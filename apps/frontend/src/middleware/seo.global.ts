@@ -2,7 +2,7 @@ import type { inferRouterOutputs } from '@trpc/server';
 import type { AppRouter } from '../../../backend/src/modules/trpc/trpc.router';
 import { useTrpc } from '../composables/useTrpc';
 import { defineNuxtRouteMiddleware, useRuntimeConfig, useState, useRequestURL } from 'nuxt/app';
-import { useHead, useSeoMeta } from '@unhead/vue';
+
 import type { RouteLocationNormalized } from 'vue-router';
 import { useGTM } from '../composables/useGTM';
 import { nextTick } from 'vue';
@@ -11,11 +11,11 @@ type RouterOutput = inferRouterOutputs<AppRouter>;
 type SeoOutput = RouterOutput['seo']['getSeoByPath'];
 
 const defaultSeo = {
-  title: 'Trang chủ',
-  description: 'Trang chủ của chúng tôi',
-  keywords: 'trang chủ, website',
-  ogTitle: 'Trang chủ',
-  ogDescription: 'Trang chủ của chúng tôi',
+  title: 'Xe Nâng MGA FORKLIFT Động Cơ ISUZU – Bền Bỉ, Mạnh Mẽ, Tiết Kiệm Nhiên Liệu Hàng Đầu',
+  description: 'Xe nâng MGA Forklift động cơ ISUZU – giải pháp nâng hạ hiệu suất cao, bền bỉ, mạnh mẽ và tiết kiệm nhiên liệu hàng đầu. Phân phối chính hãng, giá tốt, bảo hành toàn quốc.',
+  keywords: 'Xe Nâng MGA FORKLIFT Động Cơ ISUZU – Bền Bỉ, Mạnh Mẽ, Tiết Kiệm Nhiên Liệu Hàng Đầu',
+  ogTitle: 'Xe Nâng MGA FORKLIFT Động Cơ ISUZU – Bền Bỉ, Mạnh Mẽ, Tiết Kiệm Nhiên Liệu Hàng Đầu',
+  ogDescription: 'Xe nâng MGA Forklift động cơ ISUZU – giải pháp nâng hạ hiệu suất cao, bền bỉ, mạnh mẽ và tiết kiệm nhiên liệu hàng đầu. Phân phối chính hãng, giá tốt, bảo hành toàn quốc.',
   ogImage: '/images/og-default.jpg',
   robotsTxt: 'index, follow',
   canonicalUrl: ''
@@ -24,7 +24,7 @@ const defaultSeo = {
 /**
  * Get base URL in a safe way that works in all contexts (Nuxt SSR best practice)
  * - On server: use useRequestURL() to get the real request origin (see Nuxt docs)
- * - On client: use window.location as before
+ * - On a client: use window.location as before
  */
 function getSafeBaseUrl(): string {
   if (process.server) {
@@ -54,7 +54,7 @@ function getSafeBaseUrl(): string {
   } catch {
     // Fallback if window access fails
   }
-  // Try runtime config as last resort on client
+  // Try runtime config as a last resort on a client
   try {
     const config = useRuntimeConfig();
     return config.public.apiBase?.replace('/api', '') || 'http://localhost:3000';
@@ -67,156 +67,31 @@ function getSafeBaseUrl(): string {
 // interface SeoMeta will be replaced by SeoOutput from tRPC
 
 export default defineNuxtRouteMiddleware(async (to) => {
-  // Skip API routes, static assets, and internal paths to prevent infinite loops
-  if (
-    to.path.startsWith('/api/') ||
-    to.path.startsWith('/internal-api/') ||
-    to.path.startsWith('/_nuxt/') ||
-    to.path.startsWith('/static/') ||
-    to.path.startsWith('/images/') ||
-    to.path.startsWith('/favicon') ||
-    to.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|json|xml|txt)$/)
-  ) {
+  if (shouldSkipRoute(to.path)) {
     return;
   }
 
-  // Skip if running on client-side navigation (to avoid double loading)
-  if (process.client) {
-    const nuxtApp = useNuxtApp();
-    if (nuxtApp.isHydrating === false) {
-      return;
-    }
-  }
+  const normalizedPath = normalizePath(to.path);
+  const seoState = useState<SeoOutput | null>(`seo-${normalizedPath}`, () => null);
 
   try {
-    const config = useRuntimeConfig();
-    
-    // Get current URL safely
-    const currentUrl = process.client 
-      ? window.location.href 
-      : `${config.public.siteUrl}${to.fullPath}`;
-
-    // Fetch SEO data directly from tRPC (works in all environments)
-    let seoData = null;
-    
-    try {
-      const trpc = useTrpc();
-      seoData = await trpc.seo.getSeoByPath.query(to.path);
-    } catch (error) {
-      console.warn('SEO: Failed to fetch SEO data:', error);
-      seoData = null;
+    if (process.server) {
+      seoState.value = await fetchSeoDataFromServer(normalizedPath);
+    } else if (!seoState.value) {
+      seoState.value = await fetchSeoDataFromClient(normalizedPath);
     }
 
-    // Apply SEO meta tags
-    if (seoData) {
-      useHead({
-        title: seoData.title,
-        meta: [
-          { name: 'description', content: seoData.description },
-          { name: 'keywords', content: seoData.keywords || '' },
-          { property: 'og:type', content: 'website' },
-          { property: 'og:title', content: seoData.ogTitle || seoData.title },
-          { property: 'og:description', content: seoData.ogDescription || seoData.description },
-          { property: 'og:image', content: seoData.ogImage || '/images/og-default.jpg' },
-          { property: 'og:url', content: currentUrl },
-          { name: 'twitter:card', content: 'summary_large_image' },
-          { name: 'twitter:title', content: seoData.ogTitle || seoData.title },
-          { name: 'twitter:description', content: seoData.ogDescription || seoData.description },
-          { name: 'twitter:image', content: seoData.ogImage || '/images/og-default.jpg' }
-        ],
-        link: [
-          { rel: 'canonical', href: seoData.canonicalUrl || currentUrl }
-        ]
-      });
+    const seo = transformSeoData(seoState.value);
+    applySeoMeta(seo, normalizedPath);
 
-      // Also use useSeoMeta for additional optimization
-      useSeoMeta({
-        title: seoData.title,
-        description: seoData.description,
-        ogType: 'website',
-        ogTitle: seoData.ogTitle || seoData.title,
-        ogDescription: seoData.ogDescription || seoData.description,
-        ogImage: seoData.ogImage,
-        ogUrl: currentUrl,
-        twitterCard: 'summary_large_image',
-        twitterTitle: seoData.ogTitle || seoData.title,
-        twitterDescription: seoData.ogDescription || seoData.description,
-        twitterImage: seoData.ogImage
-      });
+    if (process.client) {
+      await handleClientSideSEO(normalizedPath);
     }
-
   } catch (error) {
-    // Silently fail - default meta will be used from nuxt.config.ts
     console.warn('SEO middleware: Failed to load SEO data, using defaults:', error);
+    applySeoMeta(transformSeoData(null), normalizedPath);
   }
 });
-
-/**
- * Handle server-side SEO rendering
- */
-async function handleServerSideSEO(path: string) {
-  try {
-    // Check if we're in a valid Nuxt context first
-    try {
-      const nuxtApp = useNuxtApp();
-      if (!nuxtApp) {
-        console.warn('SEO Middleware: Nuxt app context not available');
-        return;
-      }
-    } catch (contextError) {
-      console.warn('SEO Middleware: Cannot access Nuxt context:', contextError);
-      return;
-    }
-
-    // First try to get preloaded SEO data from server plugin
-    const preloadedSeoState = useState(`seo-${path}`, () => null);
-    let seoData: SeoOutput | null = preloadedSeoState.value;
-    
-    // If no preloaded data, try to fetch directly from API
-    if (!seoData) {
-      console.log('SEO Middleware: No preloaded data, fetching from API for', path);
-      try {
-        const trpc = useTrpc();
-        
-        if (trpc) {
-          // Add timeout to prevent hanging
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('SEO API timeout')), 3000)
-          );
-          
-          const seoPromise = trpc.seo.getSeoByPath.query(path || '/');
-          seoData = await Promise.race([seoPromise, timeoutPromise]) as SeoOutput;
-          
-          if (seoData) {
-            console.log('✅ SEO Middleware: Successfully fetched dynamic SEO data from API for', path);
-          }
-        } else {
-          console.warn('SEO Middleware: tRPC not available, using defaults');
-        }
-      } catch (apiError) {
-        console.warn('SEO Middleware: API error on server:', apiError);
-        console.log('SEO Middleware: Falling back to defaults for', path);
-      }
-    } else {
-      console.log('✅ SEO Middleware: Using preloaded SEO data for', path);
-    }
-
-    // Transform and apply SEO data (handles null case)
-    const seo = transformSeoData(seoData);
-    applySeoMeta(seo, path);
-    
-    console.log(`SEO Middleware: Server-side SEO applied for ${path}`, seo.title);
-
-  } catch (error) {
-    console.error('SEO Middleware: Server-side error:', error);
-    // Apply default SEO as fallback
-    try {
-      applySeoMeta(transformSeoData(null), path);
-    } catch (fallbackError) {
-      console.error('SEO Middleware: Failed to apply fallback SEO:', fallbackError);
-    }
-  }
-}
 
 /**
  * Handle client-side tracking and hydration
@@ -228,9 +103,9 @@ async function handleClientSideSEO(path: string) {
       return;
     }
 
-    // Get current SEO state (should be hydrated from server)
+    // Get the current SEO state (should be hydrated from the server)
     const currentTitle = document?.title;
-    
+
     // Track page view for GTM
     nextTick(() => {
       try {
@@ -243,6 +118,56 @@ async function handleClientSideSEO(path: string) {
 
   } catch (error) {
     console.error('SEO Middleware: Client-side error:', error);
+  }
+}
+
+function shouldSkipRoute(path: RouteLocationNormalized['path']): boolean {
+  return Boolean(
+    path.startsWith('/api/') ||
+    path.startsWith('/internal-api/') ||
+    path.startsWith('/_nuxt/') ||
+    path.startsWith('/static/') ||
+    path.startsWith('/images/') ||
+    path.startsWith('/favicon') ||
+    path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|json|xml|txt)$/),
+  );
+}
+
+function normalizePath(path: string): string {
+  if (!path) {
+    return '/';
+  }
+
+  if (path.length > 1 && path.endsWith('/')) {
+    return path.slice(0, -1);
+  }
+
+  return path;
+}
+
+async function fetchSeoDataFromServer(path: string): Promise<SeoOutput | null> {
+  try {
+    const response = await $fetch<{ success: boolean; data: SeoOutput | null }>('/api/seo-meta', {
+      params: { path },
+    });
+
+    if (response?.success && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.warn('SEO Middleware: Server fetch failed, using fallback', error);
+  }
+
+  return null;
+}
+
+async function fetchSeoDataFromClient(path: string): Promise<SeoOutput | null> {
+  try {
+    const trpc = useTrpc();
+    return await trpc.seo.getSeoByPath.query(path);
+  } catch (error) {
+    console.warn('SEO Middleware: Client fetch failed, using fallback', error);
+    return null;
   }
 }
 
@@ -260,7 +185,7 @@ function transformSeoData(result: SeoOutput | null): {
   canonicalUrl: string;
 } {
   if (!result) return { ...defaultSeo };
-  
+
   return {
     title: result.title || defaultSeo.title,
     description: result.description || defaultSeo.description,
@@ -274,7 +199,7 @@ function transformSeoData(result: SeoOutput | null): {
 }
 
 /**
- * Apply SEO meta tags - CRITICAL for SSR
+ * Apply SEO meta-tags - CRITICAL for SSR
  */
 function applySeoMeta(seo: {
   title: string;
@@ -289,12 +214,12 @@ function applySeoMeta(seo: {
   try {
     // Get base URL using the safe method
     const baseUrl = getSafeBaseUrl();
-    
+
     // Build canonical URL
     const canonicalUrl = seo.canonicalUrl || `${baseUrl}${path}`;
     const fullOgImage = seo.ogImage.startsWith('http') ? seo.ogImage : `${baseUrl}${seo.ogImage}`;
-    
-    // Apply SEO meta tags - wrap in try-catch for safety
+
+    // Apply SEO meta-tags - wrap in try-catch for safety
     try {
       useSeoMeta({
         title: seo.title,
@@ -339,4 +264,4 @@ function applySeoMeta(seo: {
   } catch (error) {
     console.error('SEO Middleware: Error applying SEO meta:', error);
   }
-} 
+}

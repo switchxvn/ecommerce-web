@@ -67,14 +67,14 @@ export class UpdateTicketBookingSectionSettings1743270380264 implements Migratio
                         "label": "Vé cáp treo khứ hồi",
                         "price": 500000,
                         "description": "Vé cáp treo khứ hồi dành cho người lớn",
-                        "image": "https://s3cablecar.sgp1.digitaloceanspaces.com/tickets/cable_car.webp"
+                        "image": "https://cdn.captreonuisam.com/tickets/cable_car.webp"
                     },
                     {
                         "id": "cable_car_buffet",
                         "label": "Vé cáp treo + Buffet",
                         "price": 800000,
                         "description": "Vé cáp treo khứ hồi kèm buffet trưa",
-                        "image": "https://s3cablecar.sgp1.digitaloceanspaces.com/tickets/buffet.jpg"
+                        "image": "https://cdn.captreonuisam.com/tickets/buffet.jpg"
                     }
                 ]'::jsonb
             )
@@ -96,4 +96,4 @@ export class UpdateTicketBookingSectionSettings1743270380264 implements Migratio
             WHERE type = 'ticket_booking';
         `);
     }
-} 
+}

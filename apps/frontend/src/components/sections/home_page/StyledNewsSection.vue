@@ -278,7 +278,7 @@ watch(locale, () => {
 
       <!-- Loading State -->
       <div v-if="isLoading" class="flex justify-center items-center py-12">
-        <ULoader size="lg" />
+        <Loader size="lg" />
       </div>
 
       <!-- Error State -->

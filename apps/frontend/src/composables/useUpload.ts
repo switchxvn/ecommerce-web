@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { useTrpc } from './useTrpc'
-import { useToast } from './useToast'
+import { useNotificationToast } from './useNotificationToast'
 
 export interface UploadOptions {
   file: File
@@ -17,7 +17,7 @@ export interface UploadResult {
 export function useUpload() {
   const trpc = useTrpc()
   const isUploading = ref(false)
-  const toast = useToast()
+  const toast = useNotificationToast()
 
   const uploadFile = async ({
     file,

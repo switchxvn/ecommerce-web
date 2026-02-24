@@ -1677,6 +1677,8 @@
       "contactPhone": "Số điện thoại liên hệ",
       "contactAddress": "Địa chỉ liên hệ",
       "supportEmail": "Email hỗ trợ",
+      "quickPurchase": "Bật mua hàng nhanh",
+      "quickPurchaseDescription": "Hiển thị form mua hàng nhanh trên trang sản phẩm và lưu thông tin liên hệ khách hàng",
       "defaultLanguage": "Ngôn ngữ mặc định",
       "defaultTimezone": "Múi giờ mặc định",
       "defaultCurrency": "Tiền tệ mặc định",

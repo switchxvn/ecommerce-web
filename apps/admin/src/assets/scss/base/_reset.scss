@@ -29,6 +29,14 @@ svg {
   max-width: 100%;
 }
 
+/* Ensure lucide inline icons retain intrinsic size */
+.lucide {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
 input,
 button,
 textarea,

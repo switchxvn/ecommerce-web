@@ -100,7 +100,8 @@ const generalSettingsTemplate = [
       { key: 'contact_email', label: t('settings.general.contactEmail'), description: 'Primary contact email address', type: 'email', placeholder: 'contact@example.com' },
       { key: 'contact_phone', label: t('settings.general.contactPhone'), description: 'Primary contact phone number', type: 'tel', placeholder: '+1 234 567 8900' },
       { key: 'contact_address', label: t('settings.general.contactAddress'), description: 'Physical business address', type: 'textarea', placeholder: '123 Main St, City, Country' },
-      { key: 'support_email', label: t('settings.general.supportEmail'), description: 'Support team email address', type: 'email', placeholder: 'support@example.com' }
+      { key: 'support_email', label: t('settings.general.supportEmail'), description: 'Support team email address', type: 'email', placeholder: 'support@example.com' },
+      { key: 'enable_quick_purchase', label: t('settings.general.quickPurchase'), description: t('settings.general.quickPurchaseDescription'), type: 'toggle', defaultValue: 'false', isPublic: true }
     ]
   },
   {
@@ -142,13 +143,21 @@ const organizedSettings = computed(() => {
       const existingSetting = generalSettings.value.find(s => s.key === template.key)
       return {
         ...template,
-        value: existingSetting?.value || '',
-        id: existingSetting?.id || null,
+        value: existingSetting?.value ?? template.defaultValue ?? '',
+        id: existingSetting?.id ?? null,
         exists: !!existingSetting
       }
     })
   }))
 })
+
+const getTemplateSettingByKey = (key: string) => {
+  for (const category of generalSettingsTemplate) {
+    const setting = category.settings.find((item: any) => item.key === key)
+    if (setting) return setting
+  }
+  return null
+}
 
 // Start inline editing
 const startEdit = (settingKey: string, currentValue: string) => {
@@ -209,6 +218,8 @@ const saveSettingValue = async (settingKey: string, value: string, description: 
     savedStates.value[settingKey] = false
     
     const existingSetting = generalSettings.value.find(s => s.key === settingKey)
+    const templateSetting = getTemplateSettingByKey(settingKey)
+    const isPublic = templateSetting?.isPublic ?? false
     
     if (existingSetting) {
       await updateSettingByKey(settingKey, value)
@@ -218,7 +229,7 @@ const saveSettingValue = async (settingKey: string, value: string, description: 
         value,
         group: 'general',
         description,
-        is_public: false
+        is_public: isPublic
       })
     }
     
@@ -477,6 +488,19 @@ onMounted(async () => {
                     :data-setting-key="setting.key"
                     @update:model-value="(value) => saveSettingValue(setting.key, value, setting.description)"
                   />
+
+                  <div
+                    v-else-if="setting.type === 'toggle'"
+                    class="flex items-center gap-3"
+                  >
+                    <UToggle
+                      :model-value="setting.value === 'true'"
+                      @update:model-value="(value: boolean) => saveSettingValue(setting.key, value ? 'true' : 'false', setting.description)"
+                    />
+                    <span class="text-sm text-gray-600 dark:text-gray-400">
+                      {{ setting.value === 'true' ? (t('common.active') || 'Bật') : (t('common.inactive') || 'Tắt') }}
+                    </span>
+                  </div>
                 </div>
               </div>
 

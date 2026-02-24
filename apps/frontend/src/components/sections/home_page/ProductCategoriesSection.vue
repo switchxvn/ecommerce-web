@@ -265,7 +265,7 @@ onMounted(() => {
     <!-- Loading State -->
     <div v-else-if="loading" class="container mx-auto px-4">
       <div class="flex justify-center items-center py-12">
-        <ULoader size="lg" />
+        <Loader size="lg" />
       </div>
     </div>
 

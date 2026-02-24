@@ -2,7 +2,7 @@
 import { ref, reactive, computed } from 'vue';
 import { z } from 'zod';
 import type { Form, FormError, FormSubmitEvent } from '@nuxt/ui/dist/runtime/types';
-import { useToast } from '~/composables/useToast';
+import { useNotificationToast } from '~/composables/useNotificationToast';
 import { useTrpc } from '~/composables/useTrpc';
 import { useLocalization } from '~/composables/useLocalization';
 
@@ -24,7 +24,7 @@ interface ContactForm {
   message: string;
 }
 
-const toast = useToast();
+const toast = useNotificationToast();
 const trpc = useTrpc();
 const { t } = useLocalization();
 

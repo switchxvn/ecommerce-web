@@ -29,7 +29,7 @@ export class AddHeroBannerSection1743270380267 implements MigrationInterface {
                 1,
                 'home_page',
                 '{
-                    "backgroundImage": "https://s3cablecar.sgp1.digitaloceanspaces.com/backgrounds/cap-treo-nui-sam.png",
+                    "backgroundImage": "https://cdn.captreonuisam.com/backgrounds/cap-treo-nui-sam.png",
                     "overlay": {
                         "backgroundColor": "rgba(0, 0, 0, 0.4)",
                         "backgroundGradient": {
@@ -70,9 +70,9 @@ export class AddHeroBannerSection1743270380267 implements MigrationInterface {
 
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`
-            DELETE FROM theme_sections 
-            WHERE type = 'hero_banner' 
+            DELETE FROM theme_sections
+            WHERE type = 'hero_banner'
             AND component_name = 'HeroBannerSection';
         `);
     }
-} 
+}

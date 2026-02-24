@@ -28,6 +28,7 @@ import Breadcrumb from "~/components/common/Breadcrumb.vue";
 import TableOfContents from "~/components/common/TableOfContents.vue";
 import CrossSellProducts from "~/components/product/CrossSellProducts.vue";
 import PriceRequestModal from "~/components/product/PriceRequestModal.vue";
+import QuickPurchaseModal from "~/components/product/QuickPurchaseModal.vue";
 import ProductDetailSidebar from "~/components/product/ProductDetailSidebar.vue";
 import ProductSpecifications from "~/components/product/ProductSpecifications.vue";
 import GlobalModal from "~/components/ui/GlobalModal.vue";
@@ -35,6 +36,7 @@ import LazyImage from "~/components/ui/LazyImage.vue";
 import { useLocalization } from "~/composables/useLocalization";
 import { useProductDetail } from '~/composables/useProductDetail';
 import { useCart } from "~/composables/useCart";
+import { useSettings } from "~/composables/useSettings";
 import TierPricingTable from "~/components/product/TierPricingTable.vue";
 
 // Định nghĩa interface cho PriceRequest
@@ -104,6 +106,16 @@ const {
   getTabIcon
 } = useProductDetail();
 
+const { getPublicSettingValueByKey } = useSettings();
+const quickPurchaseEnabled = ref(false);
+
+try {
+  const quickPurchaseSetting = await getPublicSettingValueByKey('enable_quick_purchase', 'false');
+  quickPurchaseEnabled.value = quickPurchaseSetting === 'true';
+} catch (error) {
+  console.error('Failed to load quick purchase setting:', error);
+}
+
 // Add new refs for date selection
 const selectedDate = ref<Date | null>(null);
 
@@ -144,6 +156,7 @@ definePageMeta({
 });
 
 const productQuantity = ref(1);
+const isQuickPurchaseModalOpen = ref(false);
 
 // Handle Buy Now - add to cart and redirect to checkout
 const handleBuyNow = async () => {
@@ -171,6 +184,15 @@ const handleBuyNow = async () => {
   } catch (error) {
     console.error('Error in buy now:', error);
   }
+};
+
+const openQuickPurchaseModal = () => {
+  if (!quickPurchaseEnabled.value) return;
+  isQuickPurchaseModalOpen.value = true;
+};
+
+const closeQuickPurchaseModal = () => {
+  isQuickPurchaseModalOpen.value = false;
 };
 
 // Thiết lập meta tags
@@ -746,16 +768,28 @@ watch(activeTab, (newTab, oldTab) => {
               <div class="space-y-4">
                 <!-- Add to Cart Button -->
                 <AddToCartButton
-                  v-if="canAddToCart && getProductForCart"
+                  v-if="canAddToCart && getProductForCart && !quickPurchaseEnabled"
                   :product="getProductForCart"
                   :buttonText="t('products.addToCart') || 'Thêm vào giỏ hàng'"
                   :showQuantity="!hasRequiredAttributes"
                   buttonClass="w-full bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium text-base transition-colors duration-200 flex items-center justify-center gap-2"
                 />
 
+                <UButton
+                  v-if="quickPurchaseEnabled"
+                  color="primary"
+                  variant="outline"
+                  size="lg"
+                  block
+                  class="border-primary-600 text-primary-600 hover:bg-primary-50 dark:border-primary-500 dark:text-primary-300 font-medium py-3 text-base"
+                  @click="openQuickPurchaseModal"
+                >
+                  {{ t("products.quickPurchase") || "Mua hàng nhanh" }}
+                </UButton>
+
                 <!-- Buy Now Button -->
                 <UButton
-                  v-if="canBuyNow && getProductForCart"
+                  v-if="canBuyNow && getProductForCart && !quickPurchaseEnabled"
                   color="orange"
                   size="lg"
                   block
@@ -958,6 +992,15 @@ watch(activeTab, (newTab, oldTab) => {
             />
           </div>
         </GlobalModal>
+
+        <QuickPurchaseModal
+          v-if="productData"
+          :is-open="isQuickPurchaseModalOpen"
+          :product-id="productData.id"
+          :product-name="productTitle"
+          @close="closeQuickPurchaseModal"
+          @success="closeQuickPurchaseModal"
+        />
       </div>
 
       <div v-else class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center">

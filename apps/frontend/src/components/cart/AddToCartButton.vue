@@ -4,7 +4,7 @@ import { useCart } from '~/composables/useCart';
 import { useTrpc } from '~/composables/useTrpc';
 import { ShoppingCart, Minus, Plus, Loader } from 'lucide-vue-next';
 import ProductVariantModal from '~/components/modals/ProductVariantModal.vue';
-import { useToast } from '~/composables/useToast';
+import { useNotificationToast } from '~/composables/useNotificationToast';
 import { useLocalization } from '~/composables/useLocalization';
 
 interface ProductVariant {
@@ -57,7 +57,7 @@ const { t } = useLocalization();
 const isAdding = ref(false);
 const quantity = ref(1);
 const showVariantModal = ref(false);
-const toast = useToast();
+const toast = useNotificationToast();
 
 // Ripple effect state
 const showRipple = ref(false);

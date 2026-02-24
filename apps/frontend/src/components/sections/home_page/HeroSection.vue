@@ -333,7 +333,7 @@ onBeforeUnmount(() => {
     <div class="absolute inset-0" :style="backgroundGradientStyle"></div>
 
     <div v-if="isLoading" class="flex items-center justify-center w-full h-full">
-      <ULoader size="lg" />
+      <Loader size="lg" />
     </div>
     
     <div v-else-if="error" class="flex items-center justify-center w-full h-full">

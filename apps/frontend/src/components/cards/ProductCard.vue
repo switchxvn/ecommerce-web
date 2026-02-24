@@ -37,6 +37,18 @@ interface ComponentStyleConfig {
         textColor: string;
       };
     };
+    priceStyles?: {
+      price?: {
+        fontSize?: string | number | null;
+        color?: string | null;
+        fontWeight?: string | number | null;
+      };
+      comparePrice?: {
+        fontSize?: string | number | null;
+        color?: string | null;
+        fontWeight?: string | number | null;
+      };
+    };
   };
 }
 
@@ -50,6 +62,30 @@ const props = defineProps<{
 const { t } = useLocalization();
 const { getTranslationByLocale, formatPrice, calculateDiscountPercentage, getProductUrl } = useProduct();
 const { getStyleConfig } = useComponentStyles();
+
+const formatFontSize = (value?: string | number | null) => {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'number' && !Number.isNaN(value)) {
+    return `${value}px`;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+  return undefined;
+};
+
+const formatFontWeight = (value?: string | number | null) => {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'number' && !Number.isNaN(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+  return undefined;
+};
 
 // Lấy style config từ store toàn cục
 const styleConfig = computed(() => getStyleConfig('product-card') || {
@@ -77,6 +113,18 @@ const styleConfig = computed(() => getStyleConfig('product-card') || {
       discount: {
         backgroundColor: '#F59E0B',
         textColor: '#ffffff'
+      }
+    },
+    priceStyles: {
+      price: {
+        fontSize: null,
+        color: null,
+        fontWeight: null
+      },
+      comparePrice: {
+        fontSize: null,
+        color: null,
+        fontWeight: null
       }
     }
   }
@@ -138,6 +186,24 @@ const productLink = computed(() => getProductUrl(props.product));
 const imageStyle = computed(() => ({
   height: `${styleConfig.value?.settings?.imageHeight || 200}px`
 }));
+
+const priceTextStyle = computed(() => {
+  const priceStyle = styleConfig.value?.settings?.priceStyles?.price;
+  return {
+    fontSize: formatFontSize(priceStyle?.fontSize),
+    color: priceStyle?.color || undefined,
+    fontWeight: formatFontWeight(priceStyle?.fontWeight)
+  };
+});
+
+const comparePriceTextStyle = computed(() => {
+  const compareStyle = styleConfig.value?.settings?.priceStyles?.comparePrice;
+  return {
+    fontSize: formatFontSize(compareStyle?.fontSize),
+    color: compareStyle?.color || undefined,
+    fontWeight: formatFontWeight(compareStyle?.fontWeight)
+  };
+});
 
 const labelStyle = (type: 'featured' | 'new' | 'sale' | 'discount') => ({
   backgroundColor: styleConfig.value?.settings?.labelStyles?.[type]?.backgroundColor || '#4F46E5',
@@ -272,16 +338,19 @@ const productForCart = computed(() => ({
             <span
               v-if="product.price === null"
               class="text-lg font-semibold text-primary-600 dark:text-primary-400"
+              :style="priceTextStyle"
               >{{ t('products.contactUs') || 'Liên hệ' }}</span
             >
             <template v-else>
               <span
                 class="text-lg font-semibold text-primary-600 dark:text-primary-400"
+                :style="priceTextStyle"
                 >{{ displayPrice }}</span
               >
               <span
                 v-if="displayComparePrice"
                 class="text-sm text-gray-500 line-through dark:text-gray-400"
+                :style="comparePriceTextStyle"
                 >{{ displayComparePrice }}</span
               >
             </template>

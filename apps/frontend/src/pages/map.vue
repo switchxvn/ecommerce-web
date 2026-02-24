@@ -15,13 +15,13 @@ const primaryRGB = {
     decoration: 'linear-gradient(90deg, rgb(249, 115, 22), rgb(234, 88, 12), rgb(194, 65, 12))' // Orange-500 to Orange-700
   },
   dark: {
-    main: 'rgb(249, 115, 22)', // Orange-500 
+    main: 'rgb(249, 115, 22)', // Orange-500
     decoration: 'linear-gradient(90deg, rgb(251, 146, 60), rgb(249, 115, 22), rgb(234, 88, 12))' // Orange-400 to Orange-600
   }
 };
 
 // Sử dụng màu RGB dựa trên chế độ
-const titleColor = computed(() => 
+const titleColor = computed(() =>
   isDark.value ? primaryRGB.dark.main : primaryRGB.light.main
 );
 
@@ -45,21 +45,21 @@ useHead({
       </h1>
       <div class="title-decoration" :style="{ background: decorationGradient }"></div>
     </div>
-    
+
     <div class="flex justify-center mb-8">
       <p class="text-lg text-center max-w-3xl">
         {{ t('map.description') }}
       </p>
     </div>
-    
+
     <div class="map-container mx-auto shadow-lg rounded-lg overflow-hidden">
-      <ZoomableImage 
-        src="https://s3cablecar.sgp1.digitaloceanspaces.com/maps/z6543989555098_8a3f117355c3f449457a1bf3200486c4.jpg" 
-        alt="Bản đồ khu du lịch Cáp Treo Núi Sam" 
+      <ZoomableImage
+        src="https://cdn.captreonuisam.com/maps/z6543989555098_8a3f117355c3f449457a1bf3200486c4.jpg"
+        alt="Bản đồ khu du lịch Cáp Treo Núi Sam"
         :maxScale="2.5"
       />
     </div>
-    
+
   </div>
 </template>
 
@@ -99,9 +99,9 @@ useHead({
   h1 {
     font-size: 1.75rem;
   }
-  
+
   .map-container {
     border-radius: 0.5rem;
   }
 }
-</style> 
+</style>

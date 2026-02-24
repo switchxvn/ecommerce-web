@@ -4,7 +4,7 @@ export class AddGalleryData1743270380253 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Insert gallery data
     const galleryData = Array.from({ length: 21 }, (_, i) => ({
-      image: `https://s3cablecar.sgp1.digitaloceanspaces.com/gallery/${i + 1}.jpg`,
+      image: `https://cdn.captreonuisam.com/gallery/${i + 1}.jpg`,
       translations: [
         {
           locale: 'vi',
@@ -26,7 +26,7 @@ export class AddGalleryData1743270380253 implements MigrationInterface {
 
     for (let i = 0; i < galleryData.length; i++) {
       const gallery = galleryData[i];
-      
+
       // Insert gallery
       const result = await queryRunner.query(`
         INSERT INTO galleries (image, sequence, is_active)
@@ -49,8 +49,8 @@ export class AddGalleryData1743270380253 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Delete all gallery translations
     await queryRunner.query(`DELETE FROM gallery_translations`);
-    
+
     // Delete all galleries
     await queryRunner.query(`DELETE FROM galleries`);
   }
-} 
+}

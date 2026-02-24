@@ -80,22 +80,22 @@ export class TourismAboutSectionSeeder {
           features: [
             {
               title: 'Lăng Thoại Ngọc Hầu',
-              image: 'https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/lang-thoai-ngoc-hau.jpg',
+              image: 'https://cdn.captreonuisam.com/tourism/lang-thoai-ngoc-hau.jpg',
               link: '/bai-viet/kham-pha-lang-thoai-ngoc-hau-tuyet-tac-kien-truc-giua-long-nui-sam'
             },
             {
               title: 'Đền Phật Ngọc',
-              image: 'https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/den-phat-ngoc.jpg',
+              image: 'https://cdn.captreonuisam.com/tourism/den-phat-ngoc.jpg',
               link: '/bai-viet/phat-ngoc-hoa-binh-the-gioi-tren-dinh-nui-sam'
             },
             {
               title: 'Nhà Ga Cáp Treo',
-              image: 'https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/nha-ga-cap-treo.jpg',
+              image: 'https://cdn.captreonuisam.com/tourism/nha-ga-cap-treo.jpg',
               link: '/bai-viet/nha-ga-cap-treo-nui-sam'
             },
             {
               title: 'Rừng tràm Trà Sư',
-              image: 'https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/rung-tram-tra-su.jpg',
+              image: 'https://cdn.captreonuisam.com/tourism/rung-tram-tra-su.jpg',
               link: '/bai-viet/cam-nang-du-lich-rung-tram-tra-su'
             }
           ]
@@ -138,8 +138,8 @@ export class TourismAboutSectionSeeder {
           },
           imagePosition: 'right',
           images: [
-            'https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/cultural-1.jpg',
-            'https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/cultural-2.jpg'
+            'https://cdn.captreonuisam.com/tourism/cultural-1.jpg',
+            'https://cdn.captreonuisam.com/tourism/cultural-2.jpg'
           ]
         }
       }, {
@@ -148,7 +148,7 @@ export class TourismAboutSectionSeeder {
           subtitle: 'Giá trị văn hóa và tâm linh',
           content: `
             <p>Với <strong>tầm nhìn xa</strong> và <strong>tầm huyết</strong> của chủ đầu tư MGA trong hành trình mang về vùng đất An Giang những thắng cảnh, danh thắng hùng vĩ, hữu tình, nên thơ của đất nước.</p>
-            
+
             <p>Khu du lịch Cáp treo Núi Sam còn nổi tụ những phong cảnh tuyệt đẹp với:</p>
             <ul>
               <li><em>Một Đà Lạt nên thơ</em> trong lòng Châu Đốc</li>
@@ -156,7 +156,7 @@ export class TourismAboutSectionSeeder {
               <li>Các cụm/điểm du lịch tâm linh đặc sắc</li>
               <li>Quảng trường với những lễ hội dân tộc đặc sắc</li>
             </ul>
-            
+
             <p>Trung tâm hội chợ mua sắm hay <a href="/facilities/cable-car">Nhà ga cáp treo Núi Sam</a> được xây dựng đồng bộ và hiện đại mang đẳng cấp Nhà ga Cáp treo châu Âu...</p>`,
         },
         en: {
@@ -164,7 +164,7 @@ export class TourismAboutSectionSeeder {
           subtitle: 'Cultural and Spiritual Values',
           content: `
             <p>With the <strong>far-sighted vision</strong> and <strong>dedication</strong> of MGA investors in the journey to bring to An Giang land the majestic, romantic, and poetic landscapes and attractions of the country.</p>
-            
+
             <p>Sam Mountain Cable Car Tourist Area features beautiful scenery with:</p>
             <ul>
               <li><em>A poetic Da Lat</em> in the heart of Chau Doc</li>
@@ -172,7 +172,7 @@ export class TourismAboutSectionSeeder {
               <li>Special spiritual tourism clusters/points</li>
               <li>Square with unique ethnic festivals</li>
             </ul>
-            
+
             <p>Shopping fair center and <a href="/facilities/cable-car">Sam Mountain cable car station</a> was built synchronously and modernly with European Cable Car Station class...</p>`,
         }
       });
@@ -196,8 +196,8 @@ export class TourismAboutSectionSeeder {
           },
           imagePosition: 'left',
           images: [
-            'https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/cultural-3.jpg',
-            'https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/cultural-4.jpg'
+            'https://cdn.captreonuisam.com/tourism/cultural-3.jpg',
+            'https://cdn.captreonuisam.com/tourism/cultural-4.jpg'
           ]
         }
       }, {
@@ -206,14 +206,14 @@ export class TourismAboutSectionSeeder {
           subtitle: 'Khám phá văn hóa địa phương',
           content: `
             <p>Khu du lịch Cáp treo Núi Sam không chỉ là <strong>điểm đến tâm linh</strong> mà còn là nơi du khách có thể trải nghiệm văn hóa địa phương đặc sắc.</p>
-            
+
             <h3>Trải nghiệm đa dạng</h3>
             <ul>
               <li>Thưởng thức <em>ẩm thực đặc sản</em> địa phương</li>
               <li>Tham gia các <strong>hoạt động văn hóa truyền thống</strong></li>
               <li>Khám phá không gian văn hóa độc đáo</li>
             </ul>
-            
+
             <h3>Cảnh quan tuyệt đẹp</h3>
             <p>Đặc biệt, <a href="/facilities/cable-car">hệ thống cáp treo hiện đại</a> giúp du khách có thể chiêm ngưỡng toàn cảnh vùng đất Thất Sơn huyền bí từ trên cao, tạo nên những trải nghiệm khó quên...</p>`,
         },
@@ -222,14 +222,14 @@ export class TourismAboutSectionSeeder {
           subtitle: 'Explore Local Culture',
           content: `
             <p>Sam Mountain Cable Car Tourist Area is not just a <strong>spiritual destination</strong> but also a place where visitors can experience distinctive local culture.</p>
-            
+
             <h3>Diverse Experiences</h3>
             <ul>
               <li>Enjoy local <em>specialty cuisine</em></li>
               <li>Participate in <strong>traditional cultural activities</strong></li>
               <li>Explore unique cultural spaces</li>
             </ul>
-            
+
             <h3>Beautiful Landscapes</h3>
             <p>Notably, the <a href="/facilities/cable-car">modern cable car system</a> allows visitors to admire the panoramic view of the mysterious That Son region from above, creating unforgettable experiences...</p>`,
         }
@@ -254,46 +254,46 @@ export class TourismAboutSectionSeeder {
           },
           gallery: [
             {
-              "image": "https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/be-ba-chua-xu.jpg",
+              "image": "https://cdn.captreonuisam.com/tourism/be-ba-chua-xu.jpg",
               "title": "Bệ Bà Chúa Xứ",
               "category": "spiritual"
             },
             {
-              "image": "https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/den-phat-ngoc-hoa-binh.jpg",
+              "image": "https://cdn.captreonuisam.com/tourism/den-phat-ngoc-hoa-binh.jpg",
               "title": "Đền Phật Ngọc Hoà Bình Thế Giới",
               "category": "spiritual"
             },
             {
-              "image": "https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/nha-ga-cap-treo-nui-sam.jpg",
+              "image": "https://cdn.captreonuisam.com/tourism/nha-ga-cap-treo-nui-sam.jpg",
               "title": "Nhà Ga Cáp Treo",
               "category": "infrastructure"
             },
             {
-              "image": "https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/bai-giu-xe.jpg",
+              "image": "https://cdn.captreonuisam.com/tourism/bai-giu-xe.jpg",
               "title": "Bãi Giữ Xe Rộng Rãi",
               "category": "facility"
             },
             {
-              "image": "https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/chua-mot-cot.jpg",
+              "image": "https://cdn.captreonuisam.com/tourism/chua-mot-cot.jpg",
               "title": "Chùa Một Cột",
               "category": "spiritual"
             },
             {
-              "image": "https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/phat-thien-thu.jpg",
+              "image": "https://cdn.captreonuisam.com/tourism/phat-thien-thu.jpg",
               "title": "Phật Thiên Thủ Thiên Nhãn",
               "category": "spiritual"
             },
             {
-              "image": "https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/dien-phat-duoc-su.jpg",
+              "image": "https://cdn.captreonuisam.com/tourism/dien-phat-duoc-su.jpg",
               "title": "Điện Phật Dược Sư",
               "category": "spiritual"
             },
             {
-              "image": "https://s3cablecar.sgp1.digitaloceanspaces.com/tourism/dai-vong-canh.jpg",
+              "image": "https://cdn.captreonuisam.com/tourism/dai-vong-canh.jpg",
               "title": "Đài Vọng Cảnh",
               "category": "viewpoint"
             }
-          ]          
+          ]
         }
       }, {
         vi: {
@@ -366,4 +366,4 @@ export class TourismAboutSectionSeeder {
 
     return savedSection;
   }
-} 
+}

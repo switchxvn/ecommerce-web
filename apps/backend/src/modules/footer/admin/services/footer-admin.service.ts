@@ -12,27 +12,67 @@ export class FooterAdminService {
   ) {}
 
   async create(data: CreateFooterInput) {
-    // Convert data to entity format
-    const footerData = {
+    const footerData: Partial<Footer> = {
       name: data.name,
-      type: data.type,
-      content: data.content as any,
-      isActive: data.isActive ?? false
+      componentName: data.componentName ?? 'Footer',
+      addresses: data.addresses ?? [],
+      mapUrl: data.mapUrl ?? null,
+      fanpageUrl: data.fanpageUrl ?? null,
+      companyInfo: data.companyInfo,
+      quickLinks: data.quickLinks ?? [],
+      backgroundLightColor: data.backgroundLightColor ?? '#ffc107',
+      backgroundDarkColor: data.backgroundDarkColor ?? '#111827',
+      copyrightStyle: data.copyrightStyle,
+      socialIcons: data.socialIcons ?? [],
+      logoUrl: data.logoUrl,
+      logoAlt: data.logoAlt ?? 'Company Logo',
+      branchInfo: data.branchInfo,
+      isActive: data.isActive ?? false,
+      settings: data.settings ?? {},
     };
-    
+
     const footer = this.footerRepository.create(footerData);
-    return this.footerRepository.save(footer);
+    const savedFooter = await this.footerRepository.save(footer);
+
+    if (savedFooter.isActive) {
+      return this.setActive(savedFooter.id);
+    }
+
+    return savedFooter;
   }
 
   async update(id: number, data: UpdateFooterInput) {
-    // Convert data to entity format
     const updateData: Partial<Footer> = {};
-    
+
     if (data.name !== undefined) updateData.name = data.name;
+    if (data.componentName !== undefined) updateData.componentName = data.componentName;
+    if (data.addresses !== undefined) updateData.addresses = data.addresses;
+    if (data.mapUrl !== undefined) updateData.mapUrl = data.mapUrl;
+    if (data.fanpageUrl !== undefined) updateData.fanpageUrl = data.fanpageUrl;
+    if (data.companyInfo !== undefined) updateData.companyInfo = data.companyInfo;
+    if (data.quickLinks !== undefined) updateData.quickLinks = data.quickLinks;
+    if (data.backgroundLightColor !== undefined) updateData.backgroundLightColor = data.backgroundLightColor;
+    if (data.backgroundDarkColor !== undefined) updateData.backgroundDarkColor = data.backgroundDarkColor;
+    if (data.copyrightStyle !== undefined) updateData.copyrightStyle = data.copyrightStyle;
+    if (data.socialIcons !== undefined) updateData.socialIcons = data.socialIcons;
+    if (data.logoUrl !== undefined) updateData.logoUrl = data.logoUrl;
+    if (data.logoAlt !== undefined) updateData.logoAlt = data.logoAlt;
+    if (data.branchInfo !== undefined) updateData.branchInfo = data.branchInfo;
+    if (data.settings !== undefined) updateData.settings = data.settings;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
-    
+
     await this.footerRepository.update(id, updateData);
-    return this.footerRepository.findOne({ where: { id } });
+    const updatedFooter = await this.footerRepository.findOne({ where: { id } });
+
+    if (!updatedFooter) {
+      return null;
+    }
+
+    if (data.isActive) {
+      return this.setActive(id);
+    }
+
+    return updatedFooter;
   }
 
   async delete(id: number) {

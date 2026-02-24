@@ -20,6 +20,7 @@ import '@vueform/slider/themes/default.css';
 
 const { t, locale } = useLocalization();
 const trpc = useTrpc();
+const DEFAULT_MAX_PRICE = 10_000_000_000;
 const { 
   productCategories,
   loading: categoriesLoading,
@@ -65,10 +66,10 @@ const expandedSections = ref({
 });
 
 // Price range data
-const minMaxPrice = ref<{ min: number; max: number }>({ min: 0, max: 1000000 });
+const minMaxPrice = ref<{ min: number; max: number }>({ min: 0, max: DEFAULT_MAX_PRICE });
 
 // Price range state
-const currentRange = ref([0, 1000000]);
+const currentRange = ref([0, DEFAULT_MAX_PRICE]);
 
 // Update minMaxPrice when priceRange changes
 watch(priceRange, (newRange) => {

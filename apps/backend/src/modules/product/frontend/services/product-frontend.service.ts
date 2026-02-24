@@ -6,6 +6,8 @@ import { ProductTranslation } from '../../entities/product-translation.entity';
 import { ProductVariant } from '../../entities/product-variant.entity';
 import { ProductVariantTranslation } from '../../entities/product-variant-translation.entity';
 
+const DEFAULT_MAX_PRICE = 10_000_000_000;
+
 export interface ProductFilterOptions {
   search?: string;
   minPrice?: number;
@@ -312,7 +314,7 @@ export class ProductFrontendService {
 
     return {
       min: result?.min ? parseFloat(result.min) : 0,
-      max: result?.max ? parseFloat(result.max) : 1000000,
+      max: result?.max ? parseFloat(result.max) : DEFAULT_MAX_PRICE,
     };
   }
 

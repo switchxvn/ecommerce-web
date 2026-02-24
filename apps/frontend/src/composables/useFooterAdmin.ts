@@ -1,20 +1,7 @@
 import { ref } from 'vue';
+import type { CreateFooterInput, UpdateFooterInput } from '@ew/shared';
+import type { Footer } from '~/interfaces/footer.interface';
 import { useTrpc } from './useTrpc';
-import { Footer, FooterContent } from './useFooter';
-
-export interface CreateFooterInput {
-  name: string;
-  type: 'simple' | 'complex' | 'custom';
-  content: FooterContent;
-  isActive?: boolean;
-}
-
-export interface UpdateFooterInput {
-  name?: string;
-  type?: 'simple' | 'complex' | 'custom';
-  content?: FooterContent;
-  isActive?: boolean;
-}
 
 export const useFooterAdmin = () => {
   const trpc = useTrpc();

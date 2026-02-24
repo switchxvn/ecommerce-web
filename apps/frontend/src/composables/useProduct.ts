@@ -4,6 +4,8 @@ import { useLocalization } from './useLocalization';
 import { getLocalizedRoute } from '../utils/routes';
 import { useTrpc } from './useTrpc';
 
+const DEFAULT_MAX_PRICE = 10_000_000_000;
+
 export type ProductSortBy = 'newest' | 'oldest' | 'price_asc' | 'price_desc';
 
 export interface ProductFilter {
@@ -110,7 +112,7 @@ export function useProduct(initialFilters?: ProductFilter) {
   const isLoadingProducts = ref(false);
 
   // Price range state
-  const priceRange = ref<PriceRange>({ min: 0, max: 1000000 });
+  const priceRange = ref<PriceRange>({ min: 0, max: DEFAULT_MAX_PRICE });
   const isLoadingPriceRange = ref(true);
 
   // Search state
@@ -189,10 +191,10 @@ export function useProduct(initialFilters?: ProductFilter) {
     } catch (error) {
       console.error('Error fetching price range:', error);
       // Fallback to default values
-      priceRange.value = { min: 0, max: 10000000 };
+      priceRange.value = { min: 0, max: DEFAULT_MAX_PRICE };
       if (!initialFilters?.minPrice && !initialFilters?.maxPrice) {
         filters.value.minPrice = 0;
-        filters.value.maxPrice = 10000000;
+        filters.value.maxPrice = DEFAULT_MAX_PRICE;
       }
     } finally {
       isLoadingPriceRange.value = false;

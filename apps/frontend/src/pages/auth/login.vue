@@ -3,7 +3,7 @@
 import { useAuth } from '@/composables/useAuth';
 import { useVuelidate } from '@vuelidate/core';
 import { required, email } from '@vuelidate/validators';
-import { useToast } from '@/composables/useToast';
+import { useNotificationToast } from '@/composables/useNotificationToast';
 
 definePageMeta({
   layout: 'auth',
@@ -11,7 +11,7 @@ definePageMeta({
 });
 
 const { login, isLoading, error: authError } = useAuth();
-const toast = useToast();
+const toast = useNotificationToast();
 
 const form = ref({
   email: '',

@@ -128,17 +128,6 @@ if ! docker info | grep -q "ghcr.io"; then
     fi
 fi
 
-# Function to check environment file
-check_env_file() {
-    local app=$1
-    local env_file="$PROJECT_ROOT/apps/$app/.env.production"
-    
-    if [ ! -f "$env_file" ]; then
-        echo "Error: $app production environment file not found at $env_file"
-        exit 1
-    fi
-}
-
 # Function to build and push service
 build_and_push_service() {
     local service=$1
@@ -148,7 +137,6 @@ build_and_push_service() {
     docker build --platform linux/amd64 \
         -t $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-$service:$VERSION \
         -t $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-$service:latest \
-        --build-arg ENV_FILE=.env.production \
         -f $dockerfile_path .
 
     echo "Pushing $service image..."
@@ -181,28 +169,24 @@ echo ""
 
 if [ "$BUILD_FRONTEND" = true ]; then
     echo "=== Building Frontend ==="
-    check_env_file "frontend"
     build_and_push_service "frontend" "apps/frontend/Dockerfile"
     echo ""
 fi
 
 if [ "$BUILD_BACKEND" = true ]; then
     echo "=== Building Backend ==="
-    check_env_file "backend"
     build_and_push_service "backend" "apps/backend/Dockerfile"
     echo ""
 fi
 
 if [ "$BUILD_API" = true ]; then
     echo "=== Building API ==="
-    check_env_file "api"
     build_and_push_service "api" "apps/api/Dockerfile"
     echo ""
 fi
 
 if [ "$BUILD_ADMIN" = true ]; then
     echo "=== Building Admin ==="
-    check_env_file "admin"
     build_and_push_service "admin" "apps/admin/Dockerfile"
     echo ""
 fi

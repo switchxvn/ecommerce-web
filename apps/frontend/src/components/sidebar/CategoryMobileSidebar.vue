@@ -18,6 +18,8 @@ import '@vueform/slider/themes/default.css';
 const { t, locale } = useLocalization();
 const trpc = useTrpc();
 
+const DEFAULT_MAX_PRICE = 10_000_000_000;
+
 const props = defineProps<{
   initialFilters?: {
     search?: string;
@@ -46,7 +48,7 @@ const isOpen = ref(false);
 const search = ref(props.initialFilters?.search || '');
 const priceRange = ref<[number, number]>([
   props.initialFilters?.minPrice || 0,
-  props.initialFilters?.maxPrice || 1000000,
+  props.initialFilters?.maxPrice || DEFAULT_MAX_PRICE,
 ]);
 const isFeatured = ref(props.initialFilters?.isFeatured || false);
 const isNew = ref(props.initialFilters?.isNew || false);
@@ -60,7 +62,7 @@ const expandedSections = ref({
 });
 
 // Price range data
-const minMaxPrice = ref<{ min: number; max: number }>({ min: 0, max: 1000000 });
+const minMaxPrice = ref<{ min: number; max: number }>({ min: 0, max: DEFAULT_MAX_PRICE });
 const isLoadingPriceRange = ref(true);
 
 // Custom price range inputs
@@ -147,8 +149,8 @@ const fetchPriceRange = async () => {
   } catch (error) {
     console.error('Error fetching price range:', error);
     // Fallback to default values
-    minMaxPrice.value = { min: 0, max: 10000000 };
-    priceRange.value = [0, 10000000];
+    minMaxPrice.value = { min: 0, max: DEFAULT_MAX_PRICE };
+    priceRange.value = [0, DEFAULT_MAX_PRICE];
     updatePriceInputs();
   } finally {
     isLoadingPriceRange.value = false;

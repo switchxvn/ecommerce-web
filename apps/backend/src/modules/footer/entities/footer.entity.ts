@@ -71,6 +71,13 @@ export interface FooterSettings {
     url: string;
     alt: string;
   };
+  policy_link?: {
+    title: string;
+    links: {
+      label: string;
+      url: string;
+    }[];
+  };
 }
 
 @Entity('footers')

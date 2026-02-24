@@ -274,7 +274,7 @@ async function handleLogout() {
   <div class="min-h-screen flex flex-col">
     <template v-if="isLoading">
       <div class="flex justify-center items-center min-h-screen">
-        <ULoader size="lg" />
+        <Loader size="lg" />
       </div>
     </template>
     <template v-else>

@@ -47,6 +47,16 @@ const createOrderSchema = z.object({
   cancelUrl: z.string(),
 }).passthrough();
 
+const quickPurchaseSchema = z.object({
+  customerName: z.string().min(1, 'Customer name is required'),
+  phoneCode: z.string().min(1, 'Phone code is required'),
+  phoneNumber: z.string().min(1, 'Phone number is required'),
+  email: z.string().email().optional(),
+  message: z.string().max(1000).optional(),
+  productId: z.number().optional(),
+  productName: z.string().optional(),
+}).strict();
+
 // Schema cho yêu cầu hoàn trả
 const refundItemSchema = z.object({
   orderItemId: z.number(),
@@ -189,6 +199,51 @@ export const orderRouter = router({
       );
 
       return result;
+    }),
+
+  quickPurchase: publicProcedure
+    .input(quickPurchaseSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const orderCode = generateOrderCode();
+        const notes: string[] = ['Quick purchase request'];
+
+        if (input.productName) {
+          const productLine = input.productId
+            ? `Product: ${input.productName} (ID: ${input.productId})`
+            : `Product: ${input.productName}`;
+          notes.push(productLine);
+        }
+
+        if (input.message) {
+          notes.push(`Customer note: ${input.message}`);
+        }
+
+        await ctx.services.orderFrontendService.createOrder({
+          orderCode,
+          phoneCode: input.phoneCode,
+          phoneNumber: input.phoneNumber,
+          email: input.email,
+          customerName: input.customerName,
+          totalAmount: 0,
+          paymentMethod: 'quick_purchase',
+          status: OrderStatus.PENDING,
+          paymentStatus: PaymentStatus.PENDING,
+          orderType: OrderType.STANDARD,
+          notes: notes.join('\n'),
+        });
+
+        return {
+          success: true,
+          orderCode,
+        };
+      } catch (error) {
+        console.error('Error creating quick purchase order:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create quick purchase order',
+        });
+      }
     }),
 
   // Admin routes

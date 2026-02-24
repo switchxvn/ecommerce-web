@@ -7,7 +7,7 @@
   >
     <div class="container mx-auto px-4">
       <div v-if="isLoading" class="flex justify-center items-center py-12">
-        <ULoader size="lg" />
+        <Loader size="lg" />
       </div>
 
       <div v-else-if="error" class="text-center py-12 text-red-500">

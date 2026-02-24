@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { X, ShoppingCart, Minus, Plus } from 'lucide-vue-next';
 import { useCart } from '~/composables/useCart';
-import { useToast } from '~/composables/useToast';
+import { useNotificationToast } from '~/composables/useNotificationToast';
 import { useLocalization } from '~/composables/useLocalization';
 
 interface ProductVariant {
@@ -49,7 +49,7 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'addToCart', 'success']);
 
 const { addToCart } = useCart();
-const toast = useToast();
+const toast = useNotificationToast();
 const { t } = useLocalization();
 
 const quantity = ref(1);

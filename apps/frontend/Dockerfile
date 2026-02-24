@@ -34,10 +34,18 @@ COPY libs ./libs
 
 # Build argument for environment file
 ARG ENV_FILE=.env
-ENV ENV_FILE=${ENV_FILE}
+ARG FRONTEND_HOST=localhost
+ARG FRONTEND_PORT=4201
+ARG FRONTEND_API_BASE=http://localhost:3333
 
-# Copy environment file
-COPY apps/frontend/${ENV_FILE} apps/frontend/.env
+# Ensure the app always has an .env file available
+RUN if [ -f "apps/frontend/${ENV_FILE}" ]; then \
+        cp "apps/frontend/${ENV_FILE}" "apps/frontend/.env"; \
+    else \
+        printf "NITRO_PORT=%s\nNUXT_PORT=%s\nNUXT_HOST=%s\nAPI_BASE=%s\n" \
+            "$FRONTEND_PORT" "$FRONTEND_PORT" "$FRONTEND_HOST" "$FRONTEND_API_BASE" \
+            > "apps/frontend/.env"; \
+    fi
 
 # Build only frontend app with Nuxt
 RUN mkdir -p apps/frontend/.output \

@@ -1,4 +1,4 @@
-v<script setup lang="ts">
+<script setup lang="ts">
 import { useDark } from '@vueuse/core';
 
 const isDark = useDark();

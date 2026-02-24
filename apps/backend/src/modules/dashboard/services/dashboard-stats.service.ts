@@ -63,9 +63,12 @@ export class DashboardStatsService {
     }
   }
 
-  private calculatePercentageChange(oldValue: number, newValue: number): number {
-    if (oldValue === 0) return newValue > 0 ? 100 : 0;
-    return ((newValue - oldValue) / oldValue) * 100;
+  private calculatePercentageChange(oldValue: number | string, newValue: number | string): number {
+    const previous = Number(oldValue ?? 0);
+    const current = Number(newValue ?? 0);
+    if (previous === 0) return current > 0 ? 100 : 0;
+    const change = ((current - previous) / previous) * 100;
+    return Number.isFinite(change) ? change : 0;
   }
 
   private async calculateTotalRevenue(): Promise<number> {

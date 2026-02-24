@@ -24,7 +24,7 @@ onBeforeUnmount(() => {
   <div class="bg-gray-50 dark:bg-gray-900" v-if="pageIsMounted">
     <template v-if="isLoading">
       <div class="flex justify-center items-center min-h-screen">
-        <ULoader size="lg" />
+        <Loader size="lg" />
       </div>
     </template>
     <template v-else-if="error">
@@ -44,7 +44,7 @@ onBeforeUnmount(() => {
             />
             <template #fallback>
               <div class="p-4 text-center">
-                <ULoader />
+                <Loader />
               </div>
             </template>
           </ClientOnly>

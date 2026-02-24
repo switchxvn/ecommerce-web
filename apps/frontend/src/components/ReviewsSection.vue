@@ -308,7 +308,7 @@ const contentNeedsExpansion = (content?: string) => {
       
       <!-- Loading state -->
       <div v-if="isLoading" class="flex justify-center py-10">
-        <ULoader size="lg" />
+        <Loader size="lg" />
       </div>
       
       <!-- Reviews grid -->

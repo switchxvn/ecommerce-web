@@ -21,7 +21,7 @@ npx nx serve ew
 
 To create a production bundle:
 
-```sh
+```shn
 npx nx build ew
 ```
 

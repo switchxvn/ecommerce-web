@@ -3,7 +3,7 @@ import { useLocalization } from '../composables/useLocalization';
 import { useTrpc } from '../composables/useTrpc';
 import { computed, ref, reactive, onMounted } from '../composables/useVueComposables';
 import { useRouter } from 'vue-router';
-import { useToast } from '../composables/useToast';
+import { useNotificationToast } from '../composables/useNotificationToast';
 import { Star } from 'lucide-vue-next';
 import { ReviewStatus } from '@ew/shared';
 import Loader from './ui/Loader.vue';
@@ -37,7 +37,7 @@ const emit = defineEmits<{
 const router = useRouter();
 const { t, locale } = useLocalization();
 const trpc = useTrpc();
-const toast = useToast();
+const toast = useNotificationToast();
 
 const formData = reactive({
   authorName: '',

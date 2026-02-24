@@ -1,7 +1,7 @@
 import { useToast as useVueToast } from 'vue-toast-notification';
 import 'vue-toast-notification/dist/theme-sugar.css';
 
-export const useToast = () => {
+export const useNotificationToast = () => {
   const toast = useVueToast();
 
   return {

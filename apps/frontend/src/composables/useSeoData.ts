@@ -25,7 +25,7 @@ export const useSeoData = () => {
   // Default fallback meta using runtime config
   const config = useRuntimeConfig();
   const siteName = config.public.siteName || 'Ecommerce Web';
-  
+
   const defaultMeta: SeoMeta = {
     title: `${siteName} - Trang thương mại điện tử`,
     description: `Khám phá các sản phẩm chất lượng cao tại ${siteName}. Mua sắm online dễ dàng, giao hàng nhanh chóng.`,
@@ -45,16 +45,20 @@ export const useSeoData = () => {
 
     try {
       const currentPath = path || route.path;
-      const currentUrl = customUrl || (process.client 
-        ? window.location.href 
-        : `https://captreonuisam.com${route.fullPath}`);
+      const currentUrl = customUrl || (process.client
+        ? window.location.href
+        : `${config.public.siteUrl}${route.fullPath}`);
 
-      const data = await $fetch<SeoMeta>('/internal-api/seo-meta', {
+      const response = await $fetch<{ success: boolean; data: SeoMeta }>('/api/seo-meta', {
         params: {
           path: currentPath,
           url: currentUrl
         }
       });
+
+      if (!response.data) throw new Error('No SEO data received');
+
+      const data = response.data;
 
       seoMeta.value = {
         ...data,
@@ -66,12 +70,12 @@ export const useSeoData = () => {
     } catch (err) {
       console.error('Failed to fetch SEO meta:', err);
       error.value = 'Failed to load SEO data';
-      
+
       // Use default meta on error
-      const currentUrl = customUrl || (process.client 
-        ? window.location.href 
-        : `https://captreonuisam.com${route.fullPath}`);
-      
+      const currentUrl = customUrl || (process.client
+        ? window.location.href
+        : `${config.public.siteUrl}${route.fullPath}`);
+
       seoMeta.value = {
         ...defaultMeta,
         ogUrl: currentUrl,

@@ -11,8 +11,23 @@ import { AppModule } from './app.module';
 import { TransformInterceptor } from './modules/common/interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './modules/common/filters/http-exception.filter';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import fastifyStatic from '@fastify/static';
+import fastifyView from '@fastify/view';
 import { join } from 'path';
 import * as Handlebars from 'handlebars';
+
+const FASTIFY_META_KEY = Symbol.for('plugin-meta');
+
+function getFastifyPluginFn(plugin: any, exportName: string) {
+  return plugin?.[exportName] ?? plugin?.default ?? plugin;
+}
+
+function patchFastifyVersion(pluginFn: any, version: string) {
+  const meta = pluginFn?.[FASTIFY_META_KEY];
+  if (meta) {
+    meta.fastify = version;
+  }
+}
 
 async function bootstrap() {
   // Đăng ký Handlebars helpers
@@ -36,7 +51,12 @@ async function bootstrap() {
       bufferLogs: true,
     }
   );
-  
+  const fastifyInstance = app.getHttpAdapter().getInstance();
+  const fastifyStaticFn = getFastifyPluginFn(fastifyStatic, 'fastifyStatic');
+  const fastifyViewFn = getFastifyPluginFn(fastifyView, 'fastifyView');
+  patchFastifyVersion(fastifyStaticFn, '5.x');
+  patchFastifyVersion(fastifyViewFn, '5.x');
+
   const configService = app.get(ConfigService);
 
   // Global Validation Pipe
@@ -59,15 +79,15 @@ async function bootstrap() {
 
   // Cấu hình thư mục static (nếu cần)
   try {
-    app.useStaticAssets({
+    await fastifyInstance.register(fastifyStaticFn, {
       root: join(__dirname, '..', 'public'),
       prefix: '/public/',
     });
     
     // Cấu hình trang chủ
-    app.setViewEngine({
+    await fastifyInstance.register(fastifyViewFn, {
       engine: {
-        handlebars: require('handlebars'),
+        handlebars: Handlebars,
       },
       templates: join(__dirname, '..', 'public'),
     });

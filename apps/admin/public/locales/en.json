@@ -1677,6 +1677,8 @@
       "contactPhone": "Contact Phone",
       "contactAddress": "Contact Address",
       "supportEmail": "Support Email",
+      "quickPurchase": "Enable Quick Purchase",
+      "quickPurchaseDescription": "Show a quick purchase form on product pages and store customer contact information",
       "defaultLanguage": "Default Language",
       "defaultTimezone": "Default Timezone",
       "defaultCurrency": "Default Currency",

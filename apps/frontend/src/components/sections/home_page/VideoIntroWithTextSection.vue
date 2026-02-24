@@ -247,7 +247,7 @@ const handleImageError = (event: Event) => {
         <div class="relative flex-shrink-0 w-full md:column-width-video"
              :style="{ '--column-width-video': config.videoColumnWidth || '40%' }">
           <div v-if="isLoading" class="flex justify-center items-center h-[400px] rounded-2xl bg-gray-100 dark:bg-gray-800">
-            <ULoader size="lg" />
+            <Loader size="lg" />
           </div>
 
           <div v-else-if="error" class="text-red-500 text-center p-8 h-[400px] flex items-center justify-center rounded-2xl bg-red-50 dark:bg-red-900/20">

@@ -1,5 +1,4 @@
 import { useCartStore } from '~/stores/cart';
-import type { AddToCartDto } from '~/stores/cart';
 
 /**
  * Cart composable - provides access to cart store
@@ -39,6 +38,3 @@ export function useCart() {
     updateQuantity: cartStore.updateCartItem
   };
 }
-
-// Re-export types for convenience
-export type { AddToCartDto } from '~/stores/cart'; 

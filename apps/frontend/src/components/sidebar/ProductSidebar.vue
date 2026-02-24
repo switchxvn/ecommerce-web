@@ -7,20 +7,33 @@ import {
   DollarSign,
   Flame,
   LayoutGrid,
+  Mail,
+  Phone,
   RotateCcw,
   Search,
   Sparkles,
   Star,
-  Tag
+  Tag,
+  User,
+  Clock
 } from 'lucide-vue-next';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useCategory } from '~/composables/useCategory';
 import { useLocalization } from '~/composables/useLocalization';
 import { useProduct, type ProductFilter } from '~/composables/useProduct';
-import { useTrpc } from '~/composables/useTrpc';
+import { useComponentStyles } from '~/composables/useComponentStyles';
 
-const { t, locale } = useLocalization();
-const trpc = useTrpc();
+interface SidebarContactInfo {
+  title?: string;
+  representativeName?: string;
+  position?: string;
+  phoneNumber?: string;
+  email?: string;
+  availability?: string;
+  note?: string;
+}
+
+const { t } = useLocalization();
 const {
   productCategories,
   loading: categoriesLoading,
@@ -57,6 +70,38 @@ const {
 // Custom price range inputs
 const minPriceInput = ref(formatPriceSimple(filters.value.minPrice || 0));
 const maxPriceInput = ref(formatPriceSimple(filters.value.maxPrice || 0));
+
+const { getStyleConfig, initializeStyles } = useComponentStyles();
+const defaultContactInfo =
+  getStyleConfig('product-sidebar-contact')?.settings?.contactInfo || {
+    title: 'Tư vấn mua hàng',
+    representativeName: 'Nguyễn Văn A',
+    position: 'Chuyên viên kinh doanh',
+    phoneNumber: '0900 000 000',
+    email: 'sales@example.com',
+    availability: '8:00 - 21:00, Thứ 2 - Chủ nhật',
+    note: 'Liên hệ ngay để được hỗ trợ chi tiết về sản phẩm'
+  };
+const contactInfo = ref<SidebarContactInfo | null>(defaultContactInfo);
+const loadSidebarContactInfo = async () => {
+  try {
+    await initializeStyles();
+    const config = getStyleConfig('product-sidebar-contact');
+    contactInfo.value = config?.settings?.contactInfo || defaultContactInfo;
+  } catch (error) {
+    console.error('Failed to load sidebar contact config:', error);
+    contactInfo.value = defaultContactInfo;
+  }
+};
+const contactPhoneHref = computed(() => {
+  if (!contactInfo.value?.phoneNumber) return '';
+  const sanitized = contactInfo.value.phoneNumber.replace(/[^\d+]/g, '');
+  return sanitized ? `tel:${sanitized}` : '';
+});
+const contactEmailHref = computed(() => {
+  if (!contactInfo.value?.email) return '';
+  return `mailto:${contactInfo.value.email}`;
+});
 
 // UI state
 const expandedSections = ref({
@@ -119,6 +164,7 @@ onMounted(() => {
   fetchPriceRange();
   fetchProducts();
   fetchProductCategories();
+  loadSidebarContactInfo();
 });
 </script>
 
@@ -377,6 +423,75 @@ onMounted(() => {
           </template>
           {{ t("products.resetFilters") }}
         </UButton>
+      </div>
+    </div>
+
+    <!-- Sales Contact Card -->
+    <div
+      v-if="contactInfo"
+      class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-5 contact-card"
+    >
+      <div class="flex items-start gap-3">
+        <div
+          class="flex h-12 w-12 items-center justify-center rounded-full bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-300"
+        >
+          <Phone class="h-5 w-5" />
+        </div>
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            {{ contactInfo.title }}
+          </p>
+          <div class="flex items-center gap-2 mt-1">
+            <User class="h-4 w-4 text-gray-400" />
+            <p class="text-lg font-semibold text-gray-900 dark:text-white">
+              {{ contactInfo.representativeName }}
+            </p>
+          </div>
+          <p v-if="contactInfo.position" class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+            {{ contactInfo.position }}
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-4 space-y-3 text-sm">
+        <div class="flex items-center gap-2 text-primary-600 dark:text-primary-400">
+          <Phone class="h-4 w-4" />
+          <a
+            v-if="contactPhoneHref"
+            :href="contactPhoneHref"
+            class="font-medium hover:underline"
+          >
+            {{ contactInfo.phoneNumber }}
+          </a>
+          <span v-else>{{ contactInfo.phoneNumber }}</span>
+        </div>
+
+        <div
+          v-if="contactInfo.email"
+          class="flex items-center gap-2 text-gray-600 dark:text-gray-300"
+        >
+          <Mail class="h-4 w-4" />
+          <a
+            v-if="contactEmailHref"
+            :href="contactEmailHref"
+            class="hover:underline"
+          >
+            {{ contactInfo.email }}
+          </a>
+          <span v-else>{{ contactInfo.email }}</span>
+        </div>
+
+        <div
+          v-if="contactInfo.availability"
+          class="flex items-center gap-2 text-gray-600 dark:text-gray-300"
+        >
+          <Clock class="h-4 w-4" />
+          <span>{{ contactInfo.availability }}</span>
+        </div>
+
+        <p v-if="contactInfo.note" class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+          {{ contactInfo.note }}
+        </p>
       </div>
     </div>
   </div>

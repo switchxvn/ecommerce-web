@@ -280,7 +280,7 @@ watch(() => props.config.postIds, () => {
       </h2>
 
       <div v-if="isLoading" class="flex justify-center items-center py-12">
-        <ULoader size="lg" />
+        <Loader size="lg" />
       </div>
 
       <div v-else-if="error" class="text-center text-red-500 py-8">

@@ -206,7 +206,7 @@ const processedConfig = computed(() => {
   <section class="hero-section-full relative w-full md:pt-0">
     <div class="aspect-[4/3] md:aspect-[1780/450] w-full">
       <div v-if="isLoading" class="flex items-center justify-center w-full h-full">
-        <ULoader size="lg" />
+        <Loader size="lg" />
       </div>
       
       <div v-else-if="error" class="flex items-center justify-center w-full h-full">

@@ -329,10 +329,10 @@ const props = withDefaults(
   defineProps<{
     backgroundColor?: string;
     settings?: Settings;
+    config?: Partial<Settings>;
   }>(),
   {
     backgroundColor: "bg-gray-100 dark:bg-gray-900",
-    settings: () => defaultSettings,
   }
 );
 
@@ -345,7 +345,34 @@ const { getDiscountForQuantity, fetchTierDiscountsForProduct, tierDiscounts } = 
 const selectedProduct = ref<Product | null>(null);
 const selectedDate = ref<Date | null>(null);
 const adultCount = ref(1);
-const currentSettings = ref<Settings>(props.settings);
+const normalizeSettings = (raw?: Partial<Settings>): Settings => {
+  const source = raw || {};
+
+  return {
+    ...defaultSettings,
+    ...source,
+    form: {
+      ...defaultSettings.form,
+      ...(source.form || {}),
+    },
+    colors: {
+      ...defaultSettings.colors,
+      ...(source.colors || {}),
+    },
+    typography: {
+      ...defaultSettings.typography,
+      ...(source.typography || {}),
+    },
+    benefits: {
+      ...defaultSettings.benefits,
+      ...(source.benefits || {}),
+    },
+  };
+};
+
+const currentSettings = ref<Settings>(
+  normalizeSettings(props.config || (props.settings as Partial<Settings>))
+);
 const selectedVariant = ref<any>(null);
 const indexedVariants = ref<any[]>([]);
 const variantCounts = ref<Record<number, number>>({});
@@ -458,6 +485,16 @@ const isFormValid = computed(() => {
 const totalTickets = computed(() => {
   return Object.values(variantCounts.value).reduce((sum, count) => sum + count, 0);
 });
+
+watch(
+  () => [props.settings, props.config],
+  () => {
+    currentSettings.value = normalizeSettings(
+      props.config || (props.settings as Partial<Settings>)
+    );
+  },
+  { deep: true }
+);
 
 // Sort tier discounts by minQuantity for display
 const sortedTierDiscounts = computed(() => {
