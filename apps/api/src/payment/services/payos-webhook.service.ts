@@ -142,9 +142,11 @@ export class PayOSWebhookService {
               continue;
             }
             
-            // Format event date
-            const eventDateTime = items[0].createdAt || new Date();
-            const eventDate = format(eventDateTime, 'dd/MM/yyyy', { locale: vi });
+            // Use only ticket travel date for usage date in email.
+            const primaryItem = items[0];
+            const eventDate = primaryItem?.travelDate
+              ? format(primaryItem.travelDate, 'dd/MM/yyyy', { locale: vi })
+              : '';
 
             // Prepare ticket info using pre-generated QR codes
             if (!Array.isArray(items)) {

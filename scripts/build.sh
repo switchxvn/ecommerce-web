@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Exit on any error
-set -e
+set -euo pipefail
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,6 +14,9 @@ BUILD_ADMIN=false
 BUILD_API=false
 BUILD_NGINX=false
 BUILD_ALL=true
+PUSH_IMAGES=true
+PARALLEL=false
+PLATFORM="${PLATFORM:-}"
 
 # Function to show usage
 show_usage() {
@@ -26,6 +29,10 @@ show_usage() {
     echo "  --api         Build api service only"
     echo "  --nginx       Build nginx service only"
     echo "  --all         Build all services (default)"
+    echo "  --no-push     Build only, do not push image to registry"
+    echo "  --sequential  Build services sequentially"
+    echo "  --parallel    Build services in parallel"
+    echo "  --platform    Set target platform (e.g. linux/amd64)"
     echo "  -h, --help    Show this help message"
     echo ""
     echo "Examples:"
@@ -72,6 +79,26 @@ while [[ $# -gt 0 ]]; do
             BUILD_NGINX=false
             shift
             ;;
+        --no-push)
+            PUSH_IMAGES=false
+            shift
+            ;;
+        --sequential)
+            PARALLEL=false
+            shift
+            ;;
+        --parallel)
+            PARALLEL=true
+            shift
+            ;;
+        --platform)
+            if [[ -z "${2:-}" ]]; then
+                echo "Error: --platform requires a value (e.g. linux/amd64)"
+                exit 1
+            fi
+            PLATFORM="$2"
+            shift 2
+            ;;
         -h|--help)
             show_usage
             exit 0
@@ -94,7 +121,7 @@ if [ "$BUILD_ALL" = true ]; then
 fi
 
 # Load environment variables if not already loaded
-if [ -z "$GITHUB_USERNAME" ] || [ -z "$REGISTRY" ] || [ -z "$GITHUB_TOKEN" ]; then
+if [ -z "${GITHUB_USERNAME:-}" ] || [ -z "${REGISTRY:-}" ] || [ -z "${GITHUB_TOKEN:-}" ]; then
     if [ -f "$PROJECT_ROOT/.env" ]; then
         export $(cat "$PROJECT_ROOT/.env" | grep -v '^#' | xargs)
     else
@@ -104,13 +131,14 @@ if [ -z "$GITHUB_USERNAME" ] || [ -z "$REGISTRY" ] || [ -z "$GITHUB_TOKEN" ]; th
 fi
 
 # Validate required environment variables
-if [ -z "$GITHUB_USERNAME" ] || [ -z "$REGISTRY" ] || [ -z "$GITHUB_TOKEN" ]; then
+if [ -z "${GITHUB_USERNAME:-}" ] || [ -z "${REGISTRY:-}" ] || [ -z "${GITHUB_TOKEN:-}" ]; then
     echo "Error: GITHUB_USERNAME, REGISTRY, and GITHUB_TOKEN must be set in .env file"
     exit 1
 fi
 
 # Set default app name if not defined
 APP_NAME="${APP_NAME:-cable-car}"
+YARN_REGISTRY="${YARN_REGISTRY:-https://registry.npmjs.org}"
 
 # Set version from git if not specified
 VERSION=${VERSION:-$(git describe --tags --always)}
@@ -128,73 +156,134 @@ if ! docker info | grep -q "ghcr.io"; then
     fi
 fi
 
-# Function to build and push service
-build_and_push_service() {
+# Enable BuildKit for faster and cache-aware builds
+export DOCKER_BUILDKIT=1
+
+# Ensure buildx is available
+if ! docker buildx version >/dev/null 2>&1; then
+    echo "Error: docker buildx is required but not available"
+    exit 1
+fi
+
+# Ensure a buildx builder exists and is selected
+if ! docker buildx inspect >/dev/null 2>&1; then
+    docker buildx create --name ecommerce-builder --use >/dev/null
+fi
+docker buildx inspect --bootstrap >/dev/null
+
+# Function to build and optionally push service with shared registry cache
+build_service() {
     local service=$1
     local dockerfile_path=$2
+    local image_base="$REGISTRY/$GITHUB_USERNAME/${APP_NAME}-$service"
+    local cache_ref="$image_base:buildcache"
     
     echo "Building $service image..."
-    docker build --platform linux/amd64 \
-        -t $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-$service:$VERSION \
-        -t $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-$service:latest \
-        -f $dockerfile_path .
+    local platform_args=()
+    if [ -n "$PLATFORM" ]; then
+        platform_args=(--platform "$PLATFORM")
+    fi
 
-    echo "Pushing $service image..."
-    docker push $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-$service:$VERSION
-    docker push $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-$service:latest
-    
-    echo "$service build and push completed!"
+    docker buildx build \
+        "${platform_args[@]}" \
+        --build-arg "YARN_REGISTRY=$YARN_REGISTRY" \
+        --cache-from "type=registry,ref=$cache_ref" \
+        --cache-to "type=registry,ref=$cache_ref,mode=max" \
+        -t "$image_base:$VERSION" \
+        -t "$image_base:latest" \
+        -f "$dockerfile_path" \
+        $( [ "$PUSH_IMAGES" = true ] && echo "--push" || echo "--load" ) \
+        .
+
+    if [ "$PUSH_IMAGES" = true ]; then
+        echo "$service build and push completed!"
+    else
+        echo "$service build completed (not pushed)."
+    fi
 }
 
-# Function to build and push nginx (no env file needed)
-build_and_push_nginx() {
-    echo "Building nginx image..."
-    docker build --platform linux/amd64 \
-        -t $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-nginx:$VERSION \
-        -t $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-nginx:latest \
-        -f nginx/Dockerfile .
+# Function to build nginx with shared registry cache
+build_nginx() {
+    local image_base="$REGISTRY/$GITHUB_USERNAME/${APP_NAME}-nginx"
+    local cache_ref="$image_base:buildcache"
 
-    echo "Pushing nginx image..."
-    docker push $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-nginx:$VERSION
-    docker push $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-nginx:latest
-    
-    echo "nginx build and push completed!"
+    echo "Building nginx image..."
+    local platform_args=()
+    if [ -n "$PLATFORM" ]; then
+        platform_args=(--platform "$PLATFORM")
+    fi
+
+    docker buildx build \
+        "${platform_args[@]}" \
+        --build-arg "YARN_REGISTRY=$YARN_REGISTRY" \
+        --cache-from "type=registry,ref=$cache_ref" \
+        --cache-to "type=registry,ref=$cache_ref,mode=max" \
+        -t "$image_base:$VERSION" \
+        -t "$image_base:latest" \
+        -f nginx/Dockerfile \
+        $( [ "$PUSH_IMAGES" = true ] && echo "--push" || echo "--load" ) \
+        .
+
+    if [ "$PUSH_IMAGES" = true ]; then
+        echo "nginx build and push completed!"
+    else
+        echo "nginx build completed (not pushed)."
+    fi
 }
 
 # Build services based on flags
 echo "Starting build process..."
 echo "Version: $VERSION"
 echo "Timestamp: $TIMESTAMP"
+echo "Yarn registry: $YARN_REGISTRY"
+echo "Platform: ${PLATFORM:-native}"
+echo "Push images: $PUSH_IMAGES"
+echo "Parallel mode: $PARALLEL"
 echo ""
 
-if [ "$BUILD_FRONTEND" = true ]; then
-    echo "=== Building Frontend ==="
-    build_and_push_service "frontend" "apps/frontend/Dockerfile"
+run_build_task() {
+    local name=$1
+    shift
+    echo "=== Building $name ==="
+    "$@"
     echo ""
+}
+
+PIDS=()
+
+start_task() {
+    if [ "$PARALLEL" = true ]; then
+        "$@" &
+        PIDS+=($!)
+    else
+        "$@"
+    fi
+}
+
+if [ "$BUILD_FRONTEND" = true ]; then
+    start_task run_build_task "Frontend" build_service "frontend" "apps/frontend/Dockerfile"
 fi
 
 if [ "$BUILD_BACKEND" = true ]; then
-    echo "=== Building Backend ==="
-    build_and_push_service "backend" "apps/backend/Dockerfile"
-    echo ""
+    start_task run_build_task "Backend" build_service "backend" "apps/backend/Dockerfile"
 fi
 
 if [ "$BUILD_API" = true ]; then
-    echo "=== Building API ==="
-    build_and_push_service "api" "apps/api/Dockerfile"
-    echo ""
+    start_task run_build_task "API" build_service "api" "apps/api/Dockerfile"
 fi
 
 if [ "$BUILD_ADMIN" = true ]; then
-    echo "=== Building Admin ==="
-    build_and_push_service "admin" "apps/admin/Dockerfile"
-    echo ""
+    start_task run_build_task "Admin" build_service "admin" "apps/admin/Dockerfile"
 fi
 
 if [ "$BUILD_NGINX" = true ]; then
-    echo "=== Building Nginx ==="
-    build_and_push_nginx
-    echo ""
+    start_task run_build_task "Nginx" build_nginx
+fi
+
+if [ "$PARALLEL" = true ]; then
+    for pid in "${PIDS[@]}"; do
+        wait "$pid"
+    done
 fi
 
 echo "All requested builds completed successfully!"

@@ -22,11 +22,17 @@ ENV YARN_CACHE_FOLDER=/app/.yarn-cache \
     CYPRESS_INSTALL_BINARY=0 \
     NODE_OPTIONS="--max_old_space_size=4096 --no-experimental-fetch" \
     YARN_NETWORK_TIMEOUT=300000
-
 # Install dependencies with optimized settings
 RUN yarn config set ignore-engines true \
-    && yarn config set network-timeout 300000 \
-    && yarn install --frozen-lockfile --prefer-offline --network-concurrent 1
+    && yarn config set registry "https://registry.npmjs.org" \
+    && yarn config set network-timeout 600000 \
+    && install_ok=0 \
+    && for i in 1 2 3 4 5; do \
+        if yarn install --frozen-lockfile --prefer-offline --network-concurrent 1; then install_ok=1; break; fi; \
+        echo "yarn install failed (attempt $i), retrying..."; \
+        sleep $((i * 5)); \
+    done \
+    && [ "$install_ok" -eq 1 ]
 
 # Copy application code
 COPY apps/frontend ./apps/frontend
@@ -81,8 +87,15 @@ ENV YARN_CACHE_FOLDER=/app/.yarn-cache \
 
 # Install production dependencies with optimized settings
 RUN yarn config set ignore-engines true \
-    && yarn config set network-timeout 300000 \
-    && yarn install --production --frozen-lockfile --prefer-offline --network-concurrent 1
+    && yarn config set registry "https://registry.npmjs.org" \
+    && yarn config set network-timeout 600000 \
+    && install_ok=0 \
+    && for i in 1 2 3 4 5; do \
+        if yarn install --production --frozen-lockfile --prefer-offline --network-concurrent 1; then install_ok=1; break; fi; \
+        echo "yarn install failed (attempt $i), retrying..."; \
+        sleep $((i * 5)); \
+    done \
+    && [ "$install_ok" -eq 1 ]
 
 # Copy built output from builder
 COPY --from=builder /app/apps/frontend/.output ./.output

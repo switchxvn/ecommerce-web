@@ -1,9 +1,34 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { router, adminProcedure } from '../../procedures';
-import { PaymentStatus } from '@ew/shared';
 import { Permissions } from '../../../auth/constants/permissions.constant';
 import { requirePermission } from '../../middlewares/permission.middleware';
+
+const ADMIN_TIMEZONE = 'Asia/Ho_Chi_Minh';
+
+function toDateKeyInTimezone(date: Date, timeZone: string = ADMIN_TIMEZONE): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateInTimezone(date: Date, timeZone: string = ADMIN_TIMEZONE): string {
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(date);
+}
 
 // Schema for device info
 const deviceInfoSchema = z.object({
@@ -54,20 +79,13 @@ export const ticketScannerRouter = router({
         
         if (ticketInfo && ticketInfo.travelDate) {
           const travelDate = new Date(ticketInfo.travelDate);
-          const currentDate = new Date();
-          
-          // Reset thời gian về 00:00:00 để chỉ so sánh ngày
-          currentDate.setHours(0, 0, 0, 0);
-          travelDate.setHours(0, 0, 0, 0);
-          
-          // Kiểm tra nếu ngày đi lớn hơn ngày hiện tại (chưa tới ngày)
-          if (travelDate > currentDate) {
-            const formattedDate = travelDate.toLocaleDateString('vi-VN', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric'
-            });
-            
+          const travelDateKey = toDateKeyInTimezone(travelDate);
+          const currentDateKey = toDateKeyInTimezone(new Date());
+
+          // Compare date-only in admin timezone to avoid UTC/local drift.
+          if (travelDateKey > currentDateKey) {
+            const formattedDate = formatDateInTimezone(travelDate);
+
             throw new TRPCError({
               code: 'BAD_REQUEST',
               message: `Vé chưa tới ngày sử dụng. Ngày đi hợp lệ: ${formattedDate}`,
@@ -108,20 +126,12 @@ export const ticketScannerRouter = router({
           // Kiểm tra ngày đi
           if (ticket.travelDate) {
             const travelDate = new Date(ticket.travelDate);
-            const currentDate = new Date();
-            
-            // Reset thời gian về 00:00:00 để chỉ so sánh ngày
-            currentDate.setHours(0, 0, 0, 0);
-            travelDate.setHours(0, 0, 0, 0);
-            
-            // Kiểm tra nếu ngày đi lớn hơn ngày hiện tại (chưa tới ngày)
-            if (travelDate > currentDate) {
-              const formattedDate = travelDate.toLocaleDateString('vi-VN', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-              });
-              
+            const travelDateKey = toDateKeyInTimezone(travelDate);
+            const currentDateKey = toDateKeyInTimezone(new Date());
+
+            if (travelDateKey > currentDateKey) {
+              const formattedDate = formatDateInTimezone(travelDate);
+
               throw new TRPCError({
                 code: 'BAD_REQUEST',
                 message: `Vé chưa tới ngày sử dụng. Ngày đi hợp lệ: ${formattedDate}`,

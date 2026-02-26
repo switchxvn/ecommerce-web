@@ -1,0 +1,34 @@
+# VCS
+.git
+.gitignore
+
+# Dependencies and caches
+node_modules
+.nx
+.cache
+.yarn-cache
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+
+# Build/test outputs
+dist
+coverage
+tmp
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env and editor files
+/.env
+/.env.*
+!/.env.example
+.DS_Store
+.idea
+.vscode
+
+# Local docs and misc
+*.md

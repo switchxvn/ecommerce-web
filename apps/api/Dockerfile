@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
 ENV NX_SKIP_NX_CACHE_CREATION=true
 ENV NX_DAEMON=false
 ENV CYPRESS_INSTALL_BINARY=0
+ARG YARN_REGISTRY=https://registry.npmjs.org
 
 # Copy package.json and yarn.lock
 COPY package.json yarn.lock ./
@@ -19,8 +20,15 @@ COPY nx.json ./
 
 # Install dependencies in smaller chunks to avoid memory issues
 RUN yarn config set ignore-engines true && \
-    yarn config set network-timeout 300000 && \
-    yarn install --frozen-lockfile --production=false
+    yarn config set registry "$YARN_REGISTRY" && \
+    yarn config set network-timeout 600000 && \
+    install_ok=0; \
+    for i in 1 2 3 4 5; do \
+      if yarn install --frozen-lockfile --production=false --network-concurrency 1; then install_ok=1; break; fi; \
+      echo "yarn install failed (attempt $i), retrying..."; \
+      sleep $((i * 5)); \
+    done; \
+    [ "$install_ok" -eq 1 ]
 
 # Stage 2: Builder
 FROM node:20 AS builder

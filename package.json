@@ -11,7 +11,7 @@
     "migration:show": "yarn typeorm migration:show -d libs/database/src/config/typeorm.config.ts",
     "seed": "ts-node -r tsconfig-paths/register -P ./tsconfig.seed.json -r ./libs/database/src/config/typeorm.config.ts libs/database/src/commands/seed.ts",
     "dev:backend": "nx run backend:serve:development",
-    "dev:frontend": "cd apps/frontend && npx nuxt dev --dotenv apps/frontend/.env --no-typecheck",
+    "dev:frontend": "cd apps/frontend && npx nuxt dev --dotenv apps/frontend/.env.local --no-typecheck",
     "typecheck:frontend": "cd apps/frontend && vue-tsc --project vue-tsc.config.json",
     "typecheck:frontend:watch": "cd apps/frontend && vue-tsc --project vue-tsc.config.json --watch",
     "nx:frontend": "nx run frontend:serve --verbose",
