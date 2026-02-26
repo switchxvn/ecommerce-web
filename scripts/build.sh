@@ -17,6 +17,8 @@ BUILD_ALL=true
 PUSH_IMAGES=true
 PARALLEL=false
 PLATFORM="${PLATFORM:-}"
+BUILD_RETRY_ATTEMPTS="${BUILD_RETRY_ATTEMPTS:-3}"
+BUILD_RETRY_DELAY_SECONDS="${BUILD_RETRY_DELAY_SECONDS:-15}"
 
 # Function to show usage
 show_usage() {
@@ -171,6 +173,25 @@ if ! docker buildx inspect >/dev/null 2>&1; then
 fi
 docker buildx inspect --bootstrap >/dev/null
 
+run_buildx_with_retry() {
+    local attempt=1
+    while [ "$attempt" -le "$BUILD_RETRY_ATTEMPTS" ]; do
+        if "$@"; then
+            return 0
+        fi
+
+        if [ "$attempt" -lt "$BUILD_RETRY_ATTEMPTS" ]; then
+            local sleep_seconds=$((BUILD_RETRY_DELAY_SECONDS * attempt))
+            echo "Build/push failed (attempt $attempt/$BUILD_RETRY_ATTEMPTS). Retrying in ${sleep_seconds}s..."
+            sleep "$sleep_seconds"
+        fi
+
+        attempt=$((attempt + 1))
+    done
+
+    return 1
+}
+
 # Function to build and optionally push service with shared registry cache
 build_service() {
     local service=$1
@@ -184,7 +205,7 @@ build_service() {
         platform_args=(--platform "$PLATFORM")
     fi
 
-    docker buildx build \
+    run_buildx_with_retry docker buildx build \
         "${platform_args[@]}" \
         --build-arg "YARN_REGISTRY=$YARN_REGISTRY" \
         --cache-from "type=registry,ref=$cache_ref" \
@@ -213,7 +234,7 @@ build_nginx() {
         platform_args=(--platform "$PLATFORM")
     fi
 
-    docker buildx build \
+    run_buildx_with_retry docker buildx build \
         "${platform_args[@]}" \
         --build-arg "YARN_REGISTRY=$YARN_REGISTRY" \
         --cache-from "type=registry,ref=$cache_ref" \
@@ -238,6 +259,7 @@ echo "Timestamp: $TIMESTAMP"
 echo "Yarn registry: $YARN_REGISTRY"
 echo "Platform: ${PLATFORM:-native}"
 echo "Push images: $PUSH_IMAGES"
+echo "Build retry attempts: $BUILD_RETRY_ATTEMPTS"
 echo "Parallel mode: $PARALLEL"
 echo ""
 

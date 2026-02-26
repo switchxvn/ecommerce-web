@@ -15,20 +15,20 @@ export class FooterAdminService {
     const footerData: Partial<Footer> = {
       name: data.name,
       componentName: data.componentName ?? 'Footer',
-      addresses: data.addresses ?? [],
+      addresses: (data.addresses ?? []) as Footer['addresses'],
       mapUrl: data.mapUrl ?? null,
       fanpageUrl: data.fanpageUrl ?? null,
-      companyInfo: data.companyInfo,
-      quickLinks: data.quickLinks ?? [],
+      companyInfo: data.companyInfo as Footer['companyInfo'],
+      quickLinks: (data.quickLinks ?? []) as Footer['quickLinks'],
       backgroundLightColor: data.backgroundLightColor ?? '#ffc107',
       backgroundDarkColor: data.backgroundDarkColor ?? '#111827',
-      copyrightStyle: data.copyrightStyle,
-      socialIcons: data.socialIcons ?? [],
+      copyrightStyle: data.copyrightStyle as Footer['copyrightStyle'],
+      socialIcons: (data.socialIcons ?? []) as Footer['socialIcons'],
       logoUrl: data.logoUrl,
       logoAlt: data.logoAlt ?? 'Company Logo',
-      branchInfo: data.branchInfo,
+      branchInfo: data.branchInfo as Footer['branchInfo'],
       isActive: data.isActive ?? false,
-      settings: data.settings ?? {},
+      settings: (data.settings ?? {}) as Footer['settings'],
     };
 
     const footer = this.footerRepository.create(footerData);
@@ -46,19 +46,19 @@ export class FooterAdminService {
 
     if (data.name !== undefined) updateData.name = data.name;
     if (data.componentName !== undefined) updateData.componentName = data.componentName;
-    if (data.addresses !== undefined) updateData.addresses = data.addresses;
+    if (data.addresses !== undefined) updateData.addresses = data.addresses as Footer['addresses'];
     if (data.mapUrl !== undefined) updateData.mapUrl = data.mapUrl;
     if (data.fanpageUrl !== undefined) updateData.fanpageUrl = data.fanpageUrl;
-    if (data.companyInfo !== undefined) updateData.companyInfo = data.companyInfo;
-    if (data.quickLinks !== undefined) updateData.quickLinks = data.quickLinks;
+    if (data.companyInfo !== undefined) updateData.companyInfo = data.companyInfo as Footer['companyInfo'];
+    if (data.quickLinks !== undefined) updateData.quickLinks = data.quickLinks as Footer['quickLinks'];
     if (data.backgroundLightColor !== undefined) updateData.backgroundLightColor = data.backgroundLightColor;
     if (data.backgroundDarkColor !== undefined) updateData.backgroundDarkColor = data.backgroundDarkColor;
-    if (data.copyrightStyle !== undefined) updateData.copyrightStyle = data.copyrightStyle;
-    if (data.socialIcons !== undefined) updateData.socialIcons = data.socialIcons;
+    if (data.copyrightStyle !== undefined) updateData.copyrightStyle = data.copyrightStyle as Footer['copyrightStyle'];
+    if (data.socialIcons !== undefined) updateData.socialIcons = data.socialIcons as Footer['socialIcons'];
     if (data.logoUrl !== undefined) updateData.logoUrl = data.logoUrl;
     if (data.logoAlt !== undefined) updateData.logoAlt = data.logoAlt;
-    if (data.branchInfo !== undefined) updateData.branchInfo = data.branchInfo;
-    if (data.settings !== undefined) updateData.settings = data.settings;
+    if (data.branchInfo !== undefined) updateData.branchInfo = data.branchInfo as Footer['branchInfo'];
+    if (data.settings !== undefined) updateData.settings = data.settings as Footer['settings'];
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
     await this.footerRepository.update(id, updateData);
