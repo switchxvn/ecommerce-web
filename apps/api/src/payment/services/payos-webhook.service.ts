@@ -2,8 +2,6 @@ import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
-import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
 import { Repository } from 'typeorm';
 import { MailService } from '../../../../../apps/backend/src/modules/mail/services/mail.service';
 import { OrderAdminService } from '../../../../../apps/backend/src/modules/order/admin/services/order-admin.service';
@@ -13,6 +11,17 @@ import { PaymentFrontendService } from '../../../../../apps/backend/src/modules/
 import { PayOSWebhookDto } from '../dtos/payos-webhook.dto';
 import { PayOSException } from '../exceptions/payos.exception';
 import { DashboardStatsService } from '../../../../../apps/backend/src/modules/dashboard/services/dashboard-stats.service';
+
+const ADMIN_TIMEZONE = 'Asia/Ho_Chi_Minh';
+
+function formatDateViGmt7(date: Date): string {
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: ADMIN_TIMEZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(date);
+}
 
 @Injectable()
 export class PayOSWebhookService {
@@ -145,7 +154,7 @@ export class PayOSWebhookService {
             // Use only ticket travel date for usage date in email.
             const primaryItem = items[0];
             const eventDate = primaryItem?.travelDate
-              ? format(primaryItem.travelDate, 'dd/MM/yyyy', { locale: vi })
+              ? formatDateViGmt7(new Date(primaryItem.travelDate))
               : '';
 
             // Prepare ticket info using pre-generated QR codes

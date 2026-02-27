@@ -14,6 +14,17 @@ import { Product, ProductType } from '../../../../backend/src/modules/product/en
 import { OrderItem, ProductSnapshot } from '../../../../backend/src/modules/order/entities/order-item.entity';
 import * as crypto from 'crypto';
 
+const ADMIN_TIMEZONE = 'Asia/Ho_Chi_Minh';
+
+function formatDateViGmt7(date: Date): string {
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: ADMIN_TIMEZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(date);
+}
+
 // Extended Order type with additional metadata properties
 type ExtendedOrder = Order & {
   metadata?: Record<string, any>;
@@ -357,7 +368,7 @@ export class OrderService {
       const emailData = {
         customerName: order.customerName,
         orderCode: order.orderCode,
-        orderDate: new Date().toLocaleDateString('vi-VN'),
+        orderDate: formatDateViGmt7(new Date()),
         totalAmount: order.totalAmount.toLocaleString('vi-VN', { 
           style: 'currency', 
           currency: 'VND' 
@@ -369,7 +380,7 @@ export class OrderService {
             currency: 'VND' 
           }),
           selectedDate: item.travelDate 
-            ? new Date(item.travelDate).toLocaleDateString('vi-VN') 
+            ? formatDateViGmt7(new Date(item.travelDate))
             : '',
           qrCodeUrl: item.qrCodeImageUrl || '',
         })),
