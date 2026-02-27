@@ -40,6 +40,7 @@ interface ScanResult {
     id: number;
     qrCode: string;
     orderId: number;
+    quantity?: number;
     isUsed: boolean;
     travelDate?: string;
     productType?: string;
@@ -104,6 +105,7 @@ interface CustomerTicket {
   id: number;
   qrCode: string;
   orderId: number;
+  quantity?: number;
   isUsed: boolean;
   travelDate?: string;
   productType?: string;
@@ -1227,6 +1229,7 @@ const getPrintDisabledReason = (ticket: any): string => {
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{{ t('orders.orderID') }}</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{{ t('products.title') }}</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{{ t('tickets.status') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{{ t('Số vé đã đặt') }}</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{{ t('tickets.scanCount') }}</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{{ t('orders.status') }}</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{{ t('orders.date') }}</th>
@@ -1261,6 +1264,11 @@ const getPrintDisabledReason = (ticket: any): string => {
                             : ticket.isUsed 
                               ? t('ĐÃ SỬ DỤNG') 
                               : t('CHƯA SỬ DỤNG') }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold">
+                      <span class="px-2 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-300">
+                        {{ ticket.quantity || 0 }}
                       </span>
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold">
@@ -1403,6 +1411,11 @@ const getPrintDisabledReason = (ticket: any): string => {
                 <div>
                   <p class="text-sm font-bold text-gray-700 uppercase">{{ t('Mã đơn hàng') }}</p>
                   <p class="font-medium text-base">#{{ scanResult.orderItem.order?.orderCode || scanResult.orderItem.orderId }}</p>
+                </div>
+
+                <div>
+                  <p class="text-sm font-bold text-gray-700 uppercase">{{ t('Số vé đã đặt') }}</p>
+                  <p class="font-medium text-base">{{ scanResult.orderItem.quantity || 0 }}</p>
                 </div>
                 
                 <div>
