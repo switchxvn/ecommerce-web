@@ -2336,6 +2336,10 @@ const getPrintDisabledReason = (ticket: any): string => {
                     {{ scanResult.isFirstScan ? t('LẦN ĐẦU SỬ DỤNG') : t('ĐÃ SỬ DỤNG TRƯỚC ĐÓ') }}
                   </span>
                 </p>
+                <p v-if="scanResult?.orderItem" class="mt-1">
+                  <strong>{{ t('Số vé đã đặt') }}:</strong>
+                  <span class="font-bold ml-1">{{ scanResult.orderItem.quantity || 0 }}</span>
+                </p>
                 <p v-if="!scanResult?.isFirstScan" class="mt-3">
                   <strong class="mr-2">{{ t('Số lần quét trước đó') }}:</strong> 
                   <span class="font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full text-sm border border-blue-300 ml-1 inline-block">
