@@ -116,9 +116,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <ClientOnly>
-    <LoadingScreen :is-loading="isLoading" />
-  </ClientOnly>
+  <LoadingScreen :is-loading="isLoading" />
   <!-- NuxtLayout sẽ tự động sử dụng layout default -->
   <NuxtLayout>
     <NuxtPage />

@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { useDark } from '@vueuse/core';
-
-const isDark = useDark();
 defineProps<{
   isLoading: boolean;
 }>();
@@ -18,12 +15,13 @@ defineProps<{
   >
     <div
       v-if="isLoading"
-      class="fixed inset-0 z-[9999] flex items-center justify-center"
-      :class="isDark ? 'bg-neutral-900' : 'bg-neutral-50'"
+      aria-live="polite"
+      aria-busy="true"
+      class="fixed inset-0 z-[9999] flex items-center justify-center bg-neutral-50 dark:bg-neutral-900"
     >
       <div class="flex flex-col items-center gap-4">
         <div class="h-12 w-12 animate-spin rounded-full border-4 border-primary-500 border-t-transparent"></div>
-        <p class="text-lg font-medium" :class="isDark ? 'text-neutral-50' : 'text-neutral-900'">Loading...</p>
+        <p class="text-lg font-medium text-neutral-900 dark:text-neutral-50">Loading...</p>
       </div>
     </div>
   </Transition>

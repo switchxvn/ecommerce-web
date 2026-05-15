@@ -3,7 +3,6 @@ import { defineNuxtPlugin, useRequestURL, useRuntimeConfig } from 'nuxt/app';
 import en from '../i18n/locales/en.json';
 import vi from '../i18n/locales/vi.json';
 import { normalizeLocaleCode } from '../utils/locale';
-import { isLocalRuntimeUrl } from '../utils/runtimeOrigin';
 
 interface LanguageResponse {
   code: string;
@@ -11,10 +10,8 @@ interface LanguageResponse {
 
 export default defineNuxtPlugin(async ({ vueApp }) => {
   const config = useRuntimeConfig();
-  const requestOrigin = process.server ? useRequestURL().origin : '';
-  const baseUrl = process.server
-    ? (isLocalRuntimeUrl(config.public.apiBase) ? requestOrigin : config.public.apiBase)
-    : '';
+  const requestOrigin = process.server ? useRequestURL().origin : window.location.origin;
+  const apiBase = config.public.apiBase || requestOrigin;
   const savedLocale = process.client ? localStorage.getItem('locale') : null;
 
   let defaultLocale = normalizeLocaleCode(savedLocale, 'vi');
@@ -22,7 +19,7 @@ export default defineNuxtPlugin(async ({ vueApp }) => {
   if (!savedLocale) {
     try {
       const language = await $fetch<LanguageResponse>('/api/languages/default', {
-        baseURL: baseUrl,
+        baseURL: apiBase,
       });
 
       if (language?.code) {
