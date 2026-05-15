@@ -1,14 +1,16 @@
-import { useRuntimeConfig } from '#imports';
+import { useRequestURL, useRuntimeConfig } from '#imports';
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import type { AppRouter } from '../types/trpc';
 import { ensureUniversalFetch } from '../utils/trpcFetch';
+import { isLocalRuntimeUrl, joinUrl } from '../utils/runtimeOrigin';
 
 export default defineNuxtPlugin(async () => {
   const universalFetch = ensureUniversalFetch();
 
   const config = useRuntimeConfig();
-  const baseUrl = process.server 
-    ? config.public.apiBase 
+  const requestOrigin = process.server ? useRequestURL().origin : '';
+  const baseUrl = process.server
+    ? (isLocalRuntimeUrl(config.public.apiBase) ? requestOrigin : config.public.apiBase)
     : '';
 
   // Cache session ID to prevent creating new ones on every request
@@ -37,7 +39,7 @@ export default defineNuxtPlugin(async () => {
   const client = createTRPCProxyClient<AppRouter>({
     links: [
       httpBatchLink({
-        url: `${baseUrl}/api/trpc`,
+        url: baseUrl ? joinUrl(baseUrl, '/api/trpc') : '/api/trpc',
         headers() {
           const headers: Record<string, string> = {};
           

@@ -1,8 +1,9 @@
 import { createI18n } from 'vue-i18n';
-import { defineNuxtPlugin, useRuntimeConfig } from 'nuxt/app';
+import { defineNuxtPlugin, useRequestURL, useRuntimeConfig } from 'nuxt/app';
 import en from '../i18n/locales/en.json';
 import vi from '../i18n/locales/vi.json';
 import { normalizeLocaleCode } from '../utils/locale';
+import { isLocalRuntimeUrl } from '../utils/runtimeOrigin';
 
 interface LanguageResponse {
   code: string;
@@ -10,7 +11,10 @@ interface LanguageResponse {
 
 export default defineNuxtPlugin(async ({ vueApp }) => {
   const config = useRuntimeConfig();
-  const baseUrl = process.server ? config.public.apiBase : '';
+  const requestOrigin = process.server ? useRequestURL().origin : '';
+  const baseUrl = process.server
+    ? (isLocalRuntimeUrl(config.public.apiBase) ? requestOrigin : config.public.apiBase)
+    : '';
   const savedLocale = process.client ? localStorage.getItem('locale') : null;
 
   let defaultLocale = normalizeLocaleCode(savedLocale, 'vi');
