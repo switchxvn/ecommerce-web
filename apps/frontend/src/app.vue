@@ -40,7 +40,7 @@ const initApp = async () => {
       initializeDarkMode();
     }
   } catch {
-    isLoading.value = false;
+    // Keep app usable even when some critical init step fails.
   }
 };
 
@@ -68,7 +68,7 @@ useHead({
 onMounted(async () => {
   const overlayStart = performance.now();
   const MIN_OVERLAY_MS = 400;
-  const MAX_CRITICAL_WAIT_MS = 1200;
+  const MAX_INIT_WAIT_MS = 10000;
 
   const runSecondaryInit = async () => {
     try {
@@ -81,24 +81,18 @@ onMounted(async () => {
     }
   };
 
-  try {
+  const waitWithTimeout = async (promise: Promise<unknown>, timeoutMs: number) => {
     await Promise.race([
-      appInitPromise,
-      new Promise((resolve) => window.setTimeout(resolve, MAX_CRITICAL_WAIT_MS)),
+      promise,
+      new Promise((resolve) => window.setTimeout(resolve, timeoutMs)),
     ]);
+  };
+
+  try {
+    await waitWithTimeout(appInitPromise, MAX_INIT_WAIT_MS);
+    await waitWithTimeout(runSecondaryInit(), MAX_INIT_WAIT_MS);
   } catch {
     // Overlay still releases below.
-  }
-
-  if (process.client && 'requestIdleCallback' in window) {
-    (window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => void })
-      .requestIdleCallback?.(() => {
-        void runSecondaryInit();
-      }, { timeout: 3000 });
-  } else {
-    window.setTimeout(() => {
-      void runSecondaryInit();
-    }, 1200);
   }
 
   const releaseOverlay = () => {
@@ -114,10 +108,10 @@ onMounted(async () => {
 
   releaseOverlay();
 
-  // Hard safety timeout in case the browser delays animation frames.
+  // Hard safety timeout in case the browser delays animation frames or long API hangs.
   window.setTimeout(() => {
     isLoading.value = false;
-  }, 1800);
+  }, MAX_INIT_WAIT_MS + MIN_OVERLAY_MS);
 });
 </script>
 
