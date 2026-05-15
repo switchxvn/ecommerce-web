@@ -1,3 +1,10 @@
+import type { inferRouterOutputs } from '@trpc/server'
+import type { AppRouter } from '@backend/modules/trpc/routers'
+import { fetchTrpcQuery } from '../utils/trpc'
+
+type RouterOutput = inferRouterOutputs<AppRouter>
+type SeoOutput = RouterOutput['seo']['getSeoByPath']
+
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event)
@@ -10,27 +17,11 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Use Nitro internal request to avoid SSR env/network mismatches.
-    const tRpcData = await event.$fetch('/api/trpc/seo.getSeoByPath', {
-      query: {
-        batch: '1',
-        input: JSON.stringify({ 0: path }),
-      },
-    })
-
-    if (Array.isArray(tRpcData)) {
-      const seoData = tRpcData?.[0]?.result?.data
-
-      return {
-        success: true,
-        data: seoData || null
-      }
-    }
+    const seoData = await fetchTrpcQuery<SeoOutput | null>(event, 'seo.getSeoByPath', path)
 
     return {
-      success: false,
-      data: null,
-      error: 'Unexpected tRPC response format'
+      success: true,
+      data: seoData || null
     }
 
   } catch (error) {

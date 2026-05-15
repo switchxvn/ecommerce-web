@@ -17,7 +17,7 @@ export default defineNuxtPlugin(async ({ vueApp }) => {
 
   if (!savedLocale) {
     try {
-      const language = await $fetch<LanguageResponse>('/languages/default', {
+      const language = await $fetch<LanguageResponse>('/api/languages/default', {
         baseURL: baseUrl,
       });
 

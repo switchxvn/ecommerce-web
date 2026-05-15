@@ -1,4 +1,7 @@
 {
+  "imports": {
+    "#internal/nuxt/paths": "../../node_modules/nuxt/dist/core/runtime/nitro/utils/paths.js"
+  },
   "scripts": {
     "build": "nuxt build",
     "start": "node .output/server/index.mjs"

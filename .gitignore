@@ -78,3 +78,4 @@ sql_mgavietnam_c_20250303_102858.sql
 
 .cursor\rules\nx-rules.mdc
 .github\instructions\nx.instructions.md
+.playwright-mcp/*
