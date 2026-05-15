@@ -136,9 +136,19 @@ export async function useProductDetail() {
     }
   });
 
+  const runtimeConfig = useRuntimeConfig();
+
   // Sử dụng giá trị đã lưu trong ref
   const currentURL = computed(() => {
     return baseUrl.value || "";
+  });
+
+  const normalizedSiteUrl = computed(() => {
+    const configured =
+      runtimeConfig.public && typeof runtimeConfig.public.siteUrl === "string"
+        ? runtimeConfig.public.siteUrl.trim()
+        : "";
+    return configured.replace(/\/+$/, "");
   });
 
   const canonicalPath = computed(() => {
@@ -161,7 +171,12 @@ export async function useProductDetail() {
   // Tạo canonical URL (không chứa UTM parameters)
   const canonicalUrl = computed(() => {
     if (!productData.value || !canonicalPath.value) return "";
-    return `${currentURL.value}${canonicalPath.value}`;
+    const base =
+      currentURL.value ||
+      (process.client ? window.location.origin : "") ||
+      normalizedSiteUrl.value;
+    if (!base) return canonicalPath.value;
+    return new URL(canonicalPath.value, `${base.replace(/\/+$/, "")}/`).toString();
   });
 
   // Tạo URL chia sẻ với UTM parameters
@@ -173,7 +188,12 @@ export async function useProductDetail() {
       utm_campaign: campaign,
       utm_content: translation?.slug || "",
     });
-    return `${canonicalUrl.value}?${utmParams.toString()}`;
+    const base =
+      canonicalUrl.value ||
+      (process.client ? window.location.origin : "") ||
+      normalizedSiteUrl.value;
+    if (!base) return `${canonicalPath.value}?${utmParams.toString()}`;
+    return new URL(`?${utmParams.toString()}`, base).toString();
   };
 
   const shareUrl = computed(() => canonicalUrl.value);
