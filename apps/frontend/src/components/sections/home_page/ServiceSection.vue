@@ -4,6 +4,7 @@ import ServiceCard from '~/components/ui/card/ServiceCard.vue';
 import { useLocalization } from '~/composables/useLocalization';
 import { useI18n } from 'vue-i18n';
 import { useTrpc } from '~/composables/useTrpc';
+import { normalizeLocaleCode } from '~/utils/locale';
 
 type ButtonVariant = 'solid' | 'outline' | 'soft' | 'ghost' | 'link';
 
@@ -179,7 +180,7 @@ async function fetchServices() {
   isLoading.value = true;
   error.value = null;
   try {
-    const result = await trpc.service.all.query({ locale: locale.value });
+    const result = await trpc.service.all.query({ locale: normalizeLocaleCode(locale.value) });
     services.value = result
       .filter(service => service.isActive)
       .map((service: any) => {

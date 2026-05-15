@@ -13,6 +13,7 @@ import { getLocalizedRoute } from '../../utils/routes';
 import * as LucideIcons from 'lucide-vue-next';
 import { usePageSeo } from '~/composables/usePageSeo';
 import { buildServiceSchema, resolveSeoCanonicalUrl } from '~/utils/seo';
+import { normalizeLocaleCode } from '~/utils/locale';
 
 // Định nghĩa meta cho trang
 definePageMeta({
@@ -44,7 +45,7 @@ const getIconComponent = (iconName: string) => {
 // Fetch service data
 const { data: service, pending: loading, error, refresh } = await useAsyncData(
   `service-${slug}`,
-  () => trpc.service.bySlug.query({ slug, locale: locale.value })
+  () => trpc.service.bySlug.query({ slug, locale: normalizeLocaleCode(locale.value) })
 );
 
 // Computed properties

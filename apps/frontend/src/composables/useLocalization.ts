@@ -3,6 +3,7 @@ import { useLocalStorage } from '@vueuse/core';
 import { useTrpc } from './useTrpc';
 import type { inferRouterOutputs } from '@trpc/server';
 import type { AppRouter } from '@backend/modules/trpc/routers';
+import { normalizeLocaleCode } from '../utils/locale';
 
 // Import local translations
 import viLocalTranslations from '../i18n/locales/vi.json';
@@ -128,10 +129,10 @@ export function useLocalization() {
       state.locales.value = languages;
 
       if (defaultLang && !state.locale.value) {
-        state.locale.value = defaultLang.code;
+        state.locale.value = normalizeLocaleCode(defaultLang.code, FALLBACK_LOCALE as 'en');
       }
 
-      const langCode = state.locale.value || defaultLang?.code || FALLBACK_LOCALE;
+      const langCode = normalizeLocaleCode(state.locale.value || defaultLang?.code || FALLBACK_LOCALE, FALLBACK_LOCALE as 'en');
       
       // First set local translations
       state.translations.value = {
@@ -151,7 +152,7 @@ export function useLocalization() {
       state.isInitialized.value = true;
     } catch (err) {
       console.error('Failed to initialize localization:', err);
-      const langCode = state.locale.value || FALLBACK_LOCALE;
+      const langCode = normalizeLocaleCode(state.locale.value || FALLBACK_LOCALE, FALLBACK_LOCALE as 'en');
       state.translations.value = {
         [langCode]: mergeTranslations({}, langCode)
       };
@@ -162,7 +163,8 @@ export function useLocalization() {
   };
 
   const fetchTranslations = async (languageCode: string) => {
-    if (state.translations.value[languageCode]) return; // Skip if already loaded
+    const normalizedLanguageCode = normalizeLocaleCode(languageCode, FALLBACK_LOCALE as 'en');
+    if (state.translations.value[normalizedLanguageCode]) return; // Skip if already loaded
     
     state.isLoading.value = true;
     state.error.value = null;
@@ -170,35 +172,36 @@ export function useLocalization() {
     // First set local translations
     state.translations.value = {
       ...state.translations.value,
-      [languageCode]: mergeTranslations({}, languageCode)
+      [normalizedLanguageCode]: mergeTranslations({}, normalizedLanguageCode)
     };
 
     try {
-      const dbTranslations = await trpc.language.getAllTranslations.query({ languageCode });
+      const dbTranslations = await trpc.language.getAllTranslations.query({ languageCode: normalizedLanguageCode });
       state.translations.value = {
         ...state.translations.value,
-        [languageCode]: mergeTranslations(dbTranslations, languageCode)
+        [normalizedLanguageCode]: mergeTranslations(dbTranslations, normalizedLanguageCode)
       };
     } catch (err) {
-      console.warn(`Failed to fetch database translations for ${languageCode}, using local translations only:`, err);
+      console.warn(`Failed to fetch database translations for ${normalizedLanguageCode}, using local translations only:`, err);
     } finally {
       state.isLoading.value = false;
     }
   };
 
   const switchLanguage = async (code: string) => {
-    if (code === state.locale.value) return;
+    const normalizedCode = normalizeLocaleCode(code, FALLBACK_LOCALE as 'en');
+    if (normalizedCode === state.locale.value) return;
     
     // If we don't have translations for this language yet, fetch them
-    if (!state.translations.value[code]) {
-      await fetchTranslations(code);
+    if (!state.translations.value[normalizedCode]) {
+      await fetchTranslations(normalizedCode);
     }
     
-    state.locale.value = code;
+    state.locale.value = normalizedCode;
     
     // Update HTML lang attribute
     if (process.client) {
-      document.documentElement.setAttribute('lang', code);
+      document.documentElement.setAttribute('lang', normalizedCode);
     }
   };
 
@@ -240,10 +243,16 @@ export function useLocalization() {
   };
 
   // Watch for language changes to update HTML lang attribute
-  watch(state.locale, (newLocale) => {
+watch(state.locale, (newLocale) => {
     if (process.client && newLocale) {
-      localStorage.setItem('locale', newLocale);
-      document.documentElement.setAttribute('lang', newLocale);
+      const normalizedLocale = normalizeLocaleCode(newLocale, FALLBACK_LOCALE as 'en');
+      if (normalizedLocale !== newLocale) {
+        state.locale.value = normalizedLocale;
+        return;
+      }
+
+      localStorage.setItem('locale', normalizedLocale);
+      document.documentElement.setAttribute('lang', normalizedLocale);
     }
   });
 

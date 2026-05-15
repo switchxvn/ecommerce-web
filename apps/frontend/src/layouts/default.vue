@@ -1,11 +1,9 @@
 <script setup lang="ts">
 // Auto-imported by Nuxt 3;
-import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useTrpc } from '../composables/useTrpc';
 import { useTheme } from '../composables/useTheme';
-import { useIpInfo } from '../composables/useIpInfo';
-import { nanoid } from 'nanoid';
 import { PageType } from '@ew/shared';
 // Import components
 import CombinedNavbar from '../components/ui/CombinedNavbar.vue';
@@ -21,7 +19,6 @@ import MaintenancePage from '~/components/MaintenancePage.vue';
 const router = useRouter();
 const trpc = useTrpc();
 const { getActiveTheme } = useTheme();
-const { getIpInfo } = useIpInfo();
 
 const user = ref<any>(null);
 const isLoading = ref(false);
@@ -29,7 +26,6 @@ const isDarkMode = ref(false);
 const theme = ref<any>({ sections: [] }); // Initialize with empty sections
 const footer = ref<any>(null);
 const isMaintenanceMode = ref(false);
-const sessionId = ref<string>('');
 
 // GTM Configuration
 const gtmConfig = useState('gtm-id', () => null);
@@ -97,63 +93,6 @@ const getDefaultComponent = (type: string) => {
   return typeToComponent[type] || components.CombinedNavbar;
 };
 
-// Khởi tạo hoặc cập nhật session
-const initSession = async () => {
-  try {
-    // Lấy thông tin IP và country trước
-    const ipData = await getIpInfo();
-    if (!ipData || !ipData.ip) {
-      console.error('Failed to get IP information');
-      return; // Không tiếp tục nếu không lấy được thông tin IP
-    }
-    
-    // Kiểm tra sessionId trong localStorage
-    let localSessionId = localStorage.getItem('sessionId');
-    const isNewSession = !localSessionId;
-    
-    // Tạo sessionId mới nếu chưa có
-    if (isNewSession) {
-      localSessionId = nanoid(21); // Tạo ID duy nhất 21 ký tự
-      localStorage.setItem('sessionId', localSessionId);
-    }
-    
-    sessionId.value = localSessionId!;
-    
-    // Start hoặc update session trên backend
-    if (isNewSession) {
-      // Khởi tạo session mới với IP và country đã lấy được
-      await trpc.userSession.startSession.mutate({
-        sessionId: sessionId.value,
-        ipAddress: ipData.ip,
-        country: ipData.country,
-        userAgent: navigator.userAgent,
-        deviceInfo: {
-          screenWidth: window.screen.width,
-          screenHeight: window.screen.height,
-          language: navigator.language,
-          platform: navigator.platform
-        }
-      });
-    } else {
-      // Cập nhật session
-      await trpc.userSession.updateSession.mutate({
-        sessionId: sessionId.value,
-        lastActivity: new Date(),
-      });
-      
-      // Cập nhật country nếu có
-      if (ipData.country) {
-        await trpc.userSession.updateSession.mutate({
-          sessionId: sessionId.value,
-          country: ipData.country
-        });
-      }
-    }
-  } catch (error) {
-    console.error('Failed to initialize/update session:', error);
-  }
-};
-
 // Kiểm tra dark mode với defensive programming
 const checkDarkMode = () => {
   if (process.client) {
@@ -182,30 +121,6 @@ onMounted(async () => {
   }
 
   try {
-    // Khởi tạo hoặc cập nhật session
-    if (process.client) {
-      await initSession();
-      
-      // Set up interval để cập nhật thời gian hoạt động
-      const sessionUpdateInterval = setInterval(async () => {
-        if (sessionId.value) {
-          try {
-            await trpc.userSession.updateSession.mutate({
-              sessionId: sessionId.value,
-              lastActivity: new Date()
-            });
-          } catch (error) {
-            console.error('Failed to update session activity:', error);
-          }
-        }
-      }, 5 * 60 * 1000); // 5 phút
-      
-      // Clear interval khi component unmounted
-      onBeforeUnmount(() => {
-        clearInterval(sessionUpdateInterval);
-      });
-    }
-    
     // Kiểm tra xem người dùng đã đăng nhập chưa
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');

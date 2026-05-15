@@ -6,6 +6,7 @@ import { useRoute, useRouter } from "vue-router";
 import ServiceCardWithThumbnail from "../../components/ui/card/ServiceCardWithThumbnail.vue";
 import { useService, type ServiceFilter } from "../../composables/useService";
 import { usePageSeo } from "~/composables/usePageSeo";
+import { normalizeLocaleCode } from "~/utils/locale";
 
 const { t, locale } = useLocalization();
 const trpc = useTrpc();
@@ -58,7 +59,7 @@ const filters = computed<ServiceFilter>(() => ({
   sortBy: currentSort.value,
   page: currentPage.value,
   limit: itemsPerPage.value,
-  locale: locale.value,
+  locale: normalizeLocaleCode(locale.value),
 }));
 
 // Sort options
@@ -91,7 +92,7 @@ const handleFilterChange = (newFilters: ServiceFilter) => {
   // Fetch services
   fetchServices(currentPage.value, itemsPerPage.value, {
     ...newFilters,
-    locale: locale.value,
+    locale: normalizeLocaleCode(locale.value),
     sortBy: currentSort.value,
   });
 };
@@ -107,6 +108,7 @@ const handleSortChange = (event: Event) => {
   // Fetch services with new sort
   fetchServices(currentPage.value, itemsPerPage.value, {
     ...filters.value,
+    locale: normalizeLocaleCode(locale.value),
     sortBy: currentSort.value,
   });
 };
@@ -139,7 +141,7 @@ onMounted(async () => {
 watch(locale, async () => {
   fetchServices(1, itemsPerPage.value, {
     ...filters.value,
-    locale: locale.value,
+    locale: normalizeLocaleCode(locale.value),
   });
 });
 </script>

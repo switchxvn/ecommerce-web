@@ -7,6 +7,11 @@ const SESSION_ID_KEY = 'user_session_id';
 
 // Session update interval in milliseconds (1 minute)
 const UPDATE_INTERVAL = 60 * 1000; // Giảm xuống 1 phút thay vì 5 phút
+const MIN_ACTIVITY_UPDATE_INTERVAL = 15 * 1000;
+
+let cachedIpInfo: IpInfo | null = null;
+let ipInfoPromise: Promise<IpInfo> | null = null;
+let clientTrackingStarted = false;
 
 // Hàm tạo ID ngẫu nhiên thay thế cho uuid
 const generateRandomId = (): string => {
@@ -48,6 +53,15 @@ interface IpInfo {
 }
 
 const getClientIpInfo = async (): Promise<IpInfo> => {
+  if (cachedIpInfo) {
+    return cachedIpInfo;
+  }
+
+  if (ipInfoPromise) {
+    return ipInfoPromise;
+  }
+
+  ipInfoPromise = (async () => {
   try {
     console.log('Fetching IP and country information...');
     
@@ -60,10 +74,11 @@ const getClientIpInfo = async (): Promise<IpInfo> => {
         console.log('ipinfo.io response:', data);
         if (data.ip && data.country) {
           console.log('Successfully got IP and country from ipinfo.io:', data.ip, data.country);
-          return {
+          cachedIpInfo = {
             ip: data.ip,
             country: data.country // Mã quốc gia theo ISO
           };
+          return cachedIpInfo;
         }
       }
     } catch (ipinfoError) {
@@ -94,10 +109,11 @@ const getClientIpInfo = async (): Promise<IpInfo> => {
           console.log('ipapi.co response:', geoData);
           if (geoData.country_code) {
             console.log('Successfully got country from ipapi.co:', geoData.country_code);
-            return {
+            cachedIpInfo = {
               ip: ip,
               country: geoData.country_code // Mã quốc gia theo ISO
             };
+            return cachedIpInfo;
           }
         }
       } catch (geoError) {
@@ -113,10 +129,11 @@ const getClientIpInfo = async (): Promise<IpInfo> => {
           console.log('geoiplookup.io response:', geoApiData);
           if (geoApiData.country_code) {
             console.log('Successfully got country from geoiplookup.io:', geoApiData.country_code);
-            return {
+            cachedIpInfo = {
               ip: ip,
               country: geoApiData.country_code
             };
+            return cachedIpInfo;
           }
         }
       } catch (geoApiError) {
@@ -126,17 +143,26 @@ const getClientIpInfo = async (): Promise<IpInfo> => {
     
     // Nếu không lấy được thông tin quốc gia, gán mặc định là 'XX'
     console.log('Could not determine country, using default value "XX"');
-    return { 
+    cachedIpInfo = { 
       ip: ip, 
       country: 'XX' // Mã quốc gia mặc định nếu không xác định được
     };
+    return cachedIpInfo;
   } catch (error) {
     console.error('Error getting IP and country info:', error);
     // Luôn trả về một giá trị mặc định thay vì để country undefined
-    return { 
+    cachedIpInfo = { 
       ip: 'unknown', 
       country: 'XX' 
     };
+    return cachedIpInfo;
+  }
+  })();
+
+  try {
+    return await ipInfoPromise;
+  } finally {
+    ipInfoPromise = null;
   }
 };
 
@@ -153,6 +179,7 @@ export const useUserSession = () => {
   const updateIntervalId = ref<NodeJS.Timeout | null>(null);
   const error = ref<string | null>(null);
   const isInitialized = ref(false);
+  const updateInFlight = ref(false);
 
   // Tạo hoặc lấy session ID từ localStorage
   const getOrCreateSessionId = (): string => {
@@ -283,9 +310,18 @@ export const useUserSession = () => {
         return;
       }
 
+      if (updateInFlight.value) {
+        return;
+      }
+
       // Luôn cập nhật thời gian hoạt động mới nhất
       const currentTime = new Date();
+      const lastUpdateTime = lastActivity.value?.getTime() || 0;
+      if (currentTime.getTime() - lastUpdateTime < MIN_ACTIVITY_UPDATE_INTERVAL) {
+        return;
+      }
       const isoString = currentTime.toISOString();
+      updateInFlight.value = true;
       
       // Lấy IP address và country hiện tại
       const ipInfo = await getClientIpInfo();
@@ -327,6 +363,8 @@ export const useUserSession = () => {
         cause: err?.cause
       });
       error.value = err?.message || 'Lỗi cập nhật phiên';
+    } finally {
+      updateInFlight.value = false;
     }
   };
 
@@ -466,7 +504,8 @@ export const useUserSession = () => {
   // Hook lifecycle
   onMounted(() => {
     console.log('useUserSession onMounted');
-    if (process.client) {
+    if (process.client && !clientTrackingStarted) {
+      clientTrackingStarted = true;
       console.log('Running on client, initializing session');
       // Khởi tạo session khi component mount
       initSession();
@@ -486,7 +525,7 @@ export const useUserSession = () => {
 
   onUnmounted(() => {
     console.log('useUserSession onUnmounted');
-    if (process.client) {
+    if (process.client && clientTrackingStarted) {
       // Dừng interval và xóa event listeners
       stopUpdateInterval();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -496,6 +535,7 @@ export const useUserSession = () => {
       ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(event => {
         document.removeEventListener(event, pingActivity);
       });
+      clientTrackingStarted = false;
     }
   });
 

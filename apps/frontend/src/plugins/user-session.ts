@@ -4,6 +4,16 @@ import { useRoute, useRouter } from 'vue-router';
 export default defineNuxtPlugin(() => {
   // Chỉ chạy ở phía client
   if (process.client) {
+    const trackingWindow = window as Window & {
+      __mgaUserSessionPluginInitialized?: boolean;
+      __mgaUserSessionIntervalId?: ReturnType<typeof setInterval>;
+    };
+
+    if (trackingWindow.__mgaUserSessionPluginInitialized) {
+      return;
+    }
+
+    trackingWindow.__mgaUserSessionPluginInitialized = true;
     const userSession = useUserSession();
     const router = useRouter();
     
@@ -23,7 +33,7 @@ export default defineNuxtPlugin(() => {
     });
     
     // Cập nhật session định kỳ khi người dùng đang ở trên trang
-    setInterval(() => {
+    trackingWindow.__mgaUserSessionIntervalId = setInterval(() => {
       userSession.pingActivity();
     }, 30000); // Cập nhật mỗi 30 giây nếu người dùng đang active
   }
