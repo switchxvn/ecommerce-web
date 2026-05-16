@@ -69,7 +69,7 @@ pull_and_run() {
 pull_and_run "backend" "-p $BACKEND_PORT:$BACKEND_PORT" ".env" "-e NODE_ENV=production"
 
 # Pull and run frontend
-pull_and_run "frontend" "-p $FRONTEND_PORT:4201" "apps/frontend/.env" "-e NODE_ENV=production -e HOST=0.0.0.0"
+pull_and_run "frontend" "-p $FRONTEND_PORT:4201" "apps/frontend/.env" "-e NODE_ENV=production -e HOST=0.0.0.0 -e FRONTEND_API_BASE=${FRONTEND_API_BASE:-http://backend:3333} -e NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE:-${FRONTEND_API_BASE:-http://backend:3333}}"
 
 # Pull and run nginx
 pull_and_run "nginx" "-p 80:80 -p 443:443" "" "-v /etc/nginx/ssl:/etc/nginx/ssl:ro"

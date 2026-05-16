@@ -42,7 +42,7 @@ COPY libs ./libs
 ARG ENV_FILE=.env
 ARG ADMIN_HOST=localhost
 ARG ADMIN_PORT=4201
-ARG ADMIN_API_BASE=http://localhost:3333
+ARG ADMIN_API_BASE=http://backend:3333
 
 # Ensure the app always has an .env file available
 RUN if [ -f "apps/admin/${ENV_FILE}" ]; then \

@@ -42,7 +42,7 @@ COPY libs ./libs
 ARG ENV_FILE=.env
 ARG FRONTEND_HOST=localhost
 ARG FRONTEND_PORT=4201
-ARG FRONTEND_API_BASE=http://localhost:3333
+ARG FRONTEND_API_BASE=http://backend:3333
 
 # Ensure the app always has an .env file available
 RUN if [ -f "apps/frontend/${ENV_FILE}" ]; then \

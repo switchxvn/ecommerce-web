@@ -21,7 +21,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.ADMIN_API_BASE || process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3333'
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || process.env.ADMIN_API_BASE || 'http://localhost:3333'
     },
   },
 
@@ -82,7 +82,7 @@ export default defineNuxtConfig({
     server: {
       proxy: {
         '/api/trpc': {
-          target: process.env.ADMIN_API_BASE || process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3333',
+          target: process.env.NUXT_PUBLIC_API_BASE || process.env.ADMIN_API_BASE || 'http://localhost:3333',
           changeOrigin: true,
           secure: false,
           ws: true,

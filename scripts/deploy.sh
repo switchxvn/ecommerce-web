@@ -201,6 +201,8 @@ if service_enabled "frontend"; then
         --env-file apps/frontend/.env.production \
         -e NODE_ENV=production \
         -e HOST=0.0.0.0 \
+        -e FRONTEND_API_BASE=${FRONTEND_API_BASE:-http://backend:3333} \
+        -e NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE:-${FRONTEND_API_BASE:-http://backend:3333}} \
         --restart unless-stopped \
         $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-frontend:$FRONTEND_TAG
 
@@ -221,6 +223,8 @@ if service_enabled "admin"; then
         -e NODE_ENV=production \
         -e NUXT_APP_BASE_URL=$ADMIN_BASE_PATH \
         -e HOST=0.0.0.0 \
+        -e ADMIN_API_BASE=${ADMIN_API_BASE:-http://backend:3333} \
+        -e NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE:-${ADMIN_API_BASE:-http://backend:3333}} \
         --restart unless-stopped \
         $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-admin:$ADMIN_TAG
 

@@ -278,9 +278,9 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.FRONTEND_API_BASE || process.env.API_BASE || 'http://localhost:3333',
-      siteUrl: process.env.FRONTEND_SITE_URL || process.env.SITE_URL || 'http://localhost:4200',
-      siteName: process.env.FRONTEND_SITE_NAME || process.env.SITE_NAME || 'Ecommerce Web',
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || process.env.FRONTEND_API_BASE || process.env.API_BASE || 'http://localhost:3333',
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || process.env.FRONTEND_SITE_URL || process.env.SITE_URL || 'http://localhost:4200',
+      siteName: process.env.NUXT_PUBLIC_SITE_NAME || process.env.FRONTEND_SITE_NAME || process.env.SITE_NAME || 'Ecommerce Web',
     },
   },
 
@@ -374,7 +374,7 @@ export default defineNuxtConfig({
     server: {
       proxy: {
         '/api/trpc': {
-          target: process.env.FRONTEND_API_BASE || process.env.API_BASE || 'http://localhost:3333',
+          target: process.env.NUXT_PUBLIC_API_BASE || process.env.FRONTEND_API_BASE || process.env.API_BASE || 'http://localhost:3333',
           changeOrigin: true,
           rewrite: (path) => path,
         },
