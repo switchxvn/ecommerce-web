@@ -14,18 +14,15 @@ import FloatingPhoneSupport from '~/components/ui/FloatingPhoneSupport.vue';
 import FloatingZaloSupport from '~/components/ui/FloatingZaloSupport.vue';
 import FloatingMessengerSupport from '~/components/ui/FloatingMessengerSupport.vue';
 import SimpleNavbar from '~/components/ui/SimpleNavbar.vue';
-import MaintenancePage from '~/components/MaintenancePage.vue';
 
 const router = useRouter();
 const trpc = useTrpc();
 const { getActiveTheme } = useTheme();
 
 const user = ref<any>(null);
-const isLoading = ref(false);
 const isDarkMode = ref(false);
 const theme = ref<any>({ sections: [] }); // Initialize with empty sections
 const footer = ref<any>(null);
-const isMaintenanceMode = ref(false);
 const activeSections = computed(() => {
   const sections = Array.isArray(theme.value?.sections) ? theme.value.sections : [];
   return sections.filter((section: any) => section && section.isActive);
@@ -172,11 +169,7 @@ onMounted(async () => {
     // Kiểm tra dark mode
     checkDarkMode();
     
-  } catch {
-    isLoading.value = false;
-  } finally {
-    isLoading.value = false;
-  }
+  } catch {}
 });
 
 // Theo dõi thay đổi của isDarkMode
@@ -213,41 +206,35 @@ async function handleLogout() {
 
 <template>
   <div class="min-h-screen flex flex-col">
-    <template v-if="isLoading">
-      <div class="flex justify-center items-center min-h-screen">
-        <Loader size="lg" />
-      </div>
-    </template>
-    <template v-else>
-      <!-- Header -->
-      <template v-if="activeSections.length">
-        <component 
-          v-for="section in activeSections" 
-          :key="section.id"
-          :is="resolveComponent(section)"
-          :settings="section.settings"
-          :user="user"
-          :isLoading="isLoading"
-          @logout="handleLogout"
-        />
-      </template>
-      
-      <!-- Main content -->
-      <main class="flex-grow">
-        <slot />
-      </main>
-      
-      <!-- Footer -->
-      <component
-        v-if="footer"
-        :is="resolveFooterComponent(footer.componentName)"
-        v-bind="footer"
+    <!-- Header -->
+    <template v-if="activeSections.length">
+      <component 
+        v-for="section in activeSections" 
+        :key="section.id"
+        :is="resolveComponent(section)"
+        :settings="section.settings"
+        :user="user"
+        @logout="handleLogout"
       />
+    </template>
+
+    <!-- Main content -->
+    <main class="flex-grow">
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <component
+      v-if="footer"
+      :is="resolveFooterComponent(footer.componentName)"
+      v-bind="footer"
+    />
+    <ClientOnly>
       <BackToTop />
       <FloatingPhoneSupport />
       <FloatingZaloSupport />
       <FloatingMessengerSupport />
-    </template>
+    </ClientOnly>
   </div>
 </template>
 

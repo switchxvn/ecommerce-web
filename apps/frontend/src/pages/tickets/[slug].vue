@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref, h, nextTick, watch } from "vue";
+import { useElementVisibility, useMediaQuery } from '@vueuse/core';
 import { useLocalization } from "~/composables/useLocalization";
 import { useTrpc } from "~/composables/useTrpc";
 import { useRoute, useRouter } from "vue-router";
@@ -48,6 +49,7 @@ import 'v-calendar/style.css';
 import { useTicketBooking } from '~/composables/useTicketBooking';
 import { useTierPricing } from "~/composables/useTierPricing";
 import { buildProductSchema, resolveSeoCanonicalUrl } from '~/utils/seo';
+import { resolveTicketMobileAction } from '~/utils/ticketDetailMobile';
 const CrossSellProducts = defineAsyncComponent(() => import('~/components/product/CrossSellProducts.vue'));
 const ProductSpecifications = defineAsyncComponent(() => import('~/components/product/ProductSpecifications.vue'));
 const ProductDetailSidebar = defineAsyncComponent(() => import('~/components/product/ProductDetailSidebar.vue'));
@@ -128,6 +130,9 @@ const selectedQuantity = ref(1);
 const selectedVariant = ref<any>(null);
 const indexedVariants = ref<any[]>([]);
 const variantCounts = ref<Record<number, number>>({});
+const buyBoxRef = ref<HTMLElement | null>(null);
+const isMobileViewport = useMediaQuery('(max-width: 1023px)');
+const isBuyBoxVisible = useElementVisibility(buyBoxRef);
 
 const masks = {
   input: 'DD/MM/YYYY',
@@ -243,6 +248,31 @@ const updateTotals = async () => {
 const totalTickets = computed(() => {
   return Object.values(variantCounts.value).reduce((sum, count) => sum + count, 0);
 });
+
+const trustHighlights = computed(() => [
+  t('tickets.instantDelivery') || 'Nhận vé nhanh',
+  t('tickets.secureCheckout') || 'Thanh toán an toàn',
+  t('tickets.supportAvailable') || 'Hỗ trợ khi cần',
+]);
+
+const mobileActionMode = computed(() =>
+  resolveTicketMobileAction({
+    isMobile: isMobileViewport.value,
+    buyBoxInView: isBuyBoxVisible.value,
+    hasProduct: !!productData.value,
+    hasCartProduct: !!getProductForCart.value,
+    totalTickets: totalTickets.value,
+    hasSelectedDate: selectedDate.value !== null,
+    shouldShowPriceRequest: shouldShowPriceRequest.value,
+  }),
+);
+
+const scrollToBuyBox = () => {
+  buyBoxRef.value?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  });
+};
 
 // Watch for quantity changes to update totals
 watch(variantCounts, async () => {
@@ -469,11 +499,9 @@ const handleSubmit = async () => {
         </UButton>
       </div>
 
-      <div v-else-if="productData" class="ticket-content space-y-8">
+      <div v-else-if="productData" class="ticket-content space-y-6 lg:space-y-8">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <!-- Phần thông tin vé -->
-          <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
-            <!-- Ticket Images -->
+          <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
             <div class="ticket-images bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
               <LazyImage
                 :src="productData.thumbnail || ''"
@@ -488,7 +516,6 @@ const handleSubmit = async () => {
                 customClass="h-auto w-full rounded-lg"
               />
 
-              <!-- Gallery slider -->
               <div
                 v-if="productData.gallery && productData.gallery.length > 0"
                 class="mt-4 grid grid-cols-4 gap-2"
@@ -507,115 +534,10 @@ const handleSubmit = async () => {
                   customClass="h-20 w-full cursor-pointer rounded-md"
                 />
               </div>
-
-              <!-- Thông tin bổ sung cho vé -->
-              <div class="mt-4 space-y-4">
-                <!-- Các lưu ý quan trọng -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-base font-medium text-gray-900 dark:text-white mb-2 flex items-center">
-                    <AlertCircle class="w-5 h-5 mr-2 text-amber-500" />
-                    {{ t("tickets.ticketNotes") || "Lưu ý quan trọng" }}
-                  </h3>
-                  <ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                    <li class="flex items-start">
-                      <Check class="w-4 h-4 mr-2 text-green-500 mt-0.5 flex-shrink-0" />
-                      {{ t("tickets.ticketNote1") || "Vé có giá trị trong ngày tham quan" }}
-                    </li>
-                    <li class="flex items-start">
-                      <Check class="w-4 h-4 mr-2 text-green-500 mt-0.5 flex-shrink-0" />
-                      {{ t("tickets.ticketNote2") || "Vui lòng mang theo CMND/CCCD khi sử dụng vé" }}
-                    </li>
-                    <li class="flex items-start">
-                      <Check class="w-4 h-4 mr-2 text-green-500 mt-0.5 flex-shrink-0" />
-                      {{ t("tickets.ticketNote3") || "Trẻ em dưới 3 tuổi được miễn phí vé vào cổng" }}
-                    </li>
-                  </ul>
-                </div>
-
-                <!-- Quy trình sử dụng vé -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-base font-medium text-gray-900 dark:text-white mb-3 flex items-center">
-                    <ListOrdered class="w-5 h-5 mr-2 text-primary-500" />
-                    {{ t("tickets.ticketProcess") || "Quy trình sử dụng vé" }}
-                  </h3>
-                  <div class="relative">
-                    <!-- Timeline line -->
-                    <div class="absolute left-2.5 top-0 h-full w-[2px] bg-gray-200 dark:bg-gray-700"></div>
-                    
-                    <ul class="relative space-y-6">
-                      <li class="flex items-start">
-                        <div class="flex-shrink-0 relative">
-                          <div class="flex h-6 w-6 items-center justify-center rounded-full border-2 border-primary-500 bg-white dark:bg-gray-800 text-primary-600 text-sm font-medium">1</div>
-                        </div>
-                        <div class="ml-4 flex-grow">
-                          <h4 class="text-sm font-medium text-gray-900 dark:text-white">
-                            {{ t("tickets.ticketStep1") || "Đặt vé trực tuyến" }}
-                          </h4>
-                          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            {{ t("tickets.ticketStep1Desc") || "Chọn loại vé và thanh toán" }}
-                          </p>
-                        </div>
-                      </li>
-
-                      <li class="flex items-start">
-                        <div class="flex-shrink-0 relative">
-                          <div class="flex h-6 w-6 items-center justify-center rounded-full border-2 border-primary-500 bg-white dark:bg-gray-800 text-primary-600 text-sm font-medium">2</div>
-                        </div>
-                        <div class="ml-4 flex-grow">
-                          <h4 class="text-sm font-medium text-gray-900 dark:text-white">
-                            {{ t("tickets.ticketStep2") || "Nhận mã vé" }}
-                          </h4>
-                          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            {{ t("tickets.ticketStep2Desc") || "Qua email hoặc tin nhắn SMS" }}
-                          </p>
-                        </div>
-                      </li>
-
-                      <li class="flex items-start">
-                        <div class="flex-shrink-0 relative">
-                          <div class="flex h-6 w-6 items-center justify-center rounded-full border-2 border-primary-500 bg-white dark:bg-gray-800 text-primary-600 text-sm font-medium">3</div>
-                        </div>
-                        <div class="ml-4 flex-grow">
-                          <h4 class="text-sm font-medium text-gray-900 dark:text-white">
-                            {{ t("tickets.ticketStep3") || "Sử dụng vé" }}
-                          </h4>
-                          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            {{ t("tickets.ticketStep3Desc") || "Xuất trình mã vé tại cổng" }}
-                          </p>
-                        </div>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-
-                <!-- Cam kết bảo mật -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-base font-medium text-gray-900 dark:text-white mb-3 flex items-center">
-                    <Shield class="w-5 h-5 mr-2 text-green-500" />
-                    {{ t("tickets.securityGuarantee") || "Cam kết bảo mật" }}
-                  </h3>
-                  <ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                    <li class="flex items-start">
-                      <Check class="w-4 h-4 mr-2 text-green-500 mt-0.5 flex-shrink-0" />
-                      {{ t("tickets.securityNote1") || "Thanh toán an toàn qua cổng thanh toán bảo mật" }}
-                    </li>
-                    <li class="flex items-start">
-                      <Check class="w-4 h-4 mr-2 text-green-500 mt-0.5 flex-shrink-0" />
-                      {{ t("tickets.securityNote2") || "Thông tin cá nhân được bảo vệ theo tiêu chuẩn quốc tế" }}
-                    </li>
-                    <li class="flex items-start">
-                      <Check class="w-4 h-4 mr-2 text-green-500 mt-0.5 flex-shrink-0" />
-                      {{ t("tickets.securityNote3") || "Hoàn tiền 100% nếu không nhận được vé" }}
-                    </li>
-                  </ul>
-                </div>
-              </div>
             </div>
 
-            <!-- Ticket Info -->
             <div class="ticket-info bg-white dark:bg-gray-800 rounded-lg p-6">
-              <!-- Ticket Type Badge -->
-              <div class="mb-4">
+              <div class="mb-3">
                 <UBadge color="purple" variant="solid" class="text-sm font-medium">
                   <Ticket class="w-4 h-4 mr-1" />
                   {{ t("tickets.ticketType") || "Vé" }}
@@ -631,9 +553,20 @@ const handleSubmit = async () => {
                 <UBadge v-if="productData.isFeatured" color="amber" variant="solid">{{ t("tickets.featured") || "Nổi bật" }}</UBadge>
               </div>
 
-              <h1 class="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 class="mb-2 text-2xl font-bold leading-tight text-gray-900 dark:text-white md:text-3xl">
                 {{ productTitle }}
               </h1>
+
+              <div class="mb-4 flex flex-wrap gap-2">
+                <span
+                  v-for="highlight in trustHighlights"
+                  :key="highlight"
+                  class="inline-flex items-center rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/30 dark:text-primary-200"
+                >
+                  <Check class="mr-1.5 h-3.5 w-3.5" />
+                  {{ highlight }}
+                </span>
+              </div>
 
               <div
                 v-if="productData.sku"
@@ -642,7 +575,6 @@ const handleSubmit = async () => {
                 SKU: {{ productData.sku }}
               </div>
 
-              <!-- Hiển thị danh mục vé -->
               <div
                 v-if="productData.categories && productData.categories.length > 0"
                 class="mb-5"
@@ -669,10 +601,42 @@ const handleSubmit = async () => {
                 </div>
               </div>
 
-              <!-- Ticket Specific Information -->
-              <div class="mb-6">
-                <div class="ticket-info bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                  <div class="grid grid-cols-2 gap-4">
+              <section
+                ref="buyBoxRef"
+                class="ticket-buy-box mb-6 rounded-2xl border border-primary-100 bg-gradient-to-br from-primary-50 via-white to-white p-4 shadow-sm dark:border-primary-900/40 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900"
+              >
+                <div class="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <div class="text-sm font-medium uppercase tracking-[0.16em] text-primary-600 dark:text-primary-300">
+                      {{ t("tickets.bookingSummary") || "Đặt vé ngay" }}
+                    </div>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                      {{ t("tickets.bookingSummaryHint") || "Chọn loại vé và ngày sử dụng để giữ chỗ nhanh hơn." }}
+                    </p>
+                  </div>
+                  <div class="shrink-0 rounded-xl bg-white/80 px-3 py-2 text-right shadow-sm ring-1 ring-primary-100 dark:bg-gray-900/80 dark:ring-primary-900/30">
+                    <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {{ t("tickets.total") || "Tổng tiền" }}
+                    </div>
+                    <div v-if="discountedTotal < originalTotal" class="flex flex-col items-end">
+                      <div class="text-xl font-semibold text-primary-600 dark:text-primary-400">
+                        {{ formatPrice(discountedTotal) }}
+                      </div>
+                      <div class="text-xs text-gray-500 line-through">
+                        {{ formatPrice(originalTotal) }}
+                      </div>
+                    </div>
+                    <div v-else class="text-xl font-semibold text-primary-600 dark:text-primary-400">
+                      {{ calculateTotal }}
+                    </div>
+                    <div class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                      {{ totalTickets }} {{ t("tickets.ticketCount") || "vé" }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-5 rounded-xl bg-white/80 p-4 ring-1 ring-gray-100 dark:bg-gray-800/80 dark:ring-gray-700">
+                  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div class="ticket-info-item">
                       <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <Calendar class="w-4 h-4 inline-block mr-1" />
@@ -711,133 +675,234 @@ const handleSubmit = async () => {
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Variants Selection -->
-              <div v-if="indexedVariants.length" class="mb-6">
-                <div class="space-y-2">
-                  <label class="block font-medium text-gray-700 dark:text-gray-300">
-                    {{ t("tickets.ticketType") || "Loại vé" }}
-                  </label>
-                  <div class="space-y-3">
-                    <div
-                      v-for="(variant, index) in indexedVariants"
-                      :key="index"
-                      class="flex items-center justify-between border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                <div v-if="indexedVariants.length" class="mb-5">
+                  <div class="space-y-2">
+                    <label class="block font-medium text-gray-700 dark:text-gray-300">
+                      {{ t("tickets.ticketType") || "Loại vé" }}
+                    </label>
+                    <div class="space-y-3">
+                      <div
+                        v-for="(variant, index) in indexedVariants"
+                        :key="index"
+                        class="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
+                      >
+                        <div class="flex flex-col">
+                          <span class="font-medium text-gray-900 dark:text-gray-100">{{
+                            getVariantName(variant)
+                          }}</span>
+                          <span class="text-sm text-gray-600 dark:text-gray-400">{{
+                            formatPrice(getVariantPrice(variant))
+                          }}</span>
+                        </div>
+                        <div class="flex items-center">
+                          <button
+                            type="button"
+                            class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            :disabled="getVariantCount(variant) <= 0"
+                            @click="decreaseVariantCount(variant)"
+                          >
+                            <Minus class="w-5 h-5" />
+                          </button>
+                          <span
+                            class="w-12 text-center text-lg font-medium text-gray-900 dark:text-gray-100"
+                          >
+                            {{ getVariantCount(variant) }}
+                          </span>
+                          <button
+                            type="button"
+                            class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            :disabled="getVariantCount(variant) >= 10"
+                            @click="increaseVariantCount(variant)"
+                          >
+                            <Plus class="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-5">
+                  <div class="text-base font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                    <Calendar class="w-5 h-5" />
+                    {{ t("tickets.departureDate") || "Ngày sử dụng" }}
+                    <span class="text-red-500">*</span>
+                  </div>
+                  <div class="space-y-4">
+                    <DatePicker
+                      v-model="selectedDate"
+                      :min-date="new Date()"
+                      :masks="masks"
+                      :disabled-dates="disabledDates"
+                      class="w-full [&_.vc-highlight-base-start]:!bg-primary-500 [&_.vc-highlight-base-start]:!text-white [&_.vc-disabled]:!opacity-25 [&_.vc-disabled]:!cursor-not-allowed"
                     >
-                      <div class="flex flex-col">
-                        <span class="font-medium text-gray-900 dark:text-gray-100">{{
-                          getVariantName(variant)
-                        }}</span>
-                        <span class="text-sm text-gray-600 dark:text-gray-400">{{
-                          formatPrice(getVariantPrice(variant))
-                        }}</span>
+                      <template #default="{ inputValue, inputEvents }">
+                        <input
+                          :value="inputValue"
+                          v-on="inputEvents"
+                          :placeholder="t('tickets.selectDepartureDate') || 'Chọn ngày sử dụng'"
+                          class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none dark:bg-gray-800"
+                          readonly
+                        />
+                      </template>
+                    </DatePicker>
+                    <div v-if="selectedDate" class="text-sm text-gray-600 dark:text-gray-400">
+                      {{ t("tickets.selectedDate") || "Ngày đã chọn" }}: {{ selectedDate.toLocaleDateString(currentLocale) }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-4 border-t border-gray-200 pt-4 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="text-gray-700 dark:text-gray-300">
+                    <div class="text-sm">{{ t("tickets.total") || "Tổng tiền" }}</div>
+                    <div v-if="discountedTotal < originalTotal" class="flex flex-col">
+                      <div class="text-2xl font-semibold text-primary-600 dark:text-primary-400">
+                        {{ formatPrice(discountedTotal) }}
                       </div>
-                      <div class="flex items-center">
-                        <button
-                          type="button"
-                          class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                          :disabled="getVariantCount(variant) <= 0"
-                          @click="decreaseVariantCount(variant)"
-                        >
-                          <Minus class="w-5 h-5" />
-                        </button>
-                        <span
-                          class="w-12 text-center text-lg font-medium text-gray-900 dark:text-gray-100"
-                        >
-                          {{ getVariantCount(variant) }}
-                        </span>
-                        <button
-                          type="button"
-                          class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                          :disabled="getVariantCount(variant) >= 10"
-                          @click="increaseVariantCount(variant)"
-                        >
-                          <Plus class="w-5 h-5" />
-                        </button>
+                      <div class="text-sm text-gray-500 line-through">
+                        {{ formatPrice(originalTotal) }}
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Date Selection -->
-              <div class="mb-6">
-                <div class="text-base font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-                  <Calendar class="w-5 h-5" />
-                  {{ t("tickets.departureDate") || "Ngày sử dụng" }}
-                  <span class="text-red-500">*</span>
-                </div>
-                <div class="space-y-4">
-                  <DatePicker
-                    v-model="selectedDate"
-                    :min-date="new Date()"
-                    :masks="masks"
-                    :disabled-dates="disabledDates"
-                    class="w-full [&_.vc-highlight-base-start]:!bg-primary-500 [&_.vc-highlight-base-start]:!text-white [&_.vc-disabled]:!opacity-25 [&_.vc-disabled]:!cursor-not-allowed"
-                  >
-                    <template #default="{ inputValue, inputEvents }">
-                      <input
-                        :value="inputValue"
-                        v-on="inputEvents"
-                        :placeholder="t('tickets.selectDepartureDate') || 'Chọn ngày sử dụng'"
-                        class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none dark:bg-gray-800"
-                        readonly
-                      />
-                    </template>
-                  </DatePicker>
-                  <div v-if="selectedDate" class="text-sm text-gray-600 dark:text-gray-400">
-                    {{ t("tickets.selectedDate") || "Ngày đã chọn" }}: {{ selectedDate.toLocaleDateString(currentLocale) }}
-                  </div>
-                </div>
-              </div>
-
-              <!-- Total and Add to Cart -->
-              <div class="flex items-center justify-between pt-4 border-t dark:border-gray-700">
-                <div class="text-gray-700 dark:text-gray-300">
-                  <div class="text-sm">{{ t("tickets.total") || "Tổng tiền" }}</div>
-                  <div v-if="discountedTotal < originalTotal" class="flex flex-col">
-                    <div class="text-2xl font-semibold text-primary-600 dark:text-primary-400">
-                      {{ formatPrice(discountedTotal) }}
+                    <div v-else class="text-2xl font-semibold text-primary-600 dark:text-primary-400">
+                      {{ calculateTotal }}
                     </div>
-                    <div class="text-sm text-gray-500 line-through">
-                      {{ formatPrice(originalTotal) }}
+                    <div class="text-xs mt-1 text-gray-600 dark:text-gray-400">
+                      {{ totalTickets }} {{ t("tickets.ticketCount") || "vé" }}
                     </div>
                   </div>
-                  <div v-else class="text-2xl font-semibold text-primary-600 dark:text-primary-400">
-                    {{ calculateTotal }}
-                  </div>
-                  <div class="text-xs mt-1 text-gray-600 dark:text-gray-400">
-                    {{ totalTickets }} {{ t("tickets.ticketCount") || "vé" }}
+
+                  <div class="space-y-3 sm:min-w-[240px]">
+                    <AddToCartButton
+                      v-if="canAddToCart && getProductForCart"
+                      :product="getProductForCart"
+                      :buttonText="t('tickets.addToCart') || 'Thêm vào giỏ hàng'"
+                      :showQuantity="false"
+                      buttonClass="flex w-full items-center justify-center rounded-xl bg-primary-600 px-4 py-3 text-base font-semibold text-white transition-colors duration-200 hover:bg-primary-700"
+                    />
+
+                    <UButton
+                      v-else-if="!shouldShowPriceRequest"
+                      color="primary"
+                      size="lg"
+                      block
+                      icon="i-heroicons-arrow-down"
+                      class="bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white font-medium py-3 text-base"
+                      @click="scrollToBuyBox"
+                    >
+                      {{ t("tickets.completeSelection") || "Chọn vé để tiếp tục" }}
+                    </UButton>
+
+                    <UButton
+                      v-if="shouldShowPriceRequest"
+                      color="primary"
+                      size="lg"
+                      block
+                      icon="i-heroicons-currency-dollar"
+                      class="bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white font-medium py-3 text-base"
+                      @click="openPriceRequestModal"
+                    >
+                      {{ t("tickets.requestPrice") || "Yêu cầu báo giá" }}
+                    </UButton>
                   </div>
                 </div>
-
-                <!-- Buttons -->
-                <div class="space-y-4">
-                  <AddToCartButton
-                    v-if="canAddToCart && getProductForCart"
-                    :product="getProductForCart"
-                    :buttonText="t('tickets.addToCart') || 'Thêm vào giỏ hàng'"
-                    :showQuantity="false"
-                    :quantity="totalTickets"
-                    buttonClass="flex-1"
-                  />
-
-                  <UButton
-                    v-if="shouldShowPriceRequest"
-                    color="primary"
-                    size="lg"
-                    block
-                    icon="i-heroicons-currency-dollar"
-                    class="mb-4 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white font-medium py-3 text-base"
-                    @click="openPriceRequestModal"
-                  >
-                    {{ t("tickets.requestPrice") || "Yêu cầu báo giá" }}
-                  </UButton>
-                </div>
-              </div>
-              
+              </section>
             </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
+          <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <h3 class="mb-2 flex items-center text-base font-medium text-gray-900 dark:text-white">
+              <AlertCircle class="mr-2 h-5 w-5 text-amber-500" />
+              {{ t("tickets.ticketNotes") || "Lưu ý quan trọng" }}
+            </h3>
+            <ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+              <li class="flex items-start">
+                <Check class="mr-2 mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                {{ t("tickets.ticketNote1") || "Vé có giá trị trong ngày tham quan" }}
+              </li>
+              <li class="flex items-start">
+                <Check class="mr-2 mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                {{ t("tickets.ticketNote2") || "Vui lòng mang theo CMND/CCCD khi sử dụng vé" }}
+              </li>
+              <li class="flex items-start">
+                <Check class="mr-2 mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                {{ t("tickets.ticketNote3") || "Trẻ em dưới 3 tuổi được miễn phí vé vào cổng" }}
+              </li>
+            </ul>
+          </div>
+
+          <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <h3 class="mb-3 flex items-center text-base font-medium text-gray-900 dark:text-white">
+              <ListOrdered class="mr-2 h-5 w-5 text-primary-500" />
+              {{ t("tickets.ticketProcess") || "Quy trình sử dụng vé" }}
+            </h3>
+            <div class="relative">
+              <div class="absolute left-2.5 top-0 h-full w-[2px] bg-gray-200 dark:bg-gray-700"></div>
+              <ul class="relative space-y-5">
+                <li class="flex items-start">
+                  <div class="relative shrink-0">
+                    <div class="flex h-6 w-6 items-center justify-center rounded-full border-2 border-primary-500 bg-white text-sm font-medium text-primary-600 dark:bg-gray-800">1</div>
+                  </div>
+                  <div class="ml-4 grow">
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">
+                      {{ t("tickets.ticketStep1") || "Đặt vé trực tuyến" }}
+                    </h4>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      {{ t("tickets.ticketStep1Desc") || "Chọn loại vé và thanh toán" }}
+                    </p>
+                  </div>
+                </li>
+                <li class="flex items-start">
+                  <div class="relative shrink-0">
+                    <div class="flex h-6 w-6 items-center justify-center rounded-full border-2 border-primary-500 bg-white text-sm font-medium text-primary-600 dark:bg-gray-800">2</div>
+                  </div>
+                  <div class="ml-4 grow">
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">
+                      {{ t("tickets.ticketStep2") || "Nhận mã vé" }}
+                    </h4>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      {{ t("tickets.ticketStep2Desc") || "Qua email hoặc tin nhắn SMS" }}
+                    </p>
+                  </div>
+                </li>
+                <li class="flex items-start">
+                  <div class="relative shrink-0">
+                    <div class="flex h-6 w-6 items-center justify-center rounded-full border-2 border-primary-500 bg-white text-sm font-medium text-primary-600 dark:bg-gray-800">3</div>
+                  </div>
+                  <div class="ml-4 grow">
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">
+                      {{ t("tickets.ticketStep3") || "Sử dụng vé" }}
+                    </h4>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      {{ t("tickets.ticketStep3Desc") || "Xuất trình mã vé tại cổng" }}
+                    </p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <h3 class="mb-3 flex items-center text-base font-medium text-gray-900 dark:text-white">
+              <Shield class="mr-2 h-5 w-5 text-green-500" />
+              {{ t("tickets.securityGuarantee") || "Cam kết bảo mật" }}
+            </h3>
+            <ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+              <li class="flex items-start">
+                <Check class="mr-2 mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                {{ t("tickets.securityNote1") || "Thanh toán an toàn qua cổng thanh toán bảo mật" }}
+              </li>
+              <li class="flex items-start">
+                <Check class="mr-2 mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                {{ t("tickets.securityNote2") || "Thông tin cá nhân được bảo vệ theo tiêu chuẩn quốc tế" }}
+              </li>
+              <li class="flex items-start">
+                <Check class="mr-2 mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                {{ t("tickets.securityNote3") || "Hoàn tiền 100% nếu không nhận được vé" }}
+              </li>
+            </ul>
           </div>
         </div>
 
@@ -987,6 +1052,55 @@ const handleSubmit = async () => {
             />
           </div>
         </GlobalModal>
+
+        <Transition name="mobile-bar">
+          <div
+            v-if="mobileActionMode !== 'hidden'"
+            class="mobile-ticket-action-bar fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden dark:border-gray-700 dark:bg-gray-900/95"
+          >
+            <div class="mx-auto flex max-w-5xl items-center gap-3">
+              <div class="min-w-0 flex-1">
+                <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  {{ t("tickets.total") || "Tổng tiền" }}
+                </div>
+                <div class="truncate text-lg font-semibold text-gray-900 dark:text-white">
+                  {{ calculateTotal }}
+                </div>
+                <div class="text-xs text-gray-600 dark:text-gray-400">
+                  {{ totalTickets }} {{ t("tickets.ticketCount") || "vé" }}
+                </div>
+              </div>
+
+              <AddToCartButton
+                v-if="mobileActionMode === 'add-to-cart' && getProductForCart"
+                :product="getProductForCart"
+                :buttonText="t('tickets.addToCart') || 'Thêm vào giỏ hàng'"
+                :showQuantity="false"
+                buttonClass="flex min-w-[180px] items-center justify-center rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-primary-700"
+              />
+
+              <UButton
+                v-else-if="mobileActionMode === 'request-price'"
+                color="primary"
+                size="lg"
+                class="min-w-[180px] justify-center rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600"
+                @click="openPriceRequestModal"
+              >
+                {{ t("tickets.requestPrice") || "Yêu cầu báo giá" }}
+              </UButton>
+
+              <UButton
+                v-else
+                color="primary"
+                size="lg"
+                class="min-w-[180px] justify-center rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600"
+                @click="scrollToBuyBox"
+              >
+                {{ t("tickets.completeSelection") || "Chọn vé để tiếp tục" }}
+              </UButton>
+            </div>
+          </div>
+        </Transition>
       </div>
 
       <div v-else class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center">
