@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveProductBreadcrumbCategory } from './productBreadcrumb';
+import {
+  resolveCategoryTranslation,
+  resolveProductBreadcrumbCategory,
+  resolveProductCategoryLink,
+} from './productBreadcrumb';
 
 describe('resolveProductBreadcrumbCategory', () => {
   it('prefers the first category parent when the parent has a slug', () => {
@@ -24,7 +28,7 @@ describe('resolveProductBreadcrumbCategory', () => {
 
     expect(result).toEqual({
       label: 'Xe nang',
-      to: '/categories/xe-nang',
+      to: '/danh-muc-san-pham/xe-nang',
     });
   });
 
@@ -71,7 +75,68 @@ describe('resolveProductBreadcrumbCategory', () => {
 
     expect(result).toEqual({
       label: 'Xe dien',
-      to: '/categories/xe-dien',
+      to: '/danh-muc-san-pham/xe-dien',
+    });
+  });
+
+  it('maps unsupported content locales to the default vi route set', () => {
+    const result = resolveProductBreadcrumbCategory(
+      [
+        {
+          id: 12,
+          translations: [
+            { locale: 'ko', name: '디젤 지게차', slug: 'dizel-jigecha' },
+          ],
+          parent: null,
+        },
+      ],
+      'ko',
+    );
+
+    expect(result).toEqual({
+      label: '디젤 지게차',
+      to: '/danh-muc-san-pham/dizel-jigecha',
+    });
+  });
+});
+
+describe('resolveCategoryTranslation', () => {
+  it('prefers the exact locale translation before falling back to the first item', () => {
+    const result = resolveCategoryTranslation(
+      {
+        id: 15,
+        translations: [
+          { locale: 'en', name: 'Diesel Forklift', slug: 'diesel-forklift' },
+          { locale: 'ko', name: '디젤 지게차', slug: 'dizel-jigecha' },
+        ],
+      },
+      'ko',
+    );
+
+    expect(result).toEqual({
+      locale: 'ko',
+      name: '디젤 지게차',
+      slug: 'dizel-jigecha',
+    });
+  });
+});
+
+describe('resolveProductCategoryLink', () => {
+  it('returns a locale-aware category badge link', () => {
+    const result = resolveProductCategoryLink(
+      {
+        id: 21,
+        translations: [
+          { locale: 'en', name: 'Diesel Forklift', slug: 'diesel-forklift' },
+          { locale: 'ko', name: '디젤 지게차', slug: 'dizel-jigecha' },
+        ],
+      },
+      'ko',
+    );
+
+    expect(result).toEqual({
+      label: '디젤 지게차',
+      to: '/danh-muc-san-pham/dizel-jigecha',
     });
   });
 });

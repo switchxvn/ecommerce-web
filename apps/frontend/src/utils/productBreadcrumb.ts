@@ -1,3 +1,6 @@
+import { normalizeLocaleCode } from './locale';
+import { getLocalizedRoute } from './routes';
+
 interface CategoryTranslationLike {
   locale?: string | null;
   name?: string | null;
@@ -15,7 +18,7 @@ interface BreadcrumbCategoryLink {
   to: string;
 }
 
-const getCategoryTranslation = (
+export const resolveCategoryTranslation = (
   category: CategoryLike | null | undefined,
   locale: string,
 ): CategoryTranslationLike | null => {
@@ -23,11 +26,32 @@ const getCategoryTranslation = (
     return null;
   }
 
+  const normalizedLocale = normalizeLocaleCode(locale);
+
   return (
-    category.translations.find((translation) => translation.locale === locale) ||
+    category.translations.find(
+      (translation) => normalizeLocaleCode(translation.locale, 'vi') === normalizedLocale,
+    ) ||
     category.translations[0] ||
     null
   );
+};
+
+export const resolveProductCategoryLink = (
+  category: CategoryLike | null | undefined,
+  locale: string,
+): BreadcrumbCategoryLink | null => {
+  const routeLocale = normalizeLocaleCode(locale) === 'en' ? 'en' : 'vi';
+  const translation = resolveCategoryTranslation(category, locale);
+
+  if (!translation?.slug || !translation.name) {
+    return null;
+  }
+
+  return {
+    label: translation.name,
+    to: getLocalizedRoute('CATEGORY_DETAIL', routeLocale, { slug: translation.slug }),
+  };
 };
 
 export const resolveProductBreadcrumbCategory = (
@@ -38,21 +62,20 @@ export const resolveProductBreadcrumbCategory = (
     return null;
   }
 
+  const routeLocale = normalizeLocaleCode(locale) === 'en' ? 'en' : 'vi';
+
   for (const category of categories) {
-    const parentTranslation = getCategoryTranslation(category.parent, locale);
+    const parentTranslation = resolveCategoryTranslation(category.parent, locale);
     if (parentTranslation?.slug && parentTranslation.name) {
       return {
         label: parentTranslation.name,
-        to: `/categories/${parentTranslation.slug}`,
+        to: getLocalizedRoute('CATEGORY_DETAIL', routeLocale, { slug: parentTranslation.slug }),
       };
     }
 
-    const categoryTranslation = getCategoryTranslation(category, locale);
-    if (categoryTranslation?.slug && categoryTranslation.name) {
-      return {
-        label: categoryTranslation.name,
-        to: `/categories/${categoryTranslation.slug}`,
-      };
+    const categoryLink = resolveProductCategoryLink(category, locale);
+    if (categoryLink) {
+      return categoryLink;
     }
   }
 

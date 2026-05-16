@@ -84,13 +84,14 @@ const { data: category, error: categoryError, refresh: refreshCategory } = await
 
 // Computed properties để truy cập dữ liệu category an toàn
 const categoryData = computed<Category>(() => category.value || {} as Category);
+const categoryTranslation = computed(() =>
+  categoryData.value.translations?.find(t => t.locale === locale.value),
+);
 const categoryName = computed(() => {
-  const translation = categoryData.value.translations?.find(t => t.locale === locale.value);
-  return translation?.name || categoryData.value.name || '';
+  return categoryTranslation.value?.name || categoryData.value.name || '';
 });
 const categoryDescription = computed(() => {
-  const translation = categoryData.value.translations?.find(t => t.locale === locale.value);
-  return translation?.description || categoryData.value.description || '';
+  return categoryTranslation.value?.description || categoryData.value.description || '';
 });
 const error = computed(() => categoryError.value ? (categoryError.value as Error).message : null)
 
@@ -110,12 +111,12 @@ const resolvedCanonicalUrl = computed(() =>
 );
 
 usePageSeo({
-  title: computed(() => categoryData.value.metaTitle || categoryName.value || t('categories.defaultTitle')),
-  description: computed(() => categoryData.value.metaDescription || `${t('categories.productsIn')} ${categoryName.value}`),
-  keywords: computed(() => categoryData.value.metaKeywords || `${categoryName.value}, ${t('categories.defaultKeywords')}`),
-  ogTitle: computed(() => categoryData.value.ogTitle || categoryData.value.metaTitle || categoryName.value),
-  ogDescription: computed(() => categoryData.value.ogDescription || categoryData.value.metaDescription || `${t('categories.productsIn')} ${categoryName.value}`),
-  image: computed(() => categoryData.value.ogImage || ''),
+  title: computed(() => categoryTranslation.value?.metaTitle || categoryName.value || t('categories.defaultTitle')),
+  description: computed(() => categoryTranslation.value?.metaDescription || `${t('categories.productsIn')} ${categoryName.value}`),
+  keywords: computed(() => categoryTranslation.value?.metaKeywords || `${categoryName.value}, ${t('categories.defaultKeywords')}`),
+  ogTitle: computed(() => categoryTranslation.value?.ogTitle || categoryTranslation.value?.metaTitle || categoryName.value),
+  ogDescription: computed(() => categoryTranslation.value?.ogDescription || categoryTranslation.value?.metaDescription || `${t('categories.productsIn')} ${categoryName.value}`),
+  image: computed(() => categoryTranslation.value?.ogImage || ''),
   canonicalUrl: computed(() => resolvedCanonicalUrl.value),
   currentPath: computed(() => route.path),
   locale: computed(() => (locale.value === 'en' ? 'en' : 'vi')),

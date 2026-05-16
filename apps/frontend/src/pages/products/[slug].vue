@@ -39,7 +39,8 @@ const ProductSpecifications = defineAsyncComponent(() => import('~/components/pr
 const GlobalModal = defineAsyncComponent(() => import('~/components/ui/GlobalModal.vue'));
 const TierPricingTable = defineAsyncComponent(() => import('~/components/product/TierPricingTable.vue'));
 import { buildProductSchema, resolveSeoCanonicalUrl } from '~/utils/seo';
-import { resolveProductBreadcrumbCategory } from '~/utils/productBreadcrumb';
+import { getLocalizedRoute } from '~/utils/routes';
+import { resolveProductBreadcrumbCategory, resolveProductCategoryLink } from '~/utils/productBreadcrumb';
 
 // Định nghĩa interface cho PriceRequest
 interface PriceRequest {
@@ -242,9 +243,32 @@ const seoImage = computed(
     ""
 );
 
-const productListPath = computed(() => (currentLocale.value === 'vi' ? '/san-pham' : '/en/products'));
+const productListPath = computed(() =>
+  getLocalizedRoute('PRODUCTS_LIST', currentLocale.value === 'en' ? 'en' : 'vi'),
+);
 const breadcrumbCategory = computed(() =>
   resolveProductBreadcrumbCategory(productData.value?.categories, currentLocale.value),
+);
+const breadcrumbItems = computed(() => [
+  breadcrumbCategory.value
+    ? { label: breadcrumbCategory.value.label, to: breadcrumbCategory.value.to }
+    : { label: t('products.title'), to: productListPath.value },
+  { label: productTitle.value || seoTitle.value },
+]);
+const categoryBadges = computed(() =>
+  (productData.value?.categories || [])
+    .map((category) => {
+      const link = resolveProductCategoryLink(category, currentLocale.value);
+      if (!link) {
+        return null;
+      }
+
+      return {
+        id: category.id,
+        ...link,
+      };
+    })
+    .filter((category): category is { id: number; label: string; to: string } => Boolean(category)),
 );
 const productSlugByLocale = computed(() => ({
   vi: productData.value?.translations?.find((translation: any) => translation.locale === 'vi')?.slug,
@@ -277,10 +301,10 @@ usePageSeo({
   slugByLocale: productSlugByLocale,
   breadcrumbs: computed(() => [
     { name: t('common.home') || 'Home', item: currentLocale.value === 'en' ? '/en' : '/' },
-    breadcrumbCategory.value
-      ? { name: breadcrumbCategory.value.label, item: breadcrumbCategory.value.to }
-      : { name: t('products.title'), item: productListPath.value },
-    { name: productTitle.value || seoTitle.value },
+    ...breadcrumbItems.value.map((item) => ({
+      name: item.label,
+      item: item.to,
+    })),
   ]),
   schemas: computed(() => [
     buildProductSchema({
@@ -334,12 +358,7 @@ watch(activeTab, (newTab, oldTab) => {
     <div class="container mx-auto px-4 py-8">
       <!-- Breadcrumb -->
       <div class="mb-6">
-        <Breadcrumb
-          :items="[
-            { label: t('products.title'), to: '/products' },
-            { label: productTitle },
-          ]"
-        />
+        <Breadcrumb :items="breadcrumbItems" />
       </div>
 
       <div v-if="isLoading" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
@@ -532,26 +551,23 @@ watch(activeTab, (newTab, oldTab) => {
               </div>
 
               <!-- Hiển thị danh mục sản phẩm -->
-              <div
-                v-if="productData.categories && productData.categories.length > 0"
-                class="mb-5"
-              >
+              <div v-if="categoryBadges.length > 0" class="mb-5">
                 <div class="category-title text-base font-medium text-gray-700 dark:text-gray-300 mb-2">
                   <LayoutGrid class="inline-block mr-1 h-5 w-5 text-primary-500" />
                   {{ t("products.categories") || "Danh mục:" }}
                 </div>
                 <div class="flex flex-wrap gap-2">
                   <UBadge
-                    v-for="category in productData.categories"
+                    v-for="category in categoryBadges"
                     :key="category.id"
                     size="lg"
                     class="category-badge cursor-pointer hover:bg-primary-100 dark:hover:bg-primary-800 transition-colors"
-                    @click="router.push(`/categories/${category.translations?.[0]?.slug || ''}`)"
+                    @click="router.push(category.to)"
                   >
                     <template #default>
                       <div class="flex items-center gap-1">
                         <Tag class="h-4 w-4" />
-                        <span class="text-sm font-medium">{{ category.translations?.[0]?.name || '' }}</span>
+                        <span class="text-sm font-medium">{{ category.label }}</span>
                       </div>
                     </template>
                   </UBadge>
