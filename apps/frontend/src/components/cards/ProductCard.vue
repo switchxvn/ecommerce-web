@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { ShoppingCart, Ticket, Calendar, MapPin } from 'lucide-vue-next';
-import LazyImage from '~/components/ui/LazyImage.vue';
+import AppImage from '~/components/ui/AppImage.vue';
 import AddToCartButton from '~/components/cart/AddToCartButton.vue';
 import { getLocalizedRoute } from '~/utils/routes';
 import { useLocalization } from '~/composables/useLocalization';

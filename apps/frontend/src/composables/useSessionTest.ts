@@ -19,12 +19,7 @@ export const useSessionTest = () => {
     result.value = null;
     
     try {
-      console.log('Testing direct tRPC call to create session');
-      
       const sessionId = `test-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-      
-      console.log(`Using test session ID: ${sessionId}`);
-      
       const response = await trpc.userSession.startSession.mutate({
         sessionId: sessionId,
         userAgent: navigator.userAgent,
@@ -36,9 +31,7 @@ export const useSessionTest = () => {
         referrer: document.referrer,
         landingPage: window.location.pathname
       });
-      
-      console.log('tRPC test response:', response);
-      
+
       result.value = {
         success: true,
         sessionId: sessionId,
@@ -69,12 +62,8 @@ export const useSessionTest = () => {
     result.value = null;
     
     try {
-      console.log('Testing direct tRPC call to get active user count');
-      
       const count = await trpc.userSession.getActiveUserCount.query();
-      
-      console.log('Active users count:', count);
-      
+
       result.value = {
         success: true,
         activeUsers: count
@@ -104,8 +93,6 @@ export const useSessionTest = () => {
     result.value = null;
     
     try {
-      console.log('Testing raw fetch to tRPC API');
-      
       const sessionId = `raw-test-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
       
       const payload = {
@@ -127,9 +114,7 @@ export const useSessionTest = () => {
       });
       
       const data = await response.json();
-      
-      console.log('Raw fetch response:', data);
-      
+
       result.value = {
         success: response.ok,
         status: response.status,
@@ -159,4 +144,4 @@ export const useSessionTest = () => {
     testGetActiveUsers,
     testRawFetch
   };
-}; 
+};

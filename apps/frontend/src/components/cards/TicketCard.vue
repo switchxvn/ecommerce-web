@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { ShoppingCart, Ticket, Calendar, MapPin, Clock, Users, Info } from 'lucide-vue-next';
-import LazyImage from '~/components/ui/LazyImage.vue';
+import AppImage from '~/components/ui/AppImage.vue';
 import AddToCartButton from '~/components/cart/AddToCartButton.vue';
 import VariantSelectionModal from '~/components/modals/VariantSelectionModal.vue';
 import { getLocalizedRoute } from '~/utils/routes';

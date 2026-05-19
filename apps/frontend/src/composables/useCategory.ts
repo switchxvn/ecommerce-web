@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useLocalization } from './useLocalization';
 import type { Category as BackendCategory, CategoryTranslation } from '@ew/shared';
 import { CategoryType } from '@ew/shared';
+import { normalizeLocaleCode } from '../utils/locale';
 
 
 // Định nghĩa kiểu dữ liệu Category
@@ -15,6 +16,7 @@ export type Category = BackendCategory;
 export function useCategory() {
   const trpc = useTrpc();
   const { locale } = useLocalization();
+  const getSafeLocale = () => normalizeLocaleCode(locale.value, 'vi');
   
   // State
   const categories = ref<Category[]>([]);
@@ -34,7 +36,7 @@ export function useCategory() {
     error.value = null;
     
     try {
-      const result = await trpc.category.all.query({ locale: locale.value });
+      const result = await trpc.category.all.query({ locale: getSafeLocale() });
       categories.value = result as Category[];
     } catch (err: any) {
       console.error('Error fetching categories:', err);
@@ -53,7 +55,7 @@ export function useCategory() {
     error.value = null;
     
     try {
-      const result = await trpc.category.byId.query({ id, locale: locale.value });
+      const result = await trpc.category.byId.query({ id, locale: getSafeLocale() });
       return result as Category;
     } catch (err: any) {
       console.error(`Error fetching category by ID ${id}:`, err);
@@ -73,12 +75,12 @@ export function useCategory() {
     error.value = null;
     
     try {
-      const result = await trpc.category.bySlug.query({ slug, locale: locale.value });
+      const result = await trpc.category.bySlug.query({ slug, locale: getSafeLocale() });
       return result as Category;
     } catch (err: any) {
       console.error(`Error fetching category by slug ${slug}:`, err);
       error.value = err.message || 'Có lỗi xảy ra khi tải chi tiết danh mục';
-      return null;
+      throw err;
     } finally {
       loading.value = false;
     }
@@ -92,7 +94,7 @@ export function useCategory() {
     error.value = null;
     
     try {
-      const result = await trpc.category.featured.query({ locale: locale.value });
+      const result = await trpc.category.featured.query({ locale: getSafeLocale() });
       featuredCategories.value = result as Category[];
     } catch (err: any) {
       console.error('Error fetching featured categories:', err);
@@ -110,7 +112,7 @@ export function useCategory() {
     error.value = null;
     
     try {
-      const result = await trpc.category.popular.query({ locale: locale.value });
+      const result = await trpc.category.popular.query({ locale: getSafeLocale() });
       popularCategories.value = result as Category[];
     } catch (err: any) {
       console.error('Error fetching popular categories:', err);
@@ -128,7 +130,7 @@ export function useCategory() {
     error.value = null;
     
     try {
-      const result = await trpc.category.hot.query({ locale: locale.value });
+      const result = await trpc.category.hot.query({ locale: getSafeLocale() });
       hotCategories.value = result as Category[];
     } catch (err: any) {
       console.error('Error fetching hot categories:', err);
@@ -146,7 +148,7 @@ export function useCategory() {
     error.value = null;
     
     try {
-      const result = await trpc.category.tree.query({ locale: locale.value });
+      const result = await trpc.category.tree.query({ locale: getSafeLocale() });
       categoryTree.value = result as Category[];
     } catch (err: any) {
       console.error('Error fetching category tree:', err);
@@ -180,7 +182,7 @@ export function useCategory() {
     error.value = null;
     
     try {
-      const result = await trpc.category.byType.query({ type, locale: locale.value });
+      const result = await trpc.category.byType.query({ type, locale: getSafeLocale() });
       
       if (type === CategoryType.PRODUCT) {
         productCategories.value = result as Category[];

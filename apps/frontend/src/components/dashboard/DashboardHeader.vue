@@ -28,7 +28,7 @@
 
         <!-- Right side - User Menu -->
         <div class="flex items-center">
-          <UserMenu />
+          <DashboardUserMenu />
         </div>
       </div>
     </div>
@@ -36,6 +36,7 @@
 </template>
 
 <script setup lang="ts">
+import DashboardUserMenu from '~/components/auth/DashboardUserMenu.vue';
 import { useLogo } from '~/composables/useLogo';
 
 // Logo handling

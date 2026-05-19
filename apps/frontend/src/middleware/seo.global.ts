@@ -30,7 +30,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const normalizedPath = normalizePath(to.path);
   const routeMatch = inferSeoRoute(normalizedPath);
   const routePolicy = getRouteIndexPolicy(normalizedPath);
-  const routeLocale: SeoLocale = routeMatch?.locale || (normalizedPath.startsWith('/en') ? 'en' : 'vi');
+  const routeLocale: SeoLocale = routeMatch?.locale || 'vi';
   const seoState = useState<SeoOutput | null>(`seo-${normalizedPath}`, () => null);
   const shouldLoadCmsSeo = shouldUseCmsSeoForRoute(routeMatch?.key);
 

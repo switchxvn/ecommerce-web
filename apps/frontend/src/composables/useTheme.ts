@@ -1,6 +1,6 @@
 import { ref, watch, computed } from 'vue';
 import { useTrpc } from './useTrpc';
-import { useDark } from '@vueuse/core';
+import { useDarkMode } from './useDarkMode';
 import { PageType, ThemeSectionTranslation } from '@ew/shared';
 import type { inferRouterOutputs } from '@trpc/server';
 import type { AppRouter } from '../types/trpc';
@@ -164,9 +164,7 @@ let initialized = false;
 
 export function useTheme() {
   const trpc = useTrpc();
-  const isDark = useDark({
-    initialValue: 'light' // Set default to light mode
-  });
+  const { isDark, setMode, initializeDarkMode } = useDarkMode();
   
   const getActiveTheme = async (options?: { pageType?: PageType }): Promise<Theme | null> => {
     try {
@@ -323,54 +321,12 @@ export function useTheme() {
     }
   };
 
-  const setMode = (mode: 'light' | 'dark' | 'auto') => {
-    // TODO: Add some persistence mechanism (cookie or localStorage)
-    if (mode === 'auto') {
-      // Let system preference decide
-      isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      // Add listener for changes
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = (e: MediaQueryListEvent) => {
-        isDark.value = e.matches;
-      };
-      mediaQuery.addEventListener('change', handleChange);
-      // Store the mode
-      localStorage.setItem('color-theme', 'auto');
-    } else {
-      // Explicitly set light or dark
-      isDark.value = mode === 'dark';
-      localStorage.setItem('color-theme', mode);
-    }
-
-    // If we have an active theme, update CSS
-    if (activeTheme.value && activeTheme.value.colors) {
-      updateCssVariables(activeTheme.value.colors);
-    }
-  };
-
-  // Initialize theme based on stored preference or system default
-  const initializeColorMode = () => {
-    if (process.server) return;
-
-    const storedMode = localStorage.getItem('color-theme');
-    
-    if (storedMode) {
-      if (storedMode === 'dark') {
-        isDark.value = true;
-      } else if (storedMode === 'light') {
-        isDark.value = false;
-      } else if (storedMode === 'auto') {
-        isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      }
-    }
-  };
-
   const initializeTheme = async () => {
     if (initialized || process.server) return;
 
     try {
-      // Load stored color mode first
-      initializeColorMode();
+      // Resolve dark mode from the shared source of truth before applying theme colors.
+      initializeDarkMode();
       
       // Then load the theme
       const theme = await getActiveTheme();

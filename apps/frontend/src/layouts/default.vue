@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { useTrpc } from '../composables/useTrpc';
 import { useTheme } from '../composables/useTheme';
 import { PageType } from '@ew/shared';
+import { AUTH_ROUTE_PATHS } from '../utils/routes';
 // Import components
 import CombinedNavbar from '../components/ui/CombinedNavbar.vue';
 import Footer from '../components/ui/Footer.vue';
@@ -20,13 +21,119 @@ const trpc = useTrpc();
 const { getActiveTheme } = useTheme();
 
 const user = ref<any>(null);
-const isDarkMode = ref(false);
 const theme = ref<any>({ sections: [] }); // Initialize with empty sections
 const footer = ref<any>(null);
 const activeSections = computed(() => {
   const sections = Array.isArray(theme.value?.sections) ? theme.value.sections : [];
   return sections.filter((section: any) => section && section.isActive);
 });
+
+const toRgb = (hex?: string) => {
+  if (!hex) return null;
+  const normalizedHex = hex.trim();
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(normalizedHex);
+  if (!result) return null;
+
+  return `${parseInt(result[1], 16)} ${parseInt(result[2], 16)} ${parseInt(result[3], 16)}`;
+};
+
+const buildThemeCssText = (themeColors?: any) => {
+  const lightColors = themeColors?.light;
+  const darkColors = themeColors?.dark;
+
+  if (!lightColors || !darkColors) {
+    return '';
+  }
+
+  const buildModeVariables = (colors: any) => {
+    const declarations: string[] = [];
+
+    const assignGroup = (prefix: string, group?: Record<string, string>, includeDirectAlias = false) => {
+      if (!group) return;
+
+      Object.entries(group).forEach(([shade, color]) => {
+        const rgb = toRgb(color);
+        if (!rgb) return;
+        declarations.push(`--color-${prefix}-${shade}:${rgb};`);
+        declarations.push(`--${prefix}-${shade}:${rgb};`);
+      });
+
+      if (includeDirectAlias && group['500']) {
+        const baseRgb = toRgb(group['500']);
+        if (baseRgb) {
+          declarations.push(`--${prefix}:${baseRgb};`);
+        }
+      }
+    };
+
+    assignGroup('primary', colors.primary, true);
+    assignGroup('secondary', colors.secondary);
+    assignGroup('tertiary', colors.tertiary);
+    assignGroup('yellow', colors.yellow, true);
+
+    const primary500 = toRgb(colors.primary?.['500']);
+    const secondary50 = toRgb(colors.secondary?.['50']);
+    const secondary100 = toRgb(colors.secondary?.['100']);
+    const secondary200 = toRgb(colors.secondary?.['200']);
+    const secondary400 = toRgb(colors.secondary?.['400']);
+    const secondary500 = toRgb(colors.secondary?.['500']);
+    const secondary800 = toRgb(colors.secondary?.['800']);
+    const secondary900 = toRgb(colors.secondary?.['900']);
+
+    if (primary500) declarations.push(`--primary:${primary500};`);
+    if (primary500) declarations.push(`--ring:${primary500};`);
+
+    if (colors === lightColors) {
+      declarations.push('--background:255 255 255;');
+      declarations.push(`--foreground:${secondary900 || '17 24 39'};`);
+      declarations.push('--card:255 255 255;');
+      declarations.push(`--card-foreground:${secondary900 || '17 24 39'};`);
+      declarations.push('--popover:255 255 255;');
+      declarations.push(`--popover-foreground:${secondary900 || '17 24 39'};`);
+      declarations.push(`--primary-foreground:255 255 255;`);
+      declarations.push(`--secondary:${secondary100 || '243 244 246'};`);
+      declarations.push(`--secondary-foreground:${secondary900 || '17 24 39'};`);
+      declarations.push(`--muted:${secondary100 || '243 244 246'};`);
+      declarations.push(`--muted-foreground:${secondary500 || '107 114 128'};`);
+      declarations.push(`--accent:${secondary100 || '243 244 246'};`);
+      declarations.push(`--accent-foreground:${secondary900 || '17 24 39'};`);
+      declarations.push(`--border:${secondary200 || '229 231 235'};`);
+      declarations.push(`--input:${secondary200 || '229 231 235'};`);
+      declarations.push(`--footer-bg:${colors.secondary?.['50'] || '#f8fafc'};`);
+      declarations.push(`--footer-text:${colors.secondary?.['900'] || '#111827'};`);
+      declarations.push(`--footer-border:${colors.secondary?.['200'] || '#e5e7eb'};`);
+      declarations.push(`--footer-link:${colors.secondary?.['500'] || '#64748b'};`);
+      declarations.push(`--footer-link-hover:${colors.primary?.['500'] || '#1d4ed8'};`);
+    } else {
+      declarations.push(`--background:${secondary900 || '17 24 39'};`);
+      declarations.push(`--foreground:${secondary50 || '249 250 251'};`);
+      declarations.push(`--card:${secondary800 || '31 41 55'};`);
+      declarations.push(`--card-foreground:${secondary50 || '249 250 251'};`);
+      declarations.push(`--popover:${secondary800 || '31 41 55'};`);
+      declarations.push(`--popover-foreground:${secondary50 || '249 250 251'};`);
+      declarations.push(`--primary-foreground:${secondary900 || '17 24 39'};`);
+      declarations.push(`--secondary:${secondary800 || '31 41 55'};`);
+      declarations.push(`--secondary-foreground:${secondary50 || '249 250 251'};`);
+      declarations.push(`--muted:${secondary800 || '31 41 55'};`);
+      declarations.push(`--muted-foreground:${secondary400 || '156 163 175'};`);
+      declarations.push(`--accent:${secondary800 || '31 41 55'};`);
+      declarations.push(`--accent-foreground:${secondary50 || '249 250 251'};`);
+      declarations.push(`--border:${secondary800 || '55 65 81'};`);
+      declarations.push(`--input:${secondary800 || '55 65 81'};`);
+      declarations.push(`--footer-bg:${colors.secondary?.['900'] || '#111827'};`);
+      declarations.push(`--footer-text:${colors.secondary?.['50'] || '#f9fafb'};`);
+      declarations.push(`--footer-border:${colors.secondary?.['800'] || '#374151'};`);
+      declarations.push(`--footer-link:${colors.secondary?.['400'] || '#9ca3af'};`);
+      declarations.push(`--footer-link-hover:${colors.primary?.['500'] || '#60a5fa'};`);
+    }
+
+    return declarations.join('');
+  };
+
+  return `:root{${buildModeVariables(lightColors)}}html.dark{${buildModeVariables(darkColors)}}`;
+};
+
+const themeCssText = computed(() => buildThemeCssText(theme.value?.colors));
 
 // GTM Configuration
 const gtmConfig = useState('gtm-id', () => null);
@@ -36,6 +143,7 @@ const shouldLoadTracking = ref(false);
 useHead(() => {
   const scripts = [];
   const noscripts = [];
+  const styles = [];
   
   // Add GTM script if ID is available
   if (gtmConfig.value && shouldLoadTracking.value) {
@@ -51,10 +159,18 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       innerHTML: `<iframe src="https://www.googletagmanager.com/ns.html?id=${gtmConfig.value}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`
     });
   }
+
+  if (themeCssText.value) {
+    styles.push({
+      key: 'active-theme-vars',
+      innerHTML: themeCssText.value,
+    });
+  }
   
   return {
     script: scripts,
-    noscript: noscripts
+    noscript: noscripts,
+    style: styles,
   };
 });
 
@@ -92,20 +208,6 @@ const getDefaultComponent = (type: string) => {
   };
   
   return typeToComponent[type] || components.CombinedNavbar;
-};
-
-// Kiểm tra dark mode với defensive programming
-const checkDarkMode = () => {
-  if (process.client) {
-    isDarkMode.value = document?.documentElement?.classList?.contains('dark') ?? false;
-    
-    // Thêm class vào body để đảm bảo dark mode được áp dụng đúng cách
-    if (isDarkMode.value) {
-      document?.body?.classList?.add('dark-mode');
-    } else {
-      document?.body?.classList?.remove('dark-mode');
-    }
-  }
 };
 
 try {
@@ -166,22 +268,7 @@ onMounted(async () => {
       }
     }
     
-    // Kiểm tra dark mode
-    checkDarkMode();
-    
   } catch {}
-});
-
-// Theo dõi thay đổi của isDarkMode
-watch(isDarkMode, () => {
-  // Cập nhật style khi dark mode thay đổi
-  if (typeof document !== 'undefined') {
-    if (isDarkMode.value) {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
-    }
-  }
 });
 
 async function handleLogout() {
@@ -197,7 +284,7 @@ async function handleLogout() {
     user.value = null;
     
     // Chuyển hướng đến trang đăng nhập
-    router.push('/login');
+    router.push(AUTH_ROUTE_PATHS.login);
   } catch (error) {
     // No-op on logout error
   }
@@ -237,41 +324,6 @@ async function handleLogout() {
     </ClientOnly>
   </div>
 </template>
-
-<style>
-/* Đảm bảo dark mode được áp dụng đúng cách */
-body.dark-mode {
-  background-color: #111827 !important;
-  color: #f9fafb !important;
-}
-
-body.dark-mode .footer {
-  background-color: #111827 !important;
-  color: #f9fafb !important;
-  border-color: #374151 !important;
-}
-
-body.dark-mode .footer__title {
-  color: #f9fafb !important;
-}
-
-body.dark-mode .footer__link {
-  color: #9ca3af !important;
-}
-
-body.dark-mode .footer__link:hover {
-  color: #60a5fa !important;
-}
-
-body.dark-mode .footer__text {
-  color: #9ca3af !important;
-}
-
-body.dark-mode .footer__copyright {
-  border-color: #374151 !important;
-  color: #9ca3af !important;
-}
-</style>
 
 <style scoped>
 .header-wrapper {

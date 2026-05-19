@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useTrpc } from '~/composables/useTrpc';
 import { computed, ref, watch } from 'vue';
 import Breadcrumb from '~/components/common/Breadcrumb.vue';
-import LazyImage from '~/components/ui/LazyImage.vue';
+import AppImage from '~/components/ui/AppImage.vue';
 import Icon from '~/components/ui/Icon.vue';
 import { useI18n } from 'vue-i18n';
 import type { Service } from '@ew/shared';
@@ -117,8 +117,8 @@ usePageSeo({
   routeKey: 'service-detail',
   slugByLocale: serviceSlugByLocale,
   breadcrumbs: computed(() => [
-    { name: locale.value === 'vi' ? 'Trang chu' : 'Home', item: locale.value === 'en' ? '/en' : '/' },
-    { name: locale.value === 'vi' ? 'Dich vu' : 'Services', item: locale.value === 'vi' ? '/dich-vu' : '/en/services' },
+    { name: locale.value === 'vi' ? 'Trang chu' : 'Home', item: '/' },
+    { name: locale.value === 'vi' ? 'Dich vu' : 'Services', item: locale.value === 'vi' ? '/dich-vu' : '/services' },
     { name: serviceTitle.value || 'Service' },
   ]),
   schemas: computed(() => [
@@ -144,8 +144,8 @@ usePageSeo({
       />
       
       <!-- Loading state -->
-      <div v-if="loading" class="service-detail__loading py-20 flex-grow flex items-center justify-center">
-        <div class="service-detail__loading-spinner"></div>
+      <div v-if="loading" class="service-detail__loading py-12 flex-grow">
+        <DetailPageSkeleton :show-gallery="false" />
       </div>
       
       <!-- Error state -->
@@ -274,11 +274,7 @@ usePageSeo({
 }
 
 .service-detail__loading {
-  @apply flex justify-center items-center min-h-[400px];
-}
-
-.service-detail__loading-spinner {
-  @apply w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin;
+  @apply min-h-[400px];
 }
 
 .service-detail__error {

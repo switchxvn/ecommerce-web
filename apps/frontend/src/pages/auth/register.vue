@@ -2,6 +2,7 @@
 // Auto-imported by Nuxt 3;
 import FormInput from '@/components/ui/form/FormInput.vue';
 import { useAuth, type RegisterCredentials } from '@/composables/useAuth';
+import { AUTH_ROUTE_PATHS } from '@/utils/routes';
 
 definePageMeta({
   layout: 'auth',
@@ -54,9 +55,9 @@ const handleSubmit = async () => {
     </button>
     <div class="text-center text-sm">
       <span class="text-muted-foreground">Already have an account?</span>
-      <a href="/login" class="ml-1 text-primary hover:underline">
+      <NuxtLink :to="AUTH_ROUTE_PATHS.login" class="ml-1 text-primary hover:underline">
         Sign in
-      </a>
+      </NuxtLink>
     </div>
   </form>
-</template> 
+</template>

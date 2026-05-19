@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useHead } from '@unhead/vue';
+import { useHead } from '#imports';
 import { useAsyncData } from 'nuxt/app';
 import type { Component } from 'vue';
 import { useRoute } from 'vue-router';
@@ -268,11 +268,10 @@ const componentMap: ComponentMap = {
 <template>
   <div class="bg-white dark:bg-gray-900">
     <!-- Loading state -->
-    <div v-if="isLoading" class="container mx-auto px-4 py-20 flex justify-center items-center">
-      <div class="text-center">
-        <Loader size="xl" />
-        <p class="mt-4 text-gray-600 dark:text-gray-400">{{ t('common.loading') }}</p>
-      </div>
+    <div v-if="isLoading" class="container mx-auto space-y-10 px-4 py-16">
+      <HeroSkeleton overlay-card />
+      <CardGridSkeleton :item-count="3" :columns="3" />
+      <GallerySkeleton :item-count="6" :columns="3" />
     </div>
     
     <!-- Error state -->

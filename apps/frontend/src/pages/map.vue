@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useHead } from '@unhead/vue'
+import { useHead } from '#imports'
 import { useLocalization } from '../composables/useLocalization';
 import ZoomableImage from '../components/common/ZoomableImage.vue';
 import { useTheme } from '../composables/useTheme';

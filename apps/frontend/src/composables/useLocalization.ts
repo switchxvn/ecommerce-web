@@ -3,7 +3,7 @@ import { useLocalStorage } from '@vueuse/core';
 import { useTrpc } from './useTrpc';
 import type { inferRouterOutputs } from '@trpc/server';
 import type { AppRouter } from '@backend/modules/trpc/routers';
-import { normalizeLocaleCode } from '../utils/locale';
+import { normalizeLocaleCode, resolveInitialLocaleCode } from '../utils/locale';
 
 // Import local translations
 import viLocalTranslations from '../i18n/locales/vi.json';
@@ -33,20 +33,147 @@ export interface Translations {
   };
 }
 
+const unwrapTranslationModule = (translations: any) => {
+  if (
+    translations &&
+    typeof translations === 'object' &&
+    'default' in translations &&
+    translations.default &&
+    typeof translations.default === 'object'
+  ) {
+    return translations.default;
+  }
+
+  return translations;
+};
+
 // Local translations mapping
 const localTranslations: { [key: string]: any } = {
-  vi: viLocalTranslations,
-  en: enLocalTranslations,
-  ko: koLocalTranslations,
+  vi: unwrapTranslationModule(viLocalTranslations),
+  en: unwrapTranslationModule(enLocalTranslations),
+  ko: unwrapTranslationModule(koLocalTranslations),
 };
 
 const FALLBACK_LOCALE = 'en';
 
+const deepMerge = (target: Record<string, any>, source: Record<string, any>) => {
+  Object.entries(source).forEach(([key, value]) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (!target[key] || typeof target[key] !== 'object') {
+        target[key] = {};
+      }
+      deepMerge(target[key], value as Record<string, any>);
+      return;
+    }
+
+    target[key] = value;
+  });
+};
+
+const mergeTranslations = (dbTranslations: Record<string, Record<string, string>>, langCode: string) => {
+  const result: { [namespace: string]: { [key: string]: string } } = {};
+  const localTranslationData = localTranslations[langCode] || {};
+
+  Object.entries(localTranslationData).forEach(([key, value]) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (!result[key]) result[key] = {};
+      deepMerge(result[key], value as Record<string, any>);
+      return;
+    }
+
+    if (!result.common) result.common = {};
+    result.common[key] = value as string;
+  });
+
+  Object.entries(dbTranslations).forEach(([namespace, translations]) => {
+    if (!result[namespace]) {
+      result[namespace] = {};
+    }
+
+    Object.entries(translations).forEach(([key, value]) => {
+      if (typeof value !== 'string') {
+        return;
+      }
+
+      const trimmedValue = value.trim();
+      const fullKey = `${namespace}.${key}`;
+
+      // Ignore placeholder values persisted in DB like "products.requestPrice"
+      // so bundled locale strings remain the effective fallback.
+      if (!trimmedValue || trimmedValue === fullKey) {
+        return;
+      }
+
+      result[namespace][key] = value;
+    });
+  });
+
+  return result;
+};
+
+const resolveNestedTranslation = (source: Record<string, any> | undefined, key: string) => {
+  if (!source) return undefined;
+
+  const normalizedSource = unwrapTranslationModule(source);
+
+  return key.split('.').reduce<any>((value, part) => {
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+
+    return unwrapTranslationModule(value[part]);
+  }, normalizedSource);
+};
+
+const coerceTranslationValue = (value: any): string | undefined => {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  if (typeof value.static === 'string') {
+    return value.static;
+  }
+
+  if (typeof value.source === 'string') {
+    return value.source;
+  }
+
+  if (value.body && typeof value.body.static === 'string') {
+    return value.body.static;
+  }
+
+  if (value.loc && typeof value.loc.source === 'string') {
+    return value.loc.source;
+  }
+
+  return undefined;
+};
+
+const getDocumentLocale = () =>
+  typeof document !== 'undefined' ? document.documentElement.lang : undefined;
+
+const localeStorage = useLocalStorage('locale', '');
+const initialLocale = resolveInitialLocaleCode(
+  localeStorage.value,
+  getDocumentLocale(),
+  'vi',
+);
+
+if (localeStorage.value !== initialLocale) {
+  localeStorage.value = initialLocale;
+}
+
 // Create singleton state
 const state = {
-  locale: useLocalStorage('locale', ''),
+  locale: localeStorage,
   locales: ref<Locale[]>([]),
-  translations: ref<Translations>({}),
+  translations: ref<Translations>({
+    [initialLocale]: mergeTranslations({}, initialLocale),
+  }),
   isLoading: ref(false),
   error: ref<string | null>(null),
   isInitialized: ref(false)
@@ -62,57 +189,6 @@ export function useLocalization() {
     }
     return state.translations.value[state.locale.value];
   });
-
-  // Merge translations from database and local files
-  const mergeTranslations = (dbTranslations: Record<string, Record<string, string>>, langCode: string) => {
-    const result: { [namespace: string]: { [key: string]: string } } = {};
-    
-    // First, load all translations from local JSON file
-    const localTranslationData = localTranslations[langCode] || {};
-    console.log('Raw local translations:', localTranslationData);
-    
-    // Deep merge function for nested objects
-    const deepMerge = (target: any, source: any, namespace = '') => {
-      Object.entries(source).forEach(([key, value]) => {
-        const currentPath = namespace ? `${namespace}.${key}` : key;
-        
-        if (value && typeof value === 'object') {
-          // If it's an object, create namespace and recurse
-          if (!target[key]) target[key] = {};
-          deepMerge(target[key], value, currentPath);
-        } else {
-          // It's a value, assign it directly
-          target[key] = value;
-        }
-      });
-    };
-
-    // Process local translations first
-    Object.entries(localTranslationData).forEach(([key, value]) => {
-      if (value && typeof value === 'object') {
-        // Create namespace if it doesn't exist
-        if (!result[key]) result[key] = {};
-        deepMerge(result[key], value);
-      } else {
-        // Handle root level strings in common namespace
-        if (!result['common']) result['common'] = {};
-        result['common'][key] = value as string;
-      }
-    });
-
-    console.log('After processing local translations:', JSON.stringify(result, null, 2));
-
-    // Then merge database translations, overriding local ones if they exist
-    Object.entries(dbTranslations).forEach(([namespace, translations]) => {
-      if (!result[namespace]) {
-        result[namespace] = {};
-      }
-      Object.assign(result[namespace], translations);
-    });
-
-    console.log('Final merged translations:', JSON.stringify(result, null, 2));
-    return result;
-  };
 
   // Methods
   const initializeLocalization = async () => {
@@ -209,27 +285,19 @@ export function useLocalization() {
 
   // Translation function
   const t = (key: string, params?: Record<string, any>) => {
-    if (!state.locale.value || !state.translations.value[state.locale.value]) {
-      return key;
+    const activeLocale = normalizeLocaleCode(state.locale.value || initialLocale, FALLBACK_LOCALE as 'en');
+    const translations = state.translations.value[activeLocale] || mergeTranslations({}, activeLocale);
+    let value = coerceTranslationValue(resolveNestedTranslation(translations, key));
+
+    if (typeof value !== 'string' || value.trim() === key) {
+      value = coerceTranslationValue(resolveNestedTranslation(localTranslations[activeLocale], key));
     }
 
-    const translations = state.translations.value[state.locale.value];
-    
-    // Split key by dots to handle nested translations
-    const parts = key.split('.');
-    
-    // Navigate through the nested structure
-    let value: any = translations;
-    for (const part of parts) {
-      if (!value || typeof value !== 'object') {
-        console.warn(`Translation path broken at "${part}" for key "${key}"`);
-        return key;
-      }
-      value = value[part];
+    if ((typeof value !== 'string' || value.trim() === key) && activeLocale !== FALLBACK_LOCALE) {
+      value = coerceTranslationValue(resolveNestedTranslation(localTranslations[FALLBACK_LOCALE], key));
     }
 
-    // If we didn't find a string value at the end
-    if (typeof value !== 'string') {
+    if (typeof value !== 'string' || value.trim() === key) {
       console.warn(`Translation not found for key "${key}"`);
       return key;
     }

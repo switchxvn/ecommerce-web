@@ -1,5 +1,6 @@
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import { defineNuxtConfig } from 'nuxt/config';
+import i18nConfig from './i18n.config';
 import { ROUTE_NAMES, ROUTE_PATHS } from './src/utils/routes';
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
@@ -68,6 +69,7 @@ export default defineNuxtConfig({
   },
 
   components: {
+    extensions: ['vue'],
     dirs: [
       {
         path: '~/components',
@@ -87,10 +89,6 @@ export default defineNuxtConfig({
       },
       {
         path: '~/components/category',
-        pathPrefix: false,
-      },
-      {
-        path: '~/components/layout',
         pathPrefix: false,
       },
       {
@@ -330,13 +328,21 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
   ],
 
+  ui: {
+    colorMode: false,
+  },
+
   plugins: [
     '~/plugins/trpc',
     '~/plugins/gtm.server',
   ],
 
-  // @ts-expect-error - i18n module types
-  i18n: './i18n.config.ts',
+  i18n: {
+    ...i18nConfig,
+    bundle: {
+      optimizeTranslationDirective: false,
+    },
+  },
 
   vite: {
     plugins: [nxViteTsPaths()],
@@ -398,6 +404,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-03-03',
 
   app: {
+    spaLoadingTemplate: '~/app/spa-loading-template.html',
     head: {
       titleTemplate: '%s',
       title: 'Ecommerce Web - Trang thương mại điện tử',

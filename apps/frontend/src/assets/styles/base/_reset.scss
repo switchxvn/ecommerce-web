@@ -10,8 +10,8 @@
 
 body {
   min-height: 100vh;
-  color: var(--foreground);
-  background: var(--background);
+  color: rgb(var(--foreground));
+  background: rgb(var(--background));
   transition: color 0.5s, background-color 0.5s;
   line-height: 1.6;
   font-family: var(--font-primary);

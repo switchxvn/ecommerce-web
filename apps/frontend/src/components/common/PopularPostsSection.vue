@@ -48,10 +48,8 @@ onMounted(() => {
     </div>
 
     <div v-if="isExpanded" class="px-4 pb-4">
-      <div v-if="loadingPopular" class="flex justify-center py-4">
-        <div
-          class="h-5 w-5 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"
-        ></div>
+      <div v-if="loadingPopular" class="py-2">
+        <ListSkeleton :item-count="props.limit || 5" :show-thumbnail="false" />
       </div>
 
       <div

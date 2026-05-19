@@ -1,5 +1,4 @@
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
-import { createTRPCClient } from '~/composables/useTrpc';
 import { ensureUniversalFetch } from '~/utils/trpcFetch';
 
 // Đường dẫn mặc định đến tRPC API
@@ -21,6 +20,3 @@ export const client = createTRPCProxyClient<any>({
     }),
   ],
 });
-
-// Re-export createTRPCClient để sử dụng trong composables
-export { createTRPCClient }; 

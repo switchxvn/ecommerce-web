@@ -9,6 +9,7 @@ const reviewsFilterSchema = z.object({
   limit: z.number().optional(),
   featured: z.boolean().optional(),
   serviceTypeId: z.number().optional(),
+  productId: z.number().optional(),
   locale: z.string().optional(),
   minRating: z.number().optional(),
   sortBy: z.enum(['latest', 'highest_rating', 'lowest_rating']).optional(),
@@ -77,6 +78,15 @@ export const reviewRouter = router({
     .query(async ({ ctx, input }) => {
       const frontendReviewService = ctx.services.frontend.review;
       return frontendReviewService.getAverageRating(input?.serviceTypeId);
+    }),
+
+  getProductAggregateRating: publicProcedure
+    .input(z.object({
+      productId: z.number().min(1),
+    }))
+    .query(async ({ ctx, input }) => {
+      const frontendReviewService = ctx.services.frontend.review;
+      return frontendReviewService.getProductAggregateRating(input.productId);
     }),
 
   getRatingDistribution: publicProcedure

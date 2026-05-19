@@ -1,13 +1,11 @@
 import { ref, onMounted } from 'vue'
-import { useHead } from '@unhead/vue'
+import { useHead } from '#imports'
 
 export const useGoogleAnalytics = () => {
   const isInitialized = ref(false)
   const error = ref<string | null>(null)
 
   const initializeGTM = (gtmId: string) => {
-    console.log('Initializing Google Tag Manager:', gtmId)
-    
     // Initialize dataLayer immediately
     if (typeof window !== 'undefined') {
       window.dataLayer = window.dataLayer || []
@@ -38,12 +36,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     })
 
     isInitialized.value = true
-    console.log('Google Tag Manager initialized successfully')
   }
 
   const initializeGA4 = (gaId: string) => {
-    console.log('Initializing Google Analytics 4:', gaId)
-    
     // Initialize gtag function
     if (typeof window !== 'undefined') {
       window.dataLayer = window.dataLayer || []
@@ -72,23 +67,16 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     })
 
     isInitialized.value = true
-    console.log('Google Analytics 4 initialized successfully')
   }
 
   const loadFromSettings = async () => {
     try {
-      console.log('Google Analytics: Loading settings...')
-      
       // For now, use hardcoded GTM ID from database until API is working
       const googleTagManagerId = 'GTM-T89X4CKH' // From database
-      
-      console.log('Google Analytics: Using GTM ID:', googleTagManagerId)
 
       // Initialize GTM
       if (googleTagManagerId && googleTagManagerId.trim()) {
         initializeGTM(googleTagManagerId)
-      } else {
-        console.log('Google Analytics: No GTM ID available')
       }
 
       // TODO: Load from API when tRPC is working
@@ -100,13 +88,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       const { $trpc } = nuxtApp
 
       const settings = await $trpc.settings.getPublicSettings.query()
-      console.log('Google Analytics: Settings loaded:', settings?.length || 0, 'items')
 
       const googleTagManagerId = settings.find((s: any) => s.key === 'google_tag_manager_id')?.value
       const googleAnalyticsId = settings.find((s: any) => s.key === 'google_analytics_id')?.value
-
-      console.log('Google Analytics: GTM ID:', googleTagManagerId)
-      console.log('Google Analytics: GA4 ID:', googleAnalyticsId)
 
       // Initialize GTM first if available
       if (googleTagManagerId && googleTagManagerId.trim()) {
@@ -115,8 +99,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       // Otherwise initialize GA4 if available
       else if (googleAnalyticsId && googleAnalyticsId.trim()) {
         initializeGA4(googleAnalyticsId)
-      } else {
-        console.log('Google Analytics: No tracking IDs found in settings')
       }
       */
 
@@ -148,4 +130,4 @@ declare global {
     gtag: (...args: any[]) => void
     dataLayer: any[]
   }
-} 
+}

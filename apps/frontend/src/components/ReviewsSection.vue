@@ -307,8 +307,8 @@ const contentNeedsExpansion = (content?: string) => {
       </div>
       
       <!-- Loading state -->
-      <div v-if="isLoading" class="flex justify-center py-10">
-        <Loader size="lg" />
+      <div v-if="isLoading" class="py-4">
+        <CardGridSkeleton :item-count="3" :columns="3" :show-card-meta="false" />
       </div>
       
       <!-- Reviews grid -->

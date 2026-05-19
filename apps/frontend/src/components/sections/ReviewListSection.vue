@@ -191,8 +191,8 @@ const gridClass = computed(() => {
         </div>
         
         <!-- Loading state -->
-        <div v-if="isLoading" class="flex justify-center py-20">
-          <Loader size="lg" />
+        <div v-if="isLoading" class="py-6">
+          <ListSkeleton :item-count="6" />
         </div>
         
         <!-- Empty state -->

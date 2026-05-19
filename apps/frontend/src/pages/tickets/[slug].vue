@@ -4,7 +4,7 @@ import { useElementVisibility, useMediaQuery } from '@vueuse/core';
 import { useLocalization } from "~/composables/useLocalization";
 import { useTrpc } from "~/composables/useTrpc";
 import { useRoute, useRouter } from "vue-router";
-import LazyImage from "~/components/ui/LazyImage.vue";
+import AppImage from "~/components/ui/AppImage.vue";
 import TableOfContents from "~/components/common/TableOfContents.vue";
 import { formatFullProductContent } from "~/utils/contentFormatter";
 import { useAsyncData } from 'nuxt/app';
@@ -13,6 +13,7 @@ import AddToCartButton from "~/components/cart/AddToCartButton.vue";
 import Breadcrumb from "~/components/common/Breadcrumb.vue";
 import { usePageSeo } from '~/composables/usePageSeo';
 import { 
+  ArrowDown,
   Check, 
   Share, 
   Facebook, 
@@ -34,6 +35,7 @@ import {
   Info,
   ListOrdered,
   Users,
+  BadgeDollarSign,
   CreditCard,
   Shield,
   ArrowRight,
@@ -50,6 +52,7 @@ import { useTicketBooking } from '~/composables/useTicketBooking';
 import { useTierPricing } from "~/composables/useTierPricing";
 import { buildProductSchema, resolveSeoCanonicalUrl } from '~/utils/seo';
 import { resolveTicketMobileAction } from '~/utils/ticketDetailMobile';
+import { getCategoryDetailRoute } from '~/utils/routes';
 const CrossSellProducts = defineAsyncComponent(() => import('~/components/product/CrossSellProducts.vue'));
 const ProductSpecifications = defineAsyncComponent(() => import('~/components/product/ProductSpecifications.vue'));
 const ProductDetailSidebar = defineAsyncComponent(() => import('~/components/product/ProductDetailSidebar.vue'));
@@ -122,7 +125,7 @@ const {
   shareViaEmail,
   copyProductLink,
   getTabIcon: originalGetTabIcon
-} = await useProductDetail();
+} = useProductDetail();
 
 // Add new refs for date selection
 const selectedDate = ref<Date | null>(null);
@@ -308,6 +311,9 @@ const ticketSlugByLocale = computed(() => ({
   en: productData.value?.translations?.find((translation: any) => translation.locale === 'en')?.slug,
 }));
 
+const homeLabel = computed(() => (currentLocale.value === 'en' ? 'Home' : 'Trang chủ'));
+const ticketsLabel = computed(() => (currentLocale.value === 'en' ? 'Tickets' : 'Vé tham quan'));
+
 const resolvedCanonicalUrl = computed(() =>
   resolveSeoCanonicalUrl({
     siteUrl,
@@ -336,8 +342,8 @@ usePageSeo({
   routeKey: 'ticket-detail',
   slugByLocale: ticketSlugByLocale,
   breadcrumbs: computed(() => [
-    { name: t('common.home') || 'Home', item: currentLocale.value === 'en' ? '/en' : '/' },
-    { name: t('tickets.title'), item: currentLocale.value === 'en' ? '/en/tickets' : '/tickets' },
+    { name: homeLabel.value, item: '/' },
+    { name: ticketsLabel.value, item: '/tickets' },
     { name: productTitle.value || 'Ticket' },
   ]),
   schemas: computed(() => [
@@ -346,7 +352,7 @@ usePageSeo({
       description: productShortDescription.value || '',
       url: resolvedCanonicalUrl.value,
       image: productData.value?.ogImage || productData.value?.thumbnail || '',
-      price: typeof productData.value?.price === 'number' ? productData.value.price : null,
+      price: productData.value?.price ?? minVariantPrice.value ?? null,
     }),
   ]),
 });
@@ -466,16 +472,7 @@ const handleSubmit = async () => {
       </div>
 
       <div v-if="isLoading" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <USkeleton class="mb-4 h-8 w-2/3" />
-        <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
-          <USkeleton class="h-96 w-full rounded-lg" />
-          <div>
-            <USkeleton class="mb-4 h-6 w-1/3" />
-            <USkeleton class="mb-4 h-6 w-1/4" />
-            <USkeleton class="mb-6 h-24 w-full" />
-            <USkeleton class="mb-4 h-10 w-full" />
-          </div>
-        </div>
+        <DetailPageSkeleton />
       </div>
 
       <div
@@ -503,7 +500,7 @@ const handleSubmit = async () => {
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
           <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
             <div class="ticket-images bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-              <LazyImage
+              <AppImage
                 :src="productData.thumbnail || ''"
                 :alt="productTitle"
                 fallbackSrc="/images/default-image.jpg"
@@ -520,7 +517,7 @@ const handleSubmit = async () => {
                 v-if="productData.gallery && productData.gallery.length > 0"
                 class="mt-4 grid grid-cols-4 gap-2"
               >
-                <LazyImage
+                <AppImage
                   v-for="(image, index) in productData.gallery"
                   :key="index"
                   :src="image"
@@ -589,7 +586,7 @@ const handleSubmit = async () => {
                     :key="category.id"
                     size="lg"
                     class="category-badge cursor-pointer hover:bg-primary-100 dark:hover:bg-primary-800 transition-colors"
-                    @click="router.push(`/categories/${category.translations?.[0]?.slug || ''}`)"
+                    @click="router.push(getCategoryDetailRoute(category.translations?.[0]?.slug || '', locale.value))"
                   >
                     <template #default>
                       <div class="flex items-center gap-1">
@@ -786,10 +783,12 @@ const handleSubmit = async () => {
                       color="primary"
                       size="lg"
                       block
-                      icon="i-heroicons-arrow-down"
                       class="bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white font-medium py-3 text-base"
                       @click="scrollToBuyBox"
                     >
+                      <template #leading>
+                        <ArrowDown class="h-5 w-5" />
+                      </template>
                       {{ t("tickets.completeSelection") || "Chọn vé để tiếp tục" }}
                     </UButton>
 
@@ -798,10 +797,12 @@ const handleSubmit = async () => {
                       color="primary"
                       size="lg"
                       block
-                      icon="i-heroicons-currency-dollar"
                       class="bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white font-medium py-3 text-base"
                       @click="openPriceRequestModal"
                     >
+                      <template #leading>
+                        <BadgeDollarSign class="h-5 w-5" />
+                      </template>
                       {{ t("tickets.requestPrice") || "Yêu cầu báo giá" }}
                     </UButton>
                   </div>

@@ -2,12 +2,11 @@ export type SupportedLocaleCode = 'vi' | 'en' | 'ko';
 
 const SUPPORTED_LOCALES: SupportedLocaleCode[] = ['vi', 'en', 'ko'];
 
-export function normalizeLocaleCode(
+function parseSupportedLocaleCode(
   input: string | null | undefined,
-  fallback: SupportedLocaleCode = 'vi',
-): SupportedLocaleCode {
+): SupportedLocaleCode | null {
   if (!input) {
-    return fallback;
+    return null;
   }
 
   const normalized = input.trim().toLowerCase().replace('_', '-');
@@ -17,5 +16,22 @@ export function normalizeLocaleCode(
     return primaryCode as SupportedLocaleCode;
   }
 
-  return fallback;
+  return null;
+}
+
+export function normalizeLocaleCode(
+  input: string | null | undefined,
+  fallback: SupportedLocaleCode = 'vi',
+): SupportedLocaleCode {
+  return parseSupportedLocaleCode(input) ?? fallback;
+}
+
+export function resolveInitialLocaleCode(
+  persistedLocale: string | null | undefined,
+  documentLocale: string | null | undefined,
+  fallback: SupportedLocaleCode = 'vi',
+): SupportedLocaleCode {
+  return parseSupportedLocaleCode(persistedLocale)
+    ?? parseSupportedLocaleCode(documentLocale)
+    ?? fallback;
 }

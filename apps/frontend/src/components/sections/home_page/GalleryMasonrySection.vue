@@ -117,6 +117,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useTrpc } from '~/composables/useTrpc';
 import PhotoSwipe from 'photoswipe';
 import type { PhotoSwipeOptions } from 'photoswipe';
+import { useToastNotification } from '~/utils/vueToast';
 // CSS is already imported globally in nuxt.config.ts
 
 interface GalleryTranslation {
@@ -303,7 +304,7 @@ const fetchGalleries = async () => {
     console.error('Error fetching galleries:', error);
     // Show user-friendly error message
     const { t } = useI18n();
-    useToast().add({
+    useToastNotification().add({
       id: 'gallery-error',
       title: t('common.error'),
       description: t('gallery.fetchError'),

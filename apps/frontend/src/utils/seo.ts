@@ -79,7 +79,6 @@ const INDEXABLE_ROUTE_KEYS = new Set<SeoRouteKey>([
   'category-detail',
   'ticket-pricing',
   'menu',
-  'order-ticket',
 ]);
 
 const TECHNICAL_ROUTE_PREFIXES = [
@@ -158,17 +157,7 @@ export function normalizeSiteUrl(siteUrl: string): string {
 }
 
 function splitLocalePrefix(path: string): { locale: SeoLocale | null; strippedPath: string } {
-  const normalized = normalizePath(path);
-
-  if (normalized === '/en') {
-    return { locale: 'en', strippedPath: '/' };
-  }
-
-  if (normalized.startsWith('/en/')) {
-    return { locale: 'en', strippedPath: normalized.slice(3) || '/' };
-  }
-
-  return { locale: null, strippedPath: normalized };
+  return { locale: null, strippedPath: normalizePath(path) };
 }
 
 function resolveRouteLocale(definition: RouteDefinition, explicitLocale: SeoLocale | null, matchedBase: string): SeoLocale {
@@ -242,17 +231,16 @@ export function buildLocalizedPath(routeKey: SeoRouteKey, locale: SeoLocale, slu
   }
 
   const basePath = locale === 'vi' ? definition.vi : definition.en;
-  const prefixedBasePath = locale === 'en' && basePath !== '/' ? `/en${basePath}` : locale === 'en' ? '/en' : basePath;
 
   if (!definition.detail) {
-    return prefixedBasePath;
+    return basePath;
   }
 
   if (!slug) {
     return null;
   }
 
-  return `${prefixedBasePath}/${slug}`;
+  return `${basePath}/${slug}`;
 }
 
 export function resolveSeoCanonicalUrl(options: {
@@ -373,23 +361,31 @@ export function getRouteIndexPolicy(path: string): { indexable: boolean; robots:
 }
 
 export function buildRobotsTxt(siteUrl: string): string {
+  const disallowPaths = new Set<string>();
+  const noindexPaths = new Set([
+    ...NOINDEX_ROUTE_PREFIXES,
+    ...NOINDEX_ROUTE_EXACT,
+  ]);
+
+  const addDisallowPath = (path: string | null) => {
+    if (!path) {
+      return;
+    }
+
+    disallowPaths.add(normalizePath(path));
+  };
+
+  for (const path of noindexPaths) {
+    addDisallowPath(path);
+  }
+
+  addDisallowPath(buildLocalizedPath('order-ticket', 'vi'));
+  addDisallowPath(buildLocalizedPath('order-ticket', 'en'));
+
   const lines = [
     'User-agent: *',
     'Allow: /',
-    'Disallow: /admin',
-    'Disallow: /en/admin',
-    'Disallow: /api',
-    'Disallow: /en/api',
-    'Disallow: /checkout',
-    'Disallow: /en/checkout',
-    'Disallow: /cart',
-    'Disallow: /en/cart',
-    'Disallow: /order-refund',
-    'Disallow: /en/order-refund',
-    'Disallow: /ticket-exchange',
-    'Disallow: /en/ticket-exchange',
-    'Disallow: /auth',
-    'Disallow: /en/auth',
+    ...[...disallowPaths].map((path) => `Disallow: ${path}`),
     `Sitemap: ${normalizeSiteUrl(siteUrl)}/sitemap.xml`,
   ];
 
@@ -532,10 +528,27 @@ export function buildProductSchema(input: {
   description: string;
   url: string;
   image?: string;
-  price?: number | null;
+  price?: number | string | null;
   priceCurrency?: string;
   availability?: string;
+  ratingValue?: number | null;
+  reviewCount?: number | null;
 }) {
+  const normalizedPrice =
+    typeof input.price === 'number'
+      ? input.price
+      : typeof input.price === 'string'
+        ? Number.parseFloat(input.price)
+        : null;
+  const hasValidPrice = typeof normalizedPrice === 'number' && Number.isFinite(normalizedPrice);
+  const hasValidAggregateRating =
+    typeof input.ratingValue === 'number' &&
+    Number.isFinite(input.ratingValue) &&
+    input.ratingValue > 0 &&
+    typeof input.reviewCount === 'number' &&
+    Number.isFinite(input.reviewCount) &&
+    input.reviewCount > 0;
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -544,13 +557,21 @@ export function buildProductSchema(input: {
     url: input.url,
     image: input.image || undefined,
     offers:
-      typeof input.price === 'number'
+      hasValidPrice
         ? {
             '@type': 'Offer',
-            price: input.price,
+            price: normalizedPrice,
             priceCurrency: input.priceCurrency || 'VND',
             availability: input.availability || 'https://schema.org/InStock',
             url: input.url,
+          }
+        : undefined,
+    aggregateRating:
+      hasValidAggregateRating
+        ? {
+            '@type': 'AggregateRating',
+            ratingValue: input.ratingValue,
+            reviewCount: input.reviewCount,
           }
         : undefined,
   };

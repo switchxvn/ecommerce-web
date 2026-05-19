@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { onMounted, computed, ref, nextTick, watch } from 'vue';
 import { useFooter } from '~/composables/useFooter';
-import { useColorMode } from '@vueuse/core';
+import { useDarkMode } from '~/composables/useDarkMode';
 import type { Footer } from '~/interfaces/footer.interface';
 import FooterStatistics from './FooterStatistics.vue';
+import { resolveFooterContactIcon } from '~/utils/footerContactIcon';
 
 // Kiểm tra môi trường phát triển
 const isDev = ref(process.env.NODE_ENV === 'development');
@@ -16,8 +17,7 @@ const {
   fetchActiveFooter,
 } = useFooter();
 
-const colorMode = useColorMode();
-const isDark = computed(() => colorMode.value === 'dark');
+const { isDark } = useDarkMode();
 
 // Tính toán style dựa trên theme từ API
 const footerStyle = computed(() => {
@@ -240,11 +240,11 @@ watch(
                     <span v-if="contact.position" class="text-base font-semibold" style="color: #FF0000">({{ contact.position }})</span>
                   </div>
                   <div v-if="contact.phone" class="flex items-center space-x-2">
-                    <Icon name="ph:phone" class="w-4 h-4" />
+                    <component :is="resolveFooterContactIcon('phone')" class="w-4 h-4" />
                     <a :href="'tel:' + contact.phone" class="hover:text-primary">{{ contact.phone }}</a>
                   </div>
                   <div v-if="contact.email" class="flex items-center space-x-2">
-                    <Icon name="ph:envelope" class="w-4 h-4" />
+                    <component :is="resolveFooterContactIcon('email')" class="w-4 h-4" />
                     <a :href="'mailto:' + contact.email" class="hover:text-primary">{{ contact.email }}</a>
                   </div>
                 </div>

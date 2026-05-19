@@ -1,5 +1,5 @@
 import { ref, computed, watch } from 'vue';
-import { useHead } from '@unhead/vue';
+import { useHead } from '#imports';
 import { useTrpc } from './useTrpc';
 import { useTheme } from './useTheme';
 import type { RouterOutput } from '../types/trpc';
@@ -24,8 +24,6 @@ export const useFavicon = () => {
       // Try to fetch favicon from API
       const faviconData = await trpc.logo.getActiveLogo.query({ type: 'favicon' });
       favicon.value = faviconData;
-      
-      console.log('Favicon fetched:', faviconData);
     } catch (err) {
       // If no favicon found or error, use default
       error.value = err instanceof Error ? err.message : 'Error fetching favicon';
@@ -96,7 +94,6 @@ export const useFavicon = () => {
   watch(currentFaviconUrl, (newUrl) => {
     if (newUrl) {
       setFavicon(newUrl);
-      console.log('Favicon updated:', newUrl);
     }
   }, { immediate: true });
 
@@ -105,7 +102,6 @@ export const useFavicon = () => {
     if (process.server) {
       // On server, set default favicon immediately for SSR
       setFavicon(defaultFavicon);
-      console.log('SSR: Default favicon set');
     }
     
     // Fetch favicon from API (works on both server and client)
@@ -114,7 +110,6 @@ export const useFavicon = () => {
 
   // Refresh favicon (useful for admin updates)
   const refreshFavicon = async () => {
-    console.log('Refreshing favicon...');
     await fetchFavicon();
   };
 
@@ -127,7 +122,6 @@ export const useFavicon = () => {
         const linkElement = element as HTMLLinkElement;
         linkElement.href = url;
       });
-      console.log('Client-side favicon updated:', url);
     }
   };
 
@@ -142,4 +136,4 @@ export const useFavicon = () => {
     updateFaviconUrl,
     setFavicon
   };
-}; 
+};

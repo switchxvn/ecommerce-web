@@ -5,6 +5,7 @@ import { Review } from '../../entities/review.entity';
 import { ReviewTranslation } from '../../entities/review-translation.entity';
 import { ReviewServiceType } from '../../entities/review-service-type.entity';
 import { ReviewStatus } from '@ew/shared';
+import { Product } from '../../../product/entities/product.entity';
 
 export interface CreateReviewInput {
   authorName: string;
@@ -12,6 +13,7 @@ export interface CreateReviewInput {
   profession?: string;
   rating: number;
   serviceTypeId?: number;
+  productId?: number;
   visitDate?: Date;
   featured?: boolean;
   status?: ReviewStatus;
@@ -28,6 +30,7 @@ export interface UpdateReviewInput {
   profession?: string;
   rating?: number;
   serviceTypeId?: number;
+  productId?: number | null;
   visitDate?: Date;
   featured?: boolean;
   status?: ReviewStatus;
@@ -59,7 +62,20 @@ export class AdminReviewService {
     private readonly reviewTranslationRepository: Repository<ReviewTranslation>,
     @InjectRepository(ReviewServiceType)
     private readonly reviewServiceTypeRepository: Repository<ReviewServiceType>,
+    @InjectRepository(Product)
+    private readonly productRepository: Repository<Product>,
   ) {}
+
+  private async assertProductExists(productId: number) {
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+      select: ['id'],
+    });
+
+    if (!product) {
+      throw new Error(`Product with ID ${productId} not found`);
+    }
+  }
 
   async findAll(params: ReviewsPaginationParams = {}) {
     const {
@@ -144,12 +160,17 @@ export class AdminReviewService {
   }
 
   async create(data: CreateReviewInput) {
+    if (typeof data.productId === 'number') {
+      await this.assertProductExists(data.productId);
+    }
+
     const review = this.reviewRepository.create({
       authorName: data.authorName,
       authorAvatar: data.authorAvatar,
       profession: data.profession,
       rating: data.rating,
       serviceTypeId: data.serviceTypeId,
+      productId: data.productId,
       visitDate: data.visitDate,
       featured: data.featured,
       status: data.status ?? ReviewStatus.ACTIVE,
@@ -177,6 +198,14 @@ export class AdminReviewService {
     if (data.profession !== undefined) review.profession = data.profession;
     if (data.rating !== undefined) review.rating = data.rating;
     if (data.serviceTypeId !== undefined) review.serviceTypeId = data.serviceTypeId;
+    if (data.productId !== undefined) {
+      if (data.productId === null) {
+        review.productId = null;
+      } else {
+        await this.assertProductExists(data.productId);
+        review.productId = data.productId;
+      }
+    }
     if (data.visitDate !== undefined) review.visitDate = data.visitDate;
     if (data.featured !== undefined) review.featured = data.featured;
     if (data.status !== undefined) review.status = data.status;

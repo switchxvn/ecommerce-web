@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
-import LazyImage from '~/components/ui/LazyImage.vue';
+import AppImage from '~/components/ui/AppImage.vue';
 import type { Post } from '@ew/shared';
 import { useLocalization } from '~/composables/useLocalization';
 import { usePost } from '~/composables/usePost';
@@ -80,7 +80,7 @@ watch(locale, () => {
         <!-- Hình ảnh bài viết - phiên bản lớn khi không compact -->
         <div v-if="!compact" class="image-container" :style="imageAspectRatio ? { aspectRatio: imageAspectRatio } : {}">
           <div class="relative w-full h-full">
-            <LazyImage 
+            <AppImage 
               :src="post.thumbnail || '/images/default-image.jpg'" 
               :alt="postTitle" 
               :priority="!!priority"
@@ -104,7 +104,7 @@ watch(locale, () => {
         <!-- Hình ảnh bài viết - phiên bản nhỏ khi compact -->
         <div v-else-if="compact && hasImage" class="compact-image-container">
           <div class="relative w-full h-full">
-            <LazyImage 
+            <AppImage 
               :src="post.thumbnail || '/images/default-image.jpg'" 
               :alt="postTitle" 
               :loading="'lazy'"

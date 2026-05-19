@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
-import { useColorMode } from '@vueuse/core';
+import { useDarkMode } from '~/composables/useDarkMode';
 import { useCssColorValue } from '~/composables/useColorUtils';
 
 interface CompanyIntroConfig {
@@ -46,8 +46,7 @@ const props = defineProps<{
   config?: CompanyIntroConfig;
 }>();
 
-const colorMode = useColorMode();
-const isDark = computed(() => colorMode.value === 'dark');
+const { isDark } = useDarkMode();
 const { processColorValue } = useCssColorValue();
 
 const sectionClasses = computed(() => {

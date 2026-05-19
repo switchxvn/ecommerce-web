@@ -6,7 +6,7 @@ import { computed, ref, watch, onMounted, onBeforeMount } from 'vue';
 import RelatedPosts from '~/components/common/RelatedPosts.vue';
 import PostDetailSidebar from '~/components/sidebar/PostDetailSidebar.vue';
 import Breadcrumb from '~/components/common/Breadcrumb.vue';
-import LazyImage from '~/components/ui/LazyImage.vue';
+import AppImage from '~/components/ui/AppImage.vue';
 import Icon from '~/components/ui/Icon.vue';
 import PostComments from '~/components/post/PostComments.vue';
 import { useI18n } from 'vue-i18n';
@@ -133,8 +133,8 @@ usePageSeo({
   routeKey: 'post-detail',
   slugByLocale: postSlugByLocale,
   breadcrumbs: computed(() => [
-    { name: locale.value === 'vi' ? 'Trang chu' : 'Home', item: locale.value === 'en' ? '/en' : '/' },
-    { name: locale.value === 'vi' ? 'Bai viet' : 'Posts', item: locale.value === 'vi' ? '/bai-viet' : '/en/posts' },
+    { name: locale.value === 'vi' ? 'Trang chu' : 'Home', item: '/' },
+    { name: locale.value === 'vi' ? 'Bai viet' : 'Posts', item: locale.value === 'vi' ? '/bai-viet' : '/posts' },
     { name: postTitle.value || 'Post' },
   ]),
   schemas: computed(() => [
@@ -214,7 +214,7 @@ usePageSeo({
           <article class="post-detail__article">
             <!-- Featured image -->
             <div class="post-detail__featured-image">
-              <LazyImage 
+              <AppImage 
                 :src="postThumbnail || postOgImage" 
                 :alt="postTitle"
                 sizes="(max-width: 768px) 100vw, 900px"

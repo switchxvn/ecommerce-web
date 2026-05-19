@@ -5,6 +5,7 @@ import { Product } from '../../entities/product.entity';
 import { ProductTranslation } from '../../entities/product-translation.entity';
 import { ProductVariant } from '../../entities/product-variant.entity';
 import { ProductVariantTranslation } from '../../entities/product-variant-translation.entity';
+import { ProductSidebarItem } from '../../entities/product-sidebar-item.entity';
 
 @Injectable()
 export class ProductAdminService {
@@ -17,6 +18,8 @@ export class ProductAdminService {
     private productVariantRepository: Repository<ProductVariant>,
     @InjectRepository(ProductVariantTranslation)
     private productVariantTranslationRepository: Repository<ProductVariantTranslation>,
+    @InjectRepository(ProductSidebarItem)
+    private productSidebarItemRepository: Repository<ProductSidebarItem>,
   ) {}
 
   async findAll(): Promise<Product[]> {
@@ -92,24 +95,46 @@ export class ProductAdminService {
         'variants', 
         'variants.translations',
         'specifications',
-        'specifications.translations'
+        'specifications.translations',
+        'sidebarItems',
       ],
     });
   }
 
   async create(productData: Partial<Product>): Promise<Product> {
-    const product = this.productRepository.create(productData);
-    return this.productRepository.save(product);
+    const { sidebarItems, ...productDetails } = productData as Partial<Product> & {
+      sidebarItems?: Partial<ProductSidebarItem>[];
+    };
+
+    const product = this.productRepository.create(productDetails);
+    const savedProduct = await this.productRepository.save(product);
+
+    if (sidebarItems?.length) {
+      const sidebarEntities = sidebarItems.map((item, index) =>
+        this.productSidebarItemRepository.create({
+          productId: savedProduct.id,
+          itemType: item.itemType,
+          itemId: item.itemId,
+          position: item.position ?? index,
+        })
+      );
+
+      await this.productSidebarItemRepository.save(sidebarEntities);
+    }
+
+    return this.findOne(savedProduct.id);
   }
 
   async update(id: number, productData: Partial<Product>): Promise<Product> {
     // Tách dữ liệu relations và các trường khác ra khỏi productData
-    const { translations, categories, variants, ...productDetails } = productData;
+    const { translations, categories, variants, sidebarItems, ...productDetails } = productData as Partial<Product> & {
+      sidebarItems?: Partial<ProductSidebarItem>[];
+    };
     
     // Lấy product hiện tại với relations cần thiết
     const existingProduct = await this.productRepository.findOne({
       where: { id },
-      relations: ['translations', 'categories', 'variants', 'variants.translations'],
+      relations: ['translations', 'categories', 'variants', 'variants.translations', 'sidebarItems'],
     });
     
     if (!existingProduct) {
@@ -262,14 +287,28 @@ export class ProductAdminService {
         }
       }
     }
+
+    if (sidebarItems) {
+      await this.productSidebarItemRepository.delete({ productId: id });
+      existingProduct.sidebarItems = [];
+
+      if (sidebarItems.length > 0) {
+        existingProduct.sidebarItems = await this.productSidebarItemRepository.save(
+          sidebarItems.map((item, index) =>
+            this.productSidebarItemRepository.create({
+              productId: id,
+              itemType: item.itemType,
+              itemId: item.itemId,
+              position: item.position ?? index,
+            })
+          )
+        );
+      }
+    }
     
     // Lưu toàn bộ product với relations
-    try {
-      const savedProduct = await this.productRepository.save(existingProduct);
-      return savedProduct;
-    } catch (error) {
-      throw error;
-    }
+    await this.productRepository.save(existingProduct);
+    return this.findOne(id);
   }
 
   async remove(id: number): Promise<void> {

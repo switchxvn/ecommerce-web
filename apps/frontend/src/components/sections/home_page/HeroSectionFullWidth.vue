@@ -11,6 +11,7 @@ import { useI18n } from 'vue-i18n';
 import { useTrpc } from '~/composables/useTrpc';
 import type { Hero, HeroSlider, Slide } from '~/types/hero';
 import { useLocalization } from '~/composables/useLocalization';
+import { useSkeletonGate } from '~/composables/useSkeletonGate';
 import HeroSliderComponent from '~/components/sliders/HeroSlider.vue';
 import type { Swiper as SwiperType } from 'swiper/types';
 import { useAsyncData } from '#imports';
@@ -70,6 +71,7 @@ const currentSlide = ref(0);
 const error = ref<Error | null>(null);
 
 const trpc = useTrpc();
+const { shouldShowSkeleton } = useSkeletonGate();
 const { data: heroPayload, pending: isLoading } = await useAsyncData(
   'hero-full-width-data',
   async () => {
@@ -179,8 +181,8 @@ const processedConfig = computed(() => {
 <template>
   <section class="hero-section-full relative w-full md:pt-0">
     <div class="aspect-[4/3] md:aspect-[1780/450] w-full">
-      <div v-if="isLoading" class="flex items-center justify-center w-full h-full">
-        <Loader size="lg" />
+      <div v-if="shouldShowSkeleton || isLoading" class="w-full h-full">
+        <HeroSkeleton class="h-full" overlay-card />
       </div>
       
       <div v-else-if="error" class="flex items-center justify-center w-full h-full">

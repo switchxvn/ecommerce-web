@@ -17,8 +17,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       const fallbackGtmId = process.env.GTM_ID || 'GTM-T89X4CKH';
       if (fallbackGtmId) {
         nuxtApp.provide('gtmId', fallbackGtmId);
-        const gtmState = useState('gtm-id', () => fallbackGtmId);
-        console.log('✅ GTM fallback ready with ID:', fallbackGtmId);
+        useState('gtm-id', () => fallbackGtmId);
       }
       return;
     }
@@ -36,20 +35,17 @@ export default defineNuxtPlugin(async (nuxtApp) => {
 
       if (gtmId && gtmId.trim()) {
         // Store GTM ID in global state for use across the app
-        const gtmState = useState('gtm-id', () => gtmId);
+        useState('gtm-id', () => gtmId);
         
         // Also provide it via nuxtApp for immediate access
         nuxtApp.provide('gtmId', gtmId);
-
-        console.log('✅ GTM Server Plugin: Successfully loaded dynamic GTM ID from database:', gtmId);
       } else {
         console.warn('GTM Server Plugin: No GTM ID found in database, using fallback');
         // Fallback to hardcoded GTM ID
         const fallbackGtmId = process.env.GTM_ID || 'GTM-T89X4CKH';
         if (fallbackGtmId) {
           nuxtApp.provide('gtmId', fallbackGtmId);
-          const gtmState = useState('gtm-id', () => fallbackGtmId);
-          console.log('✅ GTM fallback ready with ID:', fallbackGtmId);
+          useState('gtm-id', () => fallbackGtmId);
         }
       }
     } catch (apiError) {
@@ -58,8 +54,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       const fallbackGtmId = process.env.GTM_ID || 'GTM-T89X4CKH';
       if (fallbackGtmId) {
         nuxtApp.provide('gtmId', fallbackGtmId);
-        const gtmState = useState('gtm-id', () => fallbackGtmId);
-        console.log('✅ GTM fallback ready with ID:', fallbackGtmId);
+        useState('gtm-id', () => fallbackGtmId);
       }
     }
 
@@ -69,8 +64,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     const fallbackGtmId = process.env.GTM_ID || 'GTM-T89X4CKH';
     if (fallbackGtmId) {
       nuxtApp.provide('gtmId', fallbackGtmId);
-      const gtmState = useState('gtm-id', () => fallbackGtmId);
-      console.log('✅ GTM final fallback ready with ID:', fallbackGtmId);
+      useState('gtm-id', () => fallbackGtmId);
     }
   }
-}); 
+});

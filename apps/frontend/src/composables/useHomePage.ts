@@ -6,6 +6,7 @@ import { PageType, Theme, ThemeSection } from '@ew/shared';
 import type { Component } from 'vue';
 import { defineAsyncComponent, markRaw } from 'vue';
 import { useAsyncData } from 'nuxt/app';
+import { normalizeLocaleCode } from '../utils/locale';
 import ReviewsSection from '../components/ReviewsSection.vue';
 import { Autoplay, Navigation, Pagination } from 'swiper/modules';
 
@@ -116,8 +117,9 @@ export function useHomePage() {
   async function fetchThemeSections(themeId: number, currentLocale: string): Promise<ThemeSection[]> {
     try {
       isLoading.value = true;
+      const safeLocale = normalizeLocaleCode(currentLocale, 'vi');
       // Lấy sections theo pageType và locale và chuyển đổi kiểu
-      const sections = await getPageSections(themeId, PageType.HOME_PAGE, currentLocale);
+      const sections = await getPageSections(themeId, PageType.HOME_PAGE, safeLocale);
       return sections as unknown as ThemeSection[];
     } catch (err) {
       console.error("Error fetching theme sections:", err);
@@ -161,36 +163,6 @@ export function useHomePage() {
         }
         themeSections.value = fetchedSections;
         
-        // Apply theme colors
-        if (theme.value?.colors && process.client) {
-          const colors = theme.value.colors;
-          document.documentElement.style.setProperty("--primary", colors.light.primary['500']);
-          document.documentElement.style.setProperty("--secondary", colors.light.secondary['500']);
-          
-          // Kiểm tra và áp dụng các màu sắc bổ sung nếu có
-          try {
-            // Sử dụng cách tiếp cận an toàn hơn để truy cập các thuộc tính tùy chọn
-            const themeColors = colors.light as any;
-            
-            if (themeColors.success && themeColors.success['500']) {
-              document.documentElement.style.setProperty("--success", themeColors.success['500']);
-            }
-            
-            if (themeColors.error && themeColors.error['500']) {
-              document.documentElement.style.setProperty("--error", themeColors.error['500']);
-            }
-            
-            if (themeColors.warning && themeColors.warning['500']) {
-              document.documentElement.style.setProperty("--warning", themeColors.warning['500']);
-            }
-            
-            if (themeColors.info && themeColors.info['500']) {
-              document.documentElement.style.setProperty("--info", themeColors.info['500']);
-            }
-          } catch (err) {
-            console.warn('Error setting optional theme colors:', err);
-          }
-        }
       }
       
       if (!activeTheme) {

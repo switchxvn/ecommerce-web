@@ -5,6 +5,8 @@ import { useCategory } from "~/composables/useCategory";
 import { useTrpc } from "~/composables/useTrpc";
 import ProductCard from "~/components/cards/ProductCard.vue";
 import type { Category, CategoryTranslation } from "@ew/shared";
+import { getCategoryDetailRoute } from "~/utils/routes";
+import { normalizeLocaleCode } from "~/utils/locale";
 
 const props = defineProps<{
   config: {
@@ -99,10 +101,11 @@ const fetchCategories = async () => {
     await Promise.all(
       categories.value.map(async (category) => {
         try {
+          const safeLocale = normalizeLocaleCode(locale.value, 'vi');
           const result = await trpc.product.getAll.query({
             categories: [category.id],
             limit: props.config.productsPerCategory || 4,
-            locale: locale.value,
+            locale: safeLocale,
           });
           categoryProducts.value[category.id] = result.items;
         } catch (err) {
@@ -206,7 +209,7 @@ onMounted(() => {
                   </p>
                 </div>
                 <NuxtLink
-                  :to="`/categories/${getCategoryTranslation(category).slug}`"
+                  :to="getCategoryDetailRoute(getCategoryTranslation(category).slug, locale)"
                   class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium uppercase tracking-wider text-white bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 rounded-lg transition-colors duration-200 whitespace-nowrap"
                 >
                   {{ t("categories.viewAllIn") }}
@@ -263,9 +266,17 @@ onMounted(() => {
     </div>
 
     <!-- Loading State -->
-    <div v-else-if="loading" class="container mx-auto px-4">
-      <div class="flex justify-center items-center py-12">
-        <Loader size="lg" />
+    <div v-else-if="loading" class="container mx-auto px-4 py-8 space-y-10">
+      <div
+        v-for="sectionIndex in Math.min(config.maxItems || 2, 2)"
+        :key="sectionIndex"
+        class="space-y-6"
+      >
+        <SectionHeaderSkeleton centered show-action />
+        <CardGridSkeleton
+          :item-count="config.productsPerCategory || 4"
+          :columns="config.columns || 4"
+        />
       </div>
     </div>
 

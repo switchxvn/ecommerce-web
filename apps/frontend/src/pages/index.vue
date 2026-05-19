@@ -23,8 +23,10 @@ onBeforeUnmount(() => {
 <template>
   <div class="bg-gray-50 dark:bg-gray-900" v-if="pageIsMounted">
     <template v-if="isLoading">
-      <div class="flex justify-center items-center min-h-screen">
-        <Loader size="lg" />
+      <div class="space-y-10 px-4 py-6">
+        <HeroSkeleton overlay-card />
+        <CardGridSkeleton :item-count="4" :columns="4" />
+        <CardGridSkeleton :item-count="3" :columns="3" />
       </div>
     </template>
     <template v-else-if="error">
@@ -48,5 +50,5 @@ onBeforeUnmount(() => {
 </template>
 
 <style lang="scss">
-@import "@/assets/styles/components/HomePage.scss";
+@use "@/assets/styles/components/HomePage.scss" as *;
 </style> 

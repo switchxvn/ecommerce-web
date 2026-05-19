@@ -3,6 +3,7 @@ import { ProductType } from '@ew/shared';
 import {
   AlertCircle,
   AlertTriangle,
+  BadgeDollarSign,
   Calendar,
   Check,
   Clock,
@@ -14,6 +15,7 @@ import {
   ListOrdered,
   Mail,
   MapPin,
+  Phone,
   Tag,
   Ticket,
   Twitter
@@ -25,7 +27,7 @@ import { useRoute, useRouter } from "vue-router";
 import AddToCartButton from "~/components/cart/AddToCartButton.vue";
 import Breadcrumb from "~/components/common/Breadcrumb.vue";
 import TableOfContents from "~/components/common/TableOfContents.vue";
-import LazyImage from "~/components/ui/LazyImage.vue";
+import AppImage from "~/components/ui/AppImage.vue";
 import { useLocalization } from "~/composables/useLocalization";
 import { usePageSeo } from '~/composables/usePageSeo';
 import { useProductDetail } from '~/composables/useProductDetail';
@@ -82,6 +84,7 @@ const {
   shareDescription,
   shareImage,
   canonicalUrl,
+  productReviewAggregate,
   activeTab,
   isPriceRequestModalOpen,
   selectedAttributes,
@@ -108,7 +111,7 @@ const {
   shareViaEmail,
   copyProductLink,
   getTabIcon
-} = await useProductDetail();
+} = useProductDetail();
 
 const { getPublicSettingValueByKey } = useSettings();
 const quickPurchaseEnabled = ref(false);
@@ -243,6 +246,8 @@ const seoImage = computed(
     ""
 );
 
+const homeLabel = computed(() => (currentLocale.value === 'en' ? 'Home' : 'Trang chủ'));
+
 const productListPath = computed(() =>
   getLocalizedRoute('PRODUCTS_LIST', currentLocale.value === 'en' ? 'en' : 'vi'),
 );
@@ -300,7 +305,7 @@ usePageSeo({
   routeKey: 'product-detail',
   slugByLocale: productSlugByLocale,
   breadcrumbs: computed(() => [
-    { name: t('common.home') || 'Home', item: currentLocale.value === 'en' ? '/en' : '/' },
+    { name: homeLabel.value, item: '/' },
     ...breadcrumbItems.value.map((item) => ({
       name: item.label,
       item: item.to,
@@ -312,7 +317,11 @@ usePageSeo({
       description: seoDescription.value,
       url: resolvedCanonicalUrl.value,
       image: seoImage.value,
-      price: typeof productData.value?.price === 'number' ? productData.value.price : null,
+      price: productData.value?.price ?? minVariantPrice.value ?? null,
+      ratingValue: productReviewAggregate.value?.averageRating
+        ? Number.parseFloat(productReviewAggregate.value.averageRating)
+        : null,
+      reviewCount: productReviewAggregate.value?.totalReviews ?? null,
     }),
   ]),
 });
@@ -362,16 +371,7 @@ watch(activeTab, (newTab, oldTab) => {
       </div>
 
       <div v-if="isLoading" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <USkeleton class="mb-4 h-8 w-2/3" />
-        <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
-          <USkeleton class="h-96 w-full rounded-lg" />
-          <div>
-            <USkeleton class="mb-4 h-6 w-1/3" />
-            <USkeleton class="mb-4 h-6 w-1/4" />
-            <USkeleton class="mb-6 h-24 w-full" />
-            <USkeleton class="mb-4 h-10 w-full" />
-          </div>
-        </div>
+        <DetailPageSkeleton />
       </div>
 
       <div
@@ -401,7 +401,7 @@ watch(activeTab, (newTab, oldTab) => {
           <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
             <!-- Product Images -->
             <div class="product-images bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-              <LazyImage
+              <AppImage
                 :src="productData.thumbnail || ''"
                 :alt="productTitle"
                 fallbackSrc="/images/default-image.jpg"
@@ -419,7 +419,7 @@ watch(activeTab, (newTab, oldTab) => {
                 v-if="productData.gallery && productData.gallery.length > 0"
                 class="mt-4 grid grid-cols-4 gap-2"
               >
-                <LazyImage
+                <AppImage
                   v-for="(image, index) in productData.gallery"
                   :key="index"
                   :src="image"
@@ -635,7 +635,7 @@ watch(activeTab, (newTab, oldTab) => {
                     >
                       <div class="flex items-center gap-2 flex-1">
                         <!-- Thumbnail nếu có -->
-                        <LazyImage
+                        <AppImage
                           v-if="value.thumbnail"
                           :src="value.thumbnail"
                           :alt="value.displayValue"
@@ -876,10 +876,12 @@ watch(activeTab, (newTab, oldTab) => {
                   color="primary"
                   size="lg"
                   block
-                  icon="i-heroicons-currency-dollar"
                   class="mb-4 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white font-medium py-3 text-base"
                   @click="openPriceRequestModal"
                 >
+                  <template #leading>
+                    <BadgeDollarSign class="h-5 w-5" />
+                  </template>
                   {{ t("products.requestPrice") || "Yêu cầu báo giá" }}
                 </UButton>
 
@@ -889,10 +891,12 @@ watch(activeTab, (newTab, oldTab) => {
                   color="gray"
                   size="lg"
                   block
-                  icon="i-heroicons-phone"
                   class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-3 text-base"
                   @click="$router.push('/contact')"
                 >
+                  <template #leading>
+                    <Phone class="h-5 w-5" />
+                  </template>
                   {{ t("products.contact") || "Liên hệ" }}
                 </UButton>
               </div>

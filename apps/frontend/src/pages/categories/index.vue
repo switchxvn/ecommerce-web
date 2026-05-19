@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useTrpc } from '~/composables/useTrpc'
 import { usePageSeo } from '~/composables/usePageSeo'
+import { getCategoryDetailRoute, getCategoryListRoute } from '~/utils/routes'
 
 // Sử dụng composables
 const { t, locale } = useI18n()
@@ -64,7 +65,7 @@ usePageSeo({
 
 // Xử lý chuyển hướng đến trang danh mục
 const navigateToCategory = (slug: string) => {
-  router.push(`/categories/${slug}`)
+  router.push(getCategoryDetailRoute(slug, locale.value))
 }
 </script>
 
@@ -94,9 +95,7 @@ const navigateToCategory = (slug: string) => {
 
       <!-- Trạng thái tải -->
       <div v-if="isLoading" class="py-12">
-        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <USkeleton v-for="i in 8" :key="i" class="h-64 w-full rounded-lg" />
-        </div>
+        <CardGridSkeleton :item-count="8" :columns="4" :show-card-action="false" />
       </div>
 
       <!-- Thông báo lỗi -->
@@ -125,7 +124,7 @@ const navigateToCategory = (slug: string) => {
               {{ t('categories.featuredCategories') }}
             </h2>
             <UButton
-              to="/categories"
+              :to="getCategoryListRoute(locale.value)"
               variant="ghost"
               color="gray"
               trailing-icon="i-heroicons-arrow-right"

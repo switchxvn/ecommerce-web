@@ -82,6 +82,11 @@ export interface VariantAttributes {
 // Add to Product interface
 export interface Product {
   variantAttributes?: VariantAttributes;
+  sidebarItems?: Array<{
+    itemType: 'post' | 'service';
+    itemId: number;
+    position: number;
+  }>;
 }
 
 export function useProduct(initialFilters?: ProductFilter) {

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useLocalization } from '~/composables/useLocalization';
 import { useCategory } from '~/composables/useCategory';
+import { getCategoryDetailRoute } from '~/utils/routes';
 
 // Sử dụng composable
 const { 
@@ -9,6 +11,7 @@ const {
   error, 
   fetchCategoryTree 
 } = useCategory();
+const { locale } = useLocalization();
 
 // State để theo dõi các danh mục đang mở rộng
 const expandedCategories = ref<number[]>([]);
@@ -79,7 +82,7 @@ const hasChildren = (category: any) => {
             {{ isCategoryExpanded(category.id) ? '−' : '+' }}
           </span>
           <NuxtLink 
-            :to="`/danh-muc/${category.slug}`"
+            :to="getCategoryDetailRoute(category.slug, locale)"
             class="category-tree__link"
           >
             {{ category.name }}
@@ -107,7 +110,7 @@ const hasChildren = (category: any) => {
                 {{ isCategoryExpanded(child.id) ? '−' : '+' }}
               </span>
               <NuxtLink 
-                :to="`/danh-muc/${child.slug}`"
+                :to="getCategoryDetailRoute(child.slug, locale)"
                 class="category-tree__link"
               >
                 {{ child.name }}
@@ -125,7 +128,7 @@ const hasChildren = (category: any) => {
               >
                 <div class="category-tree__node-header">
                   <NuxtLink 
-                    :to="`/danh-muc/${grandchild.slug}`"
+                    :to="getCategoryDetailRoute(grandchild.slug, locale)"
                     class="category-tree__link"
                   >
                     {{ grandchild.name }}

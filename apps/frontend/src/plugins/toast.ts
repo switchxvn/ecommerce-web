@@ -1,5 +1,5 @@
 import { defineNuxtPlugin } from 'nuxt/app'
-import ToastPlugin from 'vue-toast-notification'
+import { ToastPlugin } from '~/utils/vueToast'
 // Sử dụng theme sugar để tránh xung đột CSS
 import 'vue-toast-notification/dist/theme-sugar.css'
 

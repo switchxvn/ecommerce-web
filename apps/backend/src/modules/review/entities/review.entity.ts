@@ -11,6 +11,7 @@ import {
 import { ReviewTranslation } from './review-translation.entity';
 import { ReviewStatus } from '@ew/shared';
 import { ReviewServiceType } from './review-service-type.entity';
+import { Product } from '../../product/entities/product.entity';
 
 @Entity('reviews')
 export class Review {
@@ -32,9 +33,16 @@ export class Review {
   @Column({ name: 'service_type_id', nullable: true })
   serviceTypeId?: number;
 
+  @Column({ name: 'product_id', nullable: true })
+  productId?: number | null;
+
   @ManyToOne(() => ReviewServiceType, (serviceType) => serviceType.reviews)
   @JoinColumn({ name: 'service_type_id' })
   serviceType?: ReviewServiceType;
+
+  @ManyToOne(() => Product, (product) => product.reviews, { nullable: true })
+  @JoinColumn({ name: 'product_id' })
+  product?: Product | null;
 
   @Column({ name: 'visit_date', type: 'date', nullable: true })
   visitDate?: Date;

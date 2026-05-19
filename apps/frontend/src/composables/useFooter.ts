@@ -15,11 +15,9 @@ export const useFooter = () => {
     
     try {
       const response = await trpc.footer.getActiveFooter.query();
-      console.log('API Response:', response);
       
       if (response) {
         activeFooter.value = response as Footer;
-        console.log('Processed footer:', activeFooter.value);
       } else {
         console.error('Invalid API response:', response);
         error.value = 'Không thể tải thông tin footer: Dữ liệu không hợp lệ';
@@ -40,4 +38,4 @@ export const useFooter = () => {
     error,
     fetchActiveFooter
   };
-}; 
+};

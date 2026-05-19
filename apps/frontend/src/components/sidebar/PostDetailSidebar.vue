@@ -7,6 +7,7 @@ import Icon from '../ui/Icon.vue';
 import type { Post } from '@ew/shared';
 import PopularPostsSection from '../common/PopularPostsSection.vue';
 import SubscribeSection from '../common/SubscribeSection.vue';
+import { getCategoryDetailRoute } from '../../utils/routes';
 
 interface CategoryTranslation {
   id: number;
@@ -97,7 +98,7 @@ onMounted(() => {
           <NuxtLink 
             v-for="(category, categoryIndex) in featuredCategories" 
             :key="categoryIndex"
-            :to="`/danh-muc/${getTranslation(category.translations, locale)?.slug || category.id}`"
+            :to="getCategoryDetailRoute(String(getTranslation(category.translations, locale)?.slug || category.id), locale)"
             class="post-sidebar__featured-category group"
           >
             <div class="post-sidebar__featured-category-content">
@@ -138,7 +139,7 @@ onMounted(() => {
           <NuxtLink 
             v-for="(category, categoryIndex) in categories" 
             :key="categoryIndex"
-            :to="`/danh-muc/${getTranslation(category.translations, locale)?.slug || category.id}`"
+            :to="getCategoryDetailRoute(String(getTranslation(category.translations, locale)?.slug || category.id), locale)"
             class="post-sidebar__category"
           >
             {{ getTranslation(category.translations, locale)?.name }}

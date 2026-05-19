@@ -1,0 +1,129 @@
+<div class="spa-loader" aria-hidden="true">
+  <div class="spa-loader__shell">
+    <div class="spa-loader__brand"></div>
+    <div class="spa-loader__bar"></div>
+    <div class="spa-loader__hero"></div>
+    <div class="spa-loader__grid">
+      <div class="spa-loader__card"></div>
+      <div class="spa-loader__card"></div>
+      <div class="spa-loader__card"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body {
+    margin: 0;
+    min-height: 100%;
+    background: #ffffff !important;
+    color: #111827;
+  }
+
+  #__nuxt {
+    min-height: 100vh;
+    background: #ffffff !important;
+  }
+
+  body {
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .spa-loader {
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    background:
+      radial-gradient(circle at top right, rgba(254, 185, 20, 0.18), transparent 28%),
+      linear-gradient(180deg, #ffffff 0%, #fffaf0 100%);
+  }
+
+  .spa-loader__shell {
+    width: min(1180px, calc(100% - 32px));
+    padding: 24px 0 56px;
+  }
+
+  .spa-loader__brand,
+  .spa-loader__bar,
+  .spa-loader__hero,
+  .spa-loader__card {
+    position: relative;
+    overflow: hidden;
+    background: #f3f4f6;
+  }
+
+  .spa-loader__brand::after,
+  .spa-loader__bar::after,
+  .spa-loader__hero::after,
+  .spa-loader__card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+    animation: spa-loader-shimmer 1.25s linear infinite;
+  }
+
+  .spa-loader__brand {
+    width: 168px;
+    height: 28px;
+    border-radius: 999px;
+    margin-bottom: 20px;
+  }
+
+  .spa-loader__bar {
+    height: 72px;
+    border-radius: 24px;
+    margin-bottom: 18px;
+  }
+
+  .spa-loader__hero {
+    height: clamp(220px, 34vw, 360px);
+    border-radius: 28px;
+    margin-bottom: 24px;
+  }
+
+  .spa-loader__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .spa-loader__card {
+    height: 172px;
+    border-radius: 22px;
+  }
+
+  @keyframes spa-loader-shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .spa-loader__grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .spa-loader__shell {
+      width: calc(100% - 24px);
+      padding-top: 18px;
+    }
+
+    .spa-loader__bar {
+      height: 56px;
+      border-radius: 20px;
+    }
+
+    .spa-loader__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

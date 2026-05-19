@@ -346,6 +346,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useTrpc } from '~/composables/useTrpc';
 import { usePageSeo } from '~/composables/usePageSeo';
+import { useToastNotification } from '~/utils/vueToast';
 
 import { ChevronLeft, ChevronRight, Image, Utensils, PlayCircle, Route } from 'lucide-vue-next';
 
@@ -382,7 +383,7 @@ const { t, locale } = useI18n();
 usePageSeo({
   title: computed(() => t('gallery.title') || 'Thu vien anh'),
   description: computed(() => t('gallery.description') || 'Khám phá bộ sưu tập ảnh đẹp của chúng tôi'),
-  currentPath: computed(() => (locale.value === 'en' ? '/en/gallery' : '/thu-vien-hinh-anh')),
+  currentPath: computed(() => (locale.value === 'en' ? '/gallery' : '/thu-vien-hinh-anh')),
   locale: computed(() => (locale.value === 'en' ? 'en' : 'vi')),
   routeKey: 'gallery',
 });
@@ -649,7 +650,7 @@ const fetchGalleries = async () => {
     });
   } catch (error) {
     console.error('Error fetching galleries:', error);
-    useToast().add({
+    useToastNotification().add({
       id: 'gallery-error',
       title: t('common.error'),
       description: t('gallery.fetchError'),
@@ -685,7 +686,7 @@ const fetchCategories = async () => {
     }
   } catch (error) {
     console.error('Error fetching categories:', error);
-    useToast().add({
+    useToastNotification().add({
       id: 'category-error',
       title: t('common.error'),
       description: t('category.fetchError'),
@@ -703,7 +704,7 @@ const fetchVideos = async () => {
     videos.value = result as VideoIntro[];
   } catch (error) {
     console.error('Error fetching videos:', error);
-    useToast().add({
+    useToastNotification().add({
       id: 'video-error',
       title: t('common.error'),
       description: t('gallery.fetchVideoError'),

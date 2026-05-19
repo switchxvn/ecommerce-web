@@ -7,6 +7,7 @@ import { computed } from 'vue';
 import { Autoplay, EffectFade, Navigation, Pagination } from 'swiper/modules';
 import { useAsyncData } from '#imports';
 import { useTrpc } from '~/composables/useTrpc';
+import { useSkeletonGate } from '~/composables/useSkeletonGate';
 import VideoThumbnailComponent from '~/components/media/VideoThumbnail.vue';
 import HeroSliderComponent from '~/components/sliders/HeroSlider.vue';
 import type { Hero, HeroConfig, HeroSlider, Slide, VideoThumbnail } from '~/types/hero';
@@ -43,9 +44,10 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const trpc = useTrpc();
+const { shouldShowSkeleton } = useSkeletonGate();
 const dataKey = `hero-section-${props.config?.themeId ?? 'default'}`;
 
-const { data: heroPayload, error } = await useAsyncData(
+const { data: heroPayload, error, pending } = await useAsyncData(
   dataKey,
   async () => {
     const [heroResult, sliderResult, videoResult] = await Promise.all([
@@ -131,7 +133,11 @@ const openVideo = (videoUrl: string) => {
   <section class="hero-section relative" :style="{ height: sectionHeight }">
     <div class="absolute inset-0" :style="backgroundGradientStyle"></div>
 
-    <div v-if="error" class="flex items-center justify-center w-full h-full">
+    <div v-if="shouldShowSkeleton || pending" class="container mx-auto h-full py-8">
+      <HeroSkeleton class="h-full" overlay-card />
+    </div>
+
+    <div v-else-if="error" class="flex items-center justify-center w-full h-full">
       <p class="text-red-500">{{ error.message }}</p>
     </div>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue';
-import { useColorMode } from '@vueuse/core';
+import { useDarkMode } from '~/composables/useDarkMode';
 import { PlayCircle } from 'lucide-vue-next';
 import { useCssColorValue } from '~/composables/useColorUtils';
 
@@ -60,8 +60,7 @@ const props = defineProps<{
   config?: VideoIntroConfig;
 }>();
 
-const colorMode = useColorMode();
-const isDark = computed(() => colorMode.value === 'dark');
+const { isDark } = useDarkMode();
 const { processColorValue } = useCssColorValue();
 
 const currentSlideIndex = ref(0);
@@ -265,8 +264,8 @@ const handleImageError = (event: Event) => {
         <!-- Video Column -->
         <div class="relative flex-shrink-0 w-full md:column-width-video"
              :style="{ '--column-width-video': config.videoColumnWidth || '40%' }">
-          <div v-if="isLoading" class="flex justify-center items-center h-[400px] rounded-2xl bg-gray-100 dark:bg-gray-800">
-            <Loader size="lg" />
+          <div v-if="isLoading" class="h-[400px] rounded-2xl">
+            <HeroSkeleton :show-actions="false" />
           </div>
 
           <div v-else-if="error" class="text-red-500 text-center p-8 h-[400px] flex items-center justify-center rounded-2xl bg-red-50 dark:bg-red-900/20">

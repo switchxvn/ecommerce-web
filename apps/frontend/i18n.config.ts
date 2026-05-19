@@ -1,6 +1,7 @@
 export default {
+  restructureDir: 'src',
   lazy: true,
-  langDir: 'src/i18n/locales',
+  langDir: 'i18n/locales',
   defaultLocale: 'vi',
   locales: [
     {
@@ -14,11 +15,7 @@ export default {
       file: 'en.json',
     },
   ],
-  strategy: 'prefix_except_default',
-  detectBrowserLanguage: {
-    useCookie: true,
-    cookieKey: 'i18n_locale',
-    redirectOn: 'root',
-  },
-  vueI18n: './src/plugins/i18n.ts'
-} 
+  strategy: 'no_prefix',
+  detectBrowserLanguage: false,
+  vueI18n: './i18n/vue-i18n.config.ts'
+}

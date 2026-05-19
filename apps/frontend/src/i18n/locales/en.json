@@ -1,6 +1,10 @@
 {
   "welcome": "Welcome to our application",
-  "home": "Home",
+  "home": {
+    "label": "Home",
+    "latest_posts": "Latest News",
+    "no_posts": "No posts available yet"
+  },
   "about": {
     "sections": {
       "our_mission": "Our Mission",
@@ -56,6 +60,7 @@
     "learnMore": "Learn More",
     "new": "New",
     "featured": "Featured",
+    "sale": "Sale",
     "addToCart": "Add to Cart",
     "price": "Price",
     "home": "Home",
@@ -63,9 +68,13 @@
     "contact": "Contact",
     "services": "Services",
     "products": "Products",
+    "categories": "Product Categories",
     "blog": "Blog",
     "viewAll": "View All",
     "cableCar": "Cable Car Contact"
+  },
+  "errors": {
+    "failed_to_load": "Failed to load data"
   },
   "cart": {
     "title": "Shopping Cart",
@@ -201,6 +210,7 @@
     "supportDescription": "Need more information about this product? Contact us:",
     "hotline": "Hotline: 1-800-123-4567",
     "contactUs": "Contact Us",
+    "no_featured_products": "No featured products available",
     "quickPurchase": "Quick Purchase",
     "quickPurchaseTitle": "Quick Purchase",
     "quickPurchaseDescription": "Leave your contact information and we will confirm your order as soon as possible.",
@@ -314,12 +324,33 @@
     "subcategories": "Subcategories",
     "productsIn": "Products in",
     "defaultTitle": "Product Categories",
-    "defaultKeywords": "product categories, products"
+    "defaultKeywords": "product categories, products",
+    "invalidCategoryTitle": "Category not found",
+    "invalidCategoryDescription": "The category you are looking for does not exist or its URL has changed.",
+    "invalidCategoryLabel": "Invalid URL",
+    "invalidCategoryHeading": "This category may have been renamed or the link is incorrect",
+    "invalidCategoryHelp": "You can return to the product categories page, browse popular forklift groups, or contact MGA for a quick recommendation based on load capacity and budget.",
+    "backToCategoryList": "Browse all categories",
+    "contactForAdvice": "Contact sales support",
+    "quickSupport": "Quick support",
+    "salesHotline": "Sales hotline",
+    "serviceHotline": "Service hotline",
+    "suggestedCategories": "Popular categories",
+    "filteredEmptyTitle": "No products match the current filters",
+    "filteredEmptyDescription": "Try widening the price range, removing some filters, or browse the full category to find a better match.",
+    "emptyCategoryTitle": "This category is being updated",
+    "emptyCategoryDescription": "MGA has not published products in this group yet, or the listing is being refreshed. You can browse related categories or contact us for a quick quotation."
   },
   "sidebar": {
     "popularPosts": "Popular Posts",
     "featuredCategories": "Featured Categories",
     "allCategories": "All Categories",
+    "relatedContent": "News and Services",
+    "noRelatedContent": "There is no related content to display in this sidebar.",
+    "defaultLabel": "Default",
+    "customLabel": "Custom",
+    "postLabel": "News",
+    "serviceLabel": "Service",
     "subscribe": "Subscribe",
     "subscribeDescription": "Get notified when new posts are published",
     "emailPlaceholder": "Your email",
@@ -345,7 +376,8 @@
     "noPostsFoundDescription": "We couldn't find any posts matching your criteria. Try adjusting your filters or search terms."
   },
   "news": {
-    "viewAll": "View All News"
+    "viewAll": "View All News",
+    "no_posts": "No news articles available"
   },
   "sort": {
     "newest": "Newest",
@@ -590,7 +622,7 @@
     "contactInfo": "Contact Information",
     "address": "Address: Nui Sam, Nui Sam Ward, Chau Doc City, An Giang Province",
     "phone": "Phone: 0917 001 254",
-    "email": "Email: info@cablecar.com.vn",
+    "email": "Email: info{'@'}cablecar.com.vn",
     "openingHours": "Opening Hours: 7:00 - 17:30 daily",
     "zoom": {
       "instructions": "Instructions",

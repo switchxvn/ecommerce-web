@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useTrpc } from '~/composables/useTrpc';
 import { useLocalization } from '~/composables/useLocalization';
 import ProductCard from '~/components/cards/ProductCard.vue';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
 import { ArrowRight } from 'lucide-vue-next';
+import { normalizeLocaleCode } from '~/utils/locale';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
@@ -116,7 +117,7 @@ const props = withDefaults(defineProps<Props>(), {
 const trpc = useTrpc();
 const { t, locale } = useLocalization();
 const products = ref<Product[]>([]);
-const isLoading = ref(false);
+const isLoading = ref(true);
 const error = ref<string | null>(null);
 
 const swiperOptions = computed(() => ({
@@ -148,14 +149,19 @@ onMounted(async () => {
   await fetchFeaturedProducts();
 });
 
+watch(locale, async () => {
+  await fetchFeaturedProducts();
+});
+
 async function fetchFeaturedProducts() {
   isLoading.value = true;
   error.value = null;
   try {
+    const safeLocale = normalizeLocaleCode(locale.value, 'vi');
     const result = await trpc.product.getAll.query({
       limit: props.config?.maxItems || 8,
       isFeatured: true,
-      locale: locale.value
+      locale: safeLocale
     });
     products.value = result.items.map(product => ({
       ...product,
@@ -208,8 +214,11 @@ async function fetchFeaturedProducts() {
       </div>
 
       <!-- Loading State -->
-      <div v-if="isLoading" class="flex justify-center items-center py-12">
-        <Loader size="lg" />
+      <div v-if="isLoading" class="py-4">
+        <CardGridSkeleton
+          :item-count="config?.maxItems || 8"
+          :columns="config?.displayMode === 'grid' ? 4 : (config?.slidesPerView?.desktop || 4)"
+        />
       </div>
 
       <!-- Error State -->

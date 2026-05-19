@@ -40,6 +40,7 @@ const rating = ref(5);
 const title = ref("");
 const content = ref("");
 const serviceTypeId = ref<number | null>(null);
+const productId = ref<number | null>(null);
 const visitDate = ref("");
 const featured = ref(false);
 const status = ref<ReviewStatus>(ReviewStatus.ACTIVE);
@@ -49,6 +50,10 @@ const serviceTypes = ref<
   { id: number; name: string; slug: string; translations: any[] }[]
 >([]);
 const isLoadingServiceTypes = ref(true);
+const products = ref<
+  { id: number; sku?: string | null; translations?: { title?: string }[] }[]
+>([]);
+const isLoadingProducts = ref(true);
 
 // Get review by ID
 async function fetchReview() {
@@ -67,6 +72,7 @@ async function fetchReview() {
     profession.value = review.profession || "";
     rating.value = review.rating;
     serviceTypeId.value = review.serviceTypeId || null;
+    productId.value = review.productId || null;
     visitDate.value = review.visitDate ? new Date(review.visitDate).toISOString().split("T")[0] : "";
     featured.value = review.featured;
     status.value = review.status;
@@ -101,6 +107,24 @@ async function fetchServiceTypes() {
     console.error("Error loading service types:", err);
   } finally {
     isLoadingServiceTypes.value = false;
+  }
+}
+
+async function fetchProducts() {
+  try {
+    isLoadingProducts.value = true;
+    const response = await trpc.admin.products.getAllProducts.query({
+      page: 1,
+      limit: 1000,
+      published: null,
+      sortBy: "createdAt",
+      sortOrder: "desc",
+    });
+    products.value = response.products || [];
+  } catch (err: any) {
+    console.error("Error loading products:", err);
+  } finally {
+    isLoadingProducts.value = false;
   }
 }
 
@@ -141,6 +165,7 @@ async function submitForm() {
         profession: profession.value || null,
         rating: rating.value,
         serviceTypeId: serviceTypeId.value || null,
+        productId: productId.value || null,
         visitDate: visitDate.value || null,
         featured: featured.value,
         status: status.value,
@@ -209,7 +234,7 @@ function cancel() {
 // Load data on mounted
 onMounted(async () => {
   await checkAuth();
-  await Promise.all([fetchReview(), fetchServiceTypes()]);
+  await Promise.all([fetchReview(), fetchServiceTypes(), fetchProducts()]);
 });
 </script>
 
@@ -403,6 +428,35 @@ onMounted(async () => {
                 class="mt-1 text-sm text-gray-500"
               >
                 Loading service types...
+              </div>
+            </div>
+            <div>
+              <label
+                for="product"
+                class="block text-sm font-medium text-gray-700"
+              >
+                Product
+              </label>
+              <select
+                id="product"
+                v-model="productId"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                :disabled="isLoadingProducts"
+              >
+                <option :value="null">Select a product</option>
+                <option
+                  v-for="product in products"
+                  :key="product.id"
+                  :value="product.id"
+                >
+                  {{ product.translations?.[0]?.title || product.sku || `Product #${product.id}` }}
+                </option>
+              </select>
+              <div
+                v-if="isLoadingProducts"
+                class="mt-1 text-sm text-gray-500"
+              >
+                Loading products...
               </div>
             </div>
             <div>

@@ -2,7 +2,24 @@ import { ref, onMounted, watch, computed } from 'vue';
 import { usePreferredDark } from '@vueuse/core';
 
 type ColorMode = 'light' | 'dark' | 'auto';
-const STORAGE_KEY = 'vueuse-color-scheme';
+const STORAGE_KEY = 'color-theme';
+
+export function resolveThemeMode(
+  storedMode: string | null | undefined,
+  prefersDark: boolean,
+): { mode: ColorMode; isDark: boolean } {
+  const candidate = storedMode;
+
+  if (candidate === 'dark') {
+    return { mode: 'dark', isDark: true };
+  }
+
+  if (candidate === 'auto') {
+    return { mode: 'auto', isDark: prefersDark };
+  }
+
+  return { mode: 'light', isDark: false };
+}
 
 export function useDarkMode() {
   const isDark = ref(false);
@@ -31,19 +48,13 @@ export function useDarkMode() {
 
     // Đọc giá trị từ localStorage
     const storedMode = localStorage.getItem(STORAGE_KEY) as ColorMode | null;
-    
-    // Nếu có giá trị trong localStorage và là giá trị hợp lệ
-    if (storedMode && ['light', 'dark', 'auto'].includes(storedMode)) {
-      mode.value = storedMode;
-      if (storedMode === 'auto') {
-        updateDarkMode(prefersDark.value);
-      } else {
-        updateDarkMode(storedMode === 'dark');
-      }
-    } else {
-      // Nếu không có giá trị hoặc giá trị không hợp lệ, set về light
-      saveMode('light');
-      updateDarkMode(prefersDark.value);
+    const resolvedMode = resolveThemeMode(storedMode, prefersDark.value);
+
+    mode.value = resolvedMode.mode;
+    updateDarkMode(resolvedMode.isDark);
+
+    if (storedMode !== resolvedMode.mode) {
+      saveMode(resolvedMode.mode);
     }
     
     isInitialized.value = true;

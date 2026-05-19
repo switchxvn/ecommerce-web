@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { useToast } from 'vue-toast-notification'
+import { useToastNotification } from '~/utils/vueToast'
 // Không cần import CSS ở đây vì đã được import trong plugin
 
 export interface NotificationOptions {
@@ -42,7 +42,7 @@ export function useNotification() {
   }
 
   // Khởi tạo toast
-  const toast = useToast()
+  const toast = useToastNotification()
 
   // Thông báo thành công
   const success = (options: NotificationOptions) => {

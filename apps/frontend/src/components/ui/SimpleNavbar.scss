@@ -358,7 +358,7 @@ html, body {
 
 // Hotline button responsive styles
 // Adjust hotline button size at different breakpoints
-a[href^="/booking"] {
+.booking-link {
   @media screen and (min-width: 1024px) and (max-width: 1279px) {
     padding: 0.2rem 0.4rem !important;
     min-height: 30px !important;

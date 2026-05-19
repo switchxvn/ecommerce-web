@@ -8,6 +8,8 @@ import { PriceRequest } from '../../price-request/entities/price-request.entity'
 import { ProductVariant } from './product-variant.entity';
 import { ProductStockHistory } from './product-stock-history.entity';
 import { ProductTierDiscount } from './product-tier-discount.entity';
+import { Review } from '../../review/entities/review.entity';
+import { ProductSidebarItem } from './product-sidebar-item.entity';
 
 export enum ProductType {
   PHYSICAL = 'PHYSICAL', // Sản phẩm vật lý
@@ -124,4 +126,10 @@ export class Product {
   // Product tier discount relationship
   @OneToMany(() => ProductTierDiscount, tierDiscount => tierDiscount.product)
   tierDiscounts!: ProductTierDiscount[];
-} 
+
+  @OneToMany(() => Review, (review) => review.product)
+  reviews!: Review[];
+
+  @OneToMany(() => ProductSidebarItem, (sidebarItem) => sidebarItem.product, { cascade: true })
+  sidebarItems!: ProductSidebarItem[];
+}

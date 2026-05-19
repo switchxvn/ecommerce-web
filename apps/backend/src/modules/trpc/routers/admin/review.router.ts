@@ -16,6 +16,7 @@ const createSchema = z.object({
   profession: z.string().optional(),
   rating: z.number().min(1).max(5),
   serviceTypeId: z.number().optional(),
+  productId: z.number().optional(),
   visitDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
   featured: z.boolean().optional(),
   status: z.nativeEnum(ReviewStatus).optional(),
@@ -28,6 +29,7 @@ const updateSchema = z.object({
   profession: z.string().optional().nullable(),
   rating: z.number().min(1).max(5).optional(),
   serviceTypeId: z.number().optional().nullable(),
+  productId: z.number().optional().nullable(),
   visitDate: z.string().optional().nullable().transform(val => {
     if (val === null) return null;
     return val ? new Date(val) : undefined;
@@ -74,6 +76,15 @@ export const adminReviewRouter = router({
       }
       
       return review;
+    }),
+
+  getServiceTypes: adminProcedure
+    .input(z.object({
+      locale: z.string().optional(),
+    }).optional())
+    .query(async ({ ctx, input }) => {
+      const frontendReviewService = ctx.services.frontend.review;
+      return frontendReviewService.getServiceTypes(input?.locale || 'vi');
     }),
 
   create: adminProcedure

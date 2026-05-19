@@ -8,7 +8,7 @@ import { useNotification } from './useNotification';
 import { formatPrice } from '@ew/shared';
 import type { Product } from '@ew/shared';
 
-export async function useProductDetail() {
+export function useProductDetail() {
   const { t, locale } = useLocalization();
   const trpc = useTrpc();
   const route = useRoute();
@@ -33,7 +33,7 @@ export async function useProductDetail() {
   const isTicketRoute = computed(() => route.path.includes("/tickets/"));
 
   // Sử dụng useAsyncData với tRPC
-  const { data: productData, pending: isLoading, error, refresh } = await useAsyncData<Product | null>(
+  const { data: productData, pending: isLoading, error, refresh } = useAsyncData<Product | null>(
     `product-${route.params.slug}`,
     async () => {
       try {
@@ -82,6 +82,22 @@ export async function useProductDetail() {
     }
   );
 
+  const { data: productReviewAggregate, refresh: refreshProductReviewAggregate } = useAsyncData(
+    `product-review-aggregate-${route.params.slug}`,
+    async () => {
+      if (isTicketRoute.value || !productData.value?.id) {
+        return null;
+      }
+
+      return trpc.review.getProductAggregateRating.query({
+        productId: productData.value.id,
+      });
+    },
+    {
+      watch: [() => productData.value?.id, currentLocale],
+    },
+  );
+
   // Đảm bảo dữ liệu được tải ở phía client nếu cần
   onMounted(() => {
     if (!productData.value) {
@@ -93,6 +109,13 @@ export async function useProductDetail() {
   watch([slug, currentLocale], () => {
     refresh();
   });
+
+  watch(
+    () => productData.value?.id,
+    () => {
+      refreshProductReviewAggregate();
+    },
+  );
 
   // Tạo các computed properties để truy cập dữ liệu sản phẩm an toàn
   const productTitle = computed(() => productData.value?.title || "");
@@ -572,6 +595,7 @@ export async function useProductDetail() {
     shareDescription,
     shareImage,
     canonicalUrl,
+    productReviewAggregate,
     
     // Refs
     activeTab,

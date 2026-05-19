@@ -1,4 +1,4 @@
-import { normalizeLocaleCode } from './locale';
+import { normalizeLocaleCode, resolveInitialLocaleCode } from './locale';
 
 describe('normalizeLocaleCode', () => {
   it('keeps supported short locale codes', () => {
@@ -18,5 +18,20 @@ describe('normalizeLocaleCode', () => {
     expect(normalizeLocaleCode(undefined)).toBe('vi');
     expect(normalizeLocaleCode('fr-FR')).toBe('vi');
     expect(normalizeLocaleCode('', 'en')).toBe('en');
+  });
+});
+
+describe('resolveInitialLocaleCode', () => {
+  it('prefers a persisted locale when available', () => {
+    expect(resolveInitialLocaleCode('en', 'vi')).toBe('en');
+  });
+
+  it('falls back to the document locale when persisted locale is empty', () => {
+    expect(resolveInitialLocaleCode('', 'vi')).toBe('vi');
+  });
+
+  it('uses the provided fallback when neither source is valid', () => {
+    expect(resolveInitialLocaleCode('', '', 'en')).toBe('en');
+    expect(resolveInitialLocaleCode(undefined, 'fr-FR', 'en')).toBe('en');
   });
 });

@@ -14,7 +14,6 @@ export function usePost() {
    * Fetch post by slug
    */
   async function fetchPost(postSlug: string) {
-    console.log('fetchPost', postSlug);
     try {
       const result = await trpc.post.bySlugWithAuthorAndTags.query({
         slug: postSlug
@@ -137,4 +136,4 @@ export function usePost() {
     getBaseUrl,
     getCanonicalUrl
   };
-} 
+}

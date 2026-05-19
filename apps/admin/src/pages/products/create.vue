@@ -178,6 +178,17 @@
               />
             </div>
 
+            <div v-show="currentTab === 'sidebar'">
+              <div class="mb-6 bg-white rounded-lg shadow-sm p-6">
+                <h2 class="text-lg font-medium text-slate-900 mb-1">{{ tabs.find(t => t.id === 'sidebar')?.name }}</h2>
+                <p class="text-sm text-slate-500">{{ tabs.find(t => t.id === 'sidebar')?.description }}</p>
+              </div>
+              <ProductSidebarItems
+                v-model="form.sidebarItems"
+                :locale="selectedLanguage"
+              />
+            </div>
+
             <!-- SEO Tab -->
             <div v-show="currentTab === 'seo'">
               <div class="mb-6 bg-white rounded-lg shadow-sm p-6">
@@ -253,6 +264,7 @@ import ProductSpecifications from '../../components/products/ProductSpecificatio
 import ProductSpecificationsNew from '../../components/products/ProductSpecificationsNew.vue'
 import LanguageSwitcher from '../../components/common/LanguageSwitcher.vue'
 import ProductTierDiscounts from '../../components/products/ProductTierDiscounts.vue'
+import ProductSidebarItems from '../../components/products/ProductSidebarItems.vue'
 
 const trpc = useTrpc()
 const route = useRoute()
@@ -320,6 +332,12 @@ const tabs = [
     icon: PercentIcon,
     description: 'Thiết lập giảm giá theo số lượng mua'
   },
+  {
+    id: 'sidebar',
+    name: 'Sidebar',
+    icon: InfoIcon,
+    description: 'Cấu hình tin tức hoặc dịch vụ hiển thị ở sidebar trang chi tiết'
+  },
   { 
     id: 'seo', 
     name: 'SEO', 
@@ -371,6 +389,7 @@ interface ProductForm {
   stockStatus: string
   allowBackorders: boolean
   stockMovements: any[]
+  sidebarItems: Array<{ itemType: 'post' | 'service', itemId: number, position: number }>
   updatedAt: string
   specifications: Array<{name: string, value: string, position: number, isNew?: boolean}>
   videoReview: string
@@ -412,6 +431,7 @@ const initialForm: ProductForm = {
   stockStatus: 'in_stock',
   allowBackorders: false,
   stockMovements: [],
+  sidebarItems: [],
   specifications: [],
   videoReview: '',
   updatedAt: new Date().toISOString(),
@@ -577,6 +597,14 @@ const createProduct = async () => {
     // Thêm các trường tùy chọn nếu có
     if (form.value.categoryIds && form.value.categoryIds.length > 0) {
       productData.categoryIds = form.value.categoryIds
+    }
+
+    if (form.value.sidebarItems.length > 0) {
+      productData.sidebarItems = form.value.sidebarItems.map((item, index) => ({
+        itemType: item.itemType,
+        itemId: item.itemId,
+        position: index
+      }))
     }
 
     // Thêm trường specifications nếu có

@@ -17,7 +17,6 @@ export const useLogo = () => {
       isLoading.value = true;
       error.value = null;
       logo.value = await trpc.logo.getActiveLogo.query({ type });
-      console.log('Logo fetched:', logo.value);
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Error fetching logo';
       console.error('Error fetching logo:', err);
@@ -42,4 +41,4 @@ export const useLogo = () => {
     error,
     fetchLogo
   };
-}; 
+};

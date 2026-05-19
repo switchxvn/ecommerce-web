@@ -23,7 +23,6 @@ export const createTRPCClient = () => {
       httpBatchLink({
         url: apiUrl,
         fetch(url, options) {
-          console.log('Making TRPC API request to:', url);
           return universalFetch(url, {
             ...options,
             credentials: 'include',

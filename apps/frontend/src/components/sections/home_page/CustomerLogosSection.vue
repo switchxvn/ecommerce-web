@@ -122,8 +122,7 @@ const props = withDefaults(defineProps<Props>(), {
   })
 });
 const trpc = useTrpc();
-const { value: colorMode } = useColorMode();
-const isDark = computed(() => colorMode === 'dark');
+const { isDark } = useDarkMode();
 const customerLogos = ref<CustomerLogo[]>([]);
 const isLoading = ref(false);
 const error = ref<string | null>(null);

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, computed, ref, nextTick, watch } from 'vue';
 import { useFooter } from '~/composables/useFooter';
-import { useColorMode } from '@vueuse/core';
-import { Link, MapPin, Phone, Mail } from 'lucide-vue-next';
+import { useDarkMode } from '~/composables/useDarkMode';
+import { MapPin, Phone, Mail } from 'lucide-vue-next';
 import type { Footer } from '~/interfaces/footer.interface';
 import PhotoSwipe from 'photoswipe';
 import 'photoswipe/style.css';
@@ -19,8 +19,7 @@ const {
   fetchActiveFooter,
 } = useFooter();
 
-const colorMode = useColorMode();
-const isDark = computed(() => colorMode.value === 'dark');
+const { isDark } = useDarkMode();
 
 // Tính toán style dựa trên theme từ API
 const footerStyle = computed(() => {
@@ -203,8 +202,10 @@ watch(
                              style="background-color: rgba(255, 255, 255, 0.1);"
                              @mouseover="addHoverBackground"
                              @mouseout="removeHoverBackground">
-                      <UIcon :name="link.icon || 'Link'" 
-                            class="w-6 h-6 text-white group-hover:text-white transition-colors duration-300" />
+                      <Icon
+                        :name="link.icon || 'Link'"
+                        class="w-6 h-6 text-white group-hover:text-white transition-colors duration-300"
+                      />
                       <span class="text-lg font-bold text-white group-hover:text-white transition-colors duration-300">{{ link.label }}</span>
                     </NuxtLink>
                   </li>
@@ -311,7 +312,7 @@ watch(
                    style="background-color: rgba(255, 255, 255, 0.1);"
                    @mouseover="addHoverBackground"
                    @mouseout="removeHoverBackground">
-                  <UIcon :name="icon.icon" class="w-7 h-7 text-white" />
+                  <Icon :name="icon.icon" class="w-7 h-7 text-white" />
                 </a>
               </div>
             </div>

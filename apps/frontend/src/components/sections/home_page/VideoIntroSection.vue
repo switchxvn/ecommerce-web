@@ -6,8 +6,12 @@
     v-if="isMounted"
   >
     <div class="container mx-auto px-4">
-      <div v-if="isLoading" class="flex justify-center items-center py-12">
-        <Loader size="lg" />
+      <div v-if="isLoading" class="py-4">
+        <CardGridSkeleton
+          :item-count="props.config?.sliderSettings?.slidesPerView || 3"
+          :columns="3"
+          media-height-class="h-[280px]"
+        />
       </div>
 
       <div v-else-if="error" class="text-center py-12 text-red-500">
@@ -374,7 +378,6 @@ const currentLayout = computed(() => {
 
 // Trong script setup
 const isMounted = ref(true);
-let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
 
 // Fetch videos using tRPC
 const videoQuery = trpc.hero.getHeroVideos.query({
@@ -383,19 +386,11 @@ const videoQuery = trpc.hero.getHeroVideos.query({
 
 onMounted(async () => {
   if (!isMounted.value) return;
-  
-  cleanupTimer = setTimeout(() => {
-    if (!isMounted.value) return;
-    console.log("Component mounted");
-    console.log("Initial config:", props.config);
-    console.log("Initial layout:", props.config?.layout);
-  }, 0);
 
   try {
     const result = await videoQuery;
     if (isMounted.value) {
       videoData.value = result as VideoIntro[];
-      console.log("Fetched videos:", videoData.value);
     }
   } catch (err) {
     if (isMounted.value) {
@@ -484,11 +479,7 @@ const onSwiper = (swiper: SwiperInstance) => {
 // Cải thiện cleanup
 onBeforeUnmount(() => {
   isMounted.value = false;
-  
-  if (cleanupTimer) {
-    clearTimeout(cleanupTimer);
-  }
-  
+
   if (swiperInstance.value) {
     try {
       swiperInstance.value.destroy(true, true);
@@ -499,9 +490,6 @@ onBeforeUnmount(() => {
   }
 });
 
-const onSlideChange = () => {
-  console.log('slide change');
-};
 </script>
 
 <style scoped>

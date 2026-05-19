@@ -117,11 +117,9 @@ fetchData()
 
 <template>
   <div class="contact w-full bg-gray-50">
-    <div v-if="isLoading" class="container mx-auto py-10 px-4">
-      <div
-        class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"
-      ></div>
-      <p class="mt-4">Loading...</p>
+    <div v-if="isLoading" class="container mx-auto space-y-10 py-10 px-4">
+      <HeroSkeleton />
+      <DetailPageSkeleton :show-gallery="false" />
     </div>
 
     <div v-else-if="error" class="container mx-auto py-10 px-4">
@@ -145,8 +143,8 @@ fetchData()
             }"
           />
           <template #fallback>
-            <div class="p-4 text-center">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <div class="p-4">
+              <CardGridSkeleton :item-count="2" :columns="2" />
             </div>
           </template>
         </ClientOnly>

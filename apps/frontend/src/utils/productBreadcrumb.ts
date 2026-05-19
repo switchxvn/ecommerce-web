@@ -1,5 +1,5 @@
 import { normalizeLocaleCode } from './locale';
-import { getLocalizedRoute } from './routes';
+import { getCategoryDetailRoute } from './routes';
 
 interface CategoryTranslationLike {
   locale?: string | null;
@@ -50,7 +50,7 @@ export const resolveProductCategoryLink = (
 
   return {
     label: translation.name,
-    to: getLocalizedRoute('CATEGORY_DETAIL', routeLocale, { slug: translation.slug }),
+    to: getCategoryDetailRoute(translation.slug, routeLocale),
   };
 };
 
@@ -69,7 +69,7 @@ export const resolveProductBreadcrumbCategory = (
     if (parentTranslation?.slug && parentTranslation.name) {
       return {
         label: parentTranslation.name,
-        to: getLocalizedRoute('CATEGORY_DETAIL', routeLocale, { slug: parentTranslation.slug }),
+        to: getCategoryDetailRoute(parentTranslation.slug, routeLocale),
       };
     }
 

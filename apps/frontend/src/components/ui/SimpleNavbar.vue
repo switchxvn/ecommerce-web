@@ -12,6 +12,7 @@ import { useNavbarFeatures } from '~/composables/useNavbarFeatures';
 import { useDarkMode } from '~/composables/useDarkMode';
 import { useIcon } from '~/composables/useIcon';
 import { useCssColorValue } from '~/composables/useColorUtils';
+import { useSkeletonGate } from '~/composables/useSkeletonGate';
 import { Phone, User, LogIn, UserCircle, LogOut, Settings, Globe, Moon, Clock } from 'lucide-vue-next';
 import type { MenuItem, TopMenuItem } from '~/types/navbar';
 import { defineAsyncComponent, markRaw } from 'vue';
@@ -19,6 +20,7 @@ import type { Component } from 'vue';
 import { useAuth } from '@/composables/useAuth';
 import { useTrpc } from '@/composables/useTrpc';
 import CurrentDateTime from '~/components/common/CurrentDateTime.vue';
+import { getBookingRoute } from '~/utils/routes';
 
 // Register components using defineAsyncComponent
 const registeredComponents = {
@@ -159,7 +161,7 @@ const props = withDefaults(defineProps<NavbarProps>(), {
     },
     bookingButton: {
       text: "Đặt vé ngay",
-      href: "/booking",
+      href: "/dat-ve",
       phoneNumbers: [
         {
           label: "Hotline",
@@ -195,6 +197,7 @@ const isLoadingFeatureFlag = ref(true);
 
 // Localization
 const { locale, t } = useLocalization();
+const bookingRoute = computed(() => props.settings?.bookingButton?.href || getBookingRoute(locale.value));
 
 // Navbar
 const {
@@ -264,6 +267,7 @@ const { checkCartFeatureFlag } = useNavbarFeatures();
 
 // Logo
 const { currentLogoUrl, logo, isLoading: isLoadingLogo } = useLogo();
+const { shouldShowSkeleton } = useSkeletonGate();
 
 // Mobile Logo - tạo một instance mới của useLogo riêng cho mobile
 const mobileLogo = ref<any>(null);
@@ -303,6 +307,9 @@ const menuItemsRefs = ref<HTMLElement[]>([]);
 const visibleMenuItems = ref<MenuItem[]>([]);
 const hiddenMenuItems = ref<MenuItem[]>([]);
 const showMoreMenu = ref(false);
+const showDesktopLogoSkeleton = computed(() => shouldShowSkeleton.value || isLoadingLogo.value);
+const showMobileLogoSkeleton = computed(() => shouldShowSkeleton.value || isLoadingMobileLogo.value || isLoadingLogo.value);
+const showMenuSkeleton = computed(() => shouldShowSkeleton.value || isLoading.value);
 
 // Add method to calculate visible items
 const calculateVisibleItems = () => {
@@ -373,7 +380,6 @@ const { user, logout, checkAuth } = useAuth();
 const showUserDropdown = ref(false);
 
 const isAuthenticated = computed(() => {
-  console.log('Auth state check:', { user: user.value });
   return !!user.value;
 });
 
@@ -1072,8 +1078,12 @@ const handleClickOutside = (event: MouseEvent) => {
           <!-- Mobile Logo -->
           <div class="flex-shrink-0">
             <NuxtLink to="/" class="flex items-center">
+              <span
+                v-if="showMobileLogoSkeleton"
+                class="block h-8 sm:h-10 w-[120px] sm:w-[140px] animate-pulse rounded bg-white/20"
+              ></span>
               <img
-                v-if="mobileLogoUrl"
+                v-else-if="mobileLogoUrl"
                 :src="mobileLogoUrl"
                 :alt="mobileLogo?.altText || 'Logo'"
                 class="h-8 sm:h-10 w-auto object-contain max-w-[120px] sm:max-w-[140px]"
@@ -1223,18 +1233,18 @@ const handleClickOutside = (event: MouseEvent) => {
                   class="flex items-center justify-center"
                   :style="logo ? `width: ${Math.min(logo.width * 1.5, 200)}px; height: ${Math.min(logo.height * 1.5, 60)}px` : ''"
                 >
+                  <span
+                    v-if="showDesktopLogoSkeleton"
+                    class="h-12 w-12 animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded"
+                  ></span>
                   <img
-                    v-if="currentLogoUrl"
+                    v-else-if="currentLogoUrl"
                     :src="currentLogoUrl"
                     :alt="logo?.altText || 'Logo'"
                     :width="logo?.width"
                     :height="logo?.height"
                     class="transition-transform duration-300 hover:scale-110 object-contain w-full h-full max-h-[60px] lg:max-h-[45px] xl:max-h-[60px]"
                   />
-                  <span
-                    v-else-if="isLoadingLogo"
-                    class="h-12 w-12 animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded"
-                  ></span>
                 </div>
               </NuxtLink>
             </div>
@@ -1243,9 +1253,7 @@ const handleClickOutside = (event: MouseEvent) => {
             <div class="w-[70%] lg:w-[75%] xl:w-[70%] hidden lg:flex h-full">
               <div class="flex items-center justify-between w-full h-full" ref="menuContainerRef">
                 <div class="flex items-center justify-between w-full h-full">
-                  <div v-if="isLoading" class="text-sm" :style="{ color: isDark ? props.settings?.darkMode?.textColor : props.settings?.textColor }">
-                    Đang tải menu...
-                  </div>
+                  <InlineMenuSkeleton v-if="showMenuSkeleton" :item-count="5" />
                   <template v-else>
                     <div class="flex items-center justify-between w-full gap-0.5 lg:gap-1 xl:gap-2">
                       <!-- Visible Menu Items -->
@@ -1389,8 +1397,8 @@ const handleClickOutside = (event: MouseEvent) => {
             <div class="w-[15%] lg:w-[13%] xl:w-[15%] flex items-center justify-end gap-1 lg:gap-2 xl:gap-4">
               <!-- Combined Book Now Button -->
               <NuxtLink
-                :to="props.settings?.bookingButton?.href || '/booking'"
-                class="hidden lg:flex items-center gap-1 lg:gap-1 xl:gap-1.5 px-0.5 lg:px-1.5 xl:px-3.5 py-0.5 lg:py-0.5 xl:py-1.5 min-h-[30px] lg:min-h-[42px] xl:min-h-[52px] 2xl:min-h-[62px] rounded-full transition-all duration-300 hover:opacity-90"
+                :to="bookingRoute"
+                class="booking-link hidden lg:flex items-center gap-1 lg:gap-1 xl:gap-1.5 px-0.5 lg:px-1.5 xl:px-3.5 py-0.5 lg:py-0.5 xl:py-1.5 min-h-[30px] lg:min-h-[42px] xl:min-h-[52px] 2xl:min-h-[62px] rounded-full transition-all duration-300 hover:opacity-90"
                 :style="{
                   backgroundColor: props.settings?.bookingButton?.backgroundColor || 'rgb(var(--color-primary-500))',
                   color: props.settings?.bookingButton?.textColor || '#ffffff'
@@ -1497,7 +1505,7 @@ const handleClickOutside = (event: MouseEvent) => {
                 </div>
               </div>
               <NuxtLink
-                :to="props.settings?.bookingButton?.href || '/booking'"
+                :to="bookingRoute"
                 class="flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-full transition-all duration-300 text-sm"
                 @click="isMobileMenuOpen = false"
               >
@@ -2056,4 +2064,4 @@ const handleClickOutside = (event: MouseEvent) => {
     height: 1.25rem;
   }
 }
-</style> 
+</style>

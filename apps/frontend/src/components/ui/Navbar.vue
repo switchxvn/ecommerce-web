@@ -125,7 +125,7 @@ onUnmounted(() => {
 
         <!-- Desktop Navigation -->
         <nav class="hidden md:flex items-center space-x-6">
-          <div v-if="isLoading" class="text-sm text-gray-500 dark:text-gray-400">Đang tải menu...</div>
+          <InlineMenuSkeleton v-if="isLoading" :item-count="4" />
           <div v-else-if="error" class="text-sm text-red-500">{{ error }}</div>
           <template v-else>
             <!-- eslint-disable-next-line vue/valid-v-for -->
@@ -216,7 +216,7 @@ onUnmounted(() => {
       :class="{ hidden: !isMobileMenuOpen }"
     >
       <div class="px-4 py-3 space-y-1">
-        <div v-if="isLoading" class="text-sm text-gray-500 dark:text-gray-400 px-3 py-2">Đang tải menu...</div>
+        <InlineMenuSkeleton v-if="isLoading" :item-count="5" mobile />
         <div v-else-if="error" class="text-sm text-red-500 px-3 py-2">{{ error }}</div>
         <template v-else>
           <!-- eslint-disable-next-line vue/valid-v-for -->

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Permissions } from '../../../auth/constants/permissions.constant';
 import { Category } from '../../../category/entities/category.entity';
 import { ProductTranslation } from '../../../product/entities/product-translation.entity';
+import { ProductSidebarItem, ProductSidebarItemType } from '../../../product/entities/product-sidebar-item.entity';
 import { Product, ProductType } from '../../../product/entities/product.entity';
 import { requirePermission } from '../../middlewares/permission.middleware';
 import { adminProcedure, protectedProcedure, router } from '../../procedures';
@@ -37,6 +38,12 @@ const specificationInputSchema = z.object({
   value: z.string(),
   position: z.number().optional(),
   locale: z.string().length(2)
+});
+
+const sidebarItemInputSchema = z.object({
+  itemType: z.nativeEnum(ProductSidebarItemType),
+  itemId: z.number(),
+  position: z.number().optional(),
 });
 
 // Tạo router thay vì sử dụng class với @injectable
@@ -121,10 +128,11 @@ export const productAdminRouter = router({
       translations: z.array(productTranslationSchema),
       categories: z.array(categoryInputSchema).optional(),
       categoryIds: z.array(z.number()).optional(),
-      specifications: z.array(specificationInputSchema).optional()
+      specifications: z.array(specificationInputSchema).optional(),
+      sidebarItems: z.array(sidebarItemInputSchema).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const { translations, categories, categoryIds, specifications, ...productData } = input;
+      const { translations, categories, categoryIds, specifications, sidebarItems, ...productData } = input;
       
       // Tạo đối tượng dữ liệu sản phẩm
       const productCreateData: any = {
@@ -137,6 +145,10 @@ export const productAdminRouter = router({
         productCreateData.categories = categories.map(({ id }) => ({ id } as unknown as Category));
       } else if (categoryIds && categoryIds.length > 0) {
         productCreateData.categories = categoryIds.map(id => ({ id } as unknown as Category));
+      }
+
+      if (sidebarItems) {
+        productCreateData.sidebarItems = sidebarItems as unknown as ProductSidebarItem[];
       }
       
       // Tạo sản phẩ
@@ -179,6 +191,7 @@ export const productAdminRouter = router({
         translations: z.array(productTranslationSchema).optional(),
         categories: z.array(categoryInputSchema).optional(),
         categoryIds: z.array(z.number()).optional(),
+        sidebarItems: z.array(sidebarItemInputSchema).optional(),
         hasVariants: z.boolean().optional(),
         variants: z.array(z.object({
           id: z.number().optional(),
@@ -202,7 +215,7 @@ export const productAdminRouter = router({
       })
     }))
     .mutation(async ({ ctx, input }) => {
-      const { translations, categories, categoryIds, variants, ...updateData } = input.data;
+      const { translations, categories, categoryIds, variants, sidebarItems, ...updateData } = input.data;
       
       // Tạo đối tượng dữ liệu cập nhật
       const productUpdateData: any = {
@@ -219,6 +232,10 @@ export const productAdminRouter = router({
         productUpdateData.categories = categories.map(({ id }) => ({ id } as unknown as Category));
       } else if (categoryIds && categoryIds.length > 0) {
         productUpdateData.categories = categoryIds.map(id => ({ id } as unknown as Category));
+      }
+
+      if (sidebarItems) {
+        productUpdateData.sidebarItems = sidebarItems as unknown as ProductSidebarItem[];
       }
       
       // Xử lý variants nếu có
