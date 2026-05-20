@@ -61,7 +61,7 @@ const initialFilters = ref<ProductFilter>({
   maxPrice: route.query.maxPrice ? Number(route.query.maxPrice) : undefined,
   includeNullPrice: route.query.includeNullPrice === "true",
   categories: route.query.categories
-    ? String(route.query.categories).split(",")
+    ? String(route.query.categories).split(",").map(Number)
     : undefined,
   isFeatured: route.query.isFeatured === "true" ? true : undefined,
   isNew: route.query.isNew === "true" ? true : undefined,

@@ -1,5 +1,8 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 
+const MOBILE_STICKY_ACTIVATION_OFFSET = 12;
+const STICKY_RELEASE_OFFSET = 4;
+
 export const useNavbar = () => {
   const isMobileMenuOpen = ref(false);
   const isScrolled = ref(false);
@@ -44,23 +47,22 @@ export const useNavbar = () => {
     if (!navWrapperRef.value || !isInitialized.value) return;
     
     const currentScrollPosition = Math.round(window.scrollY);
-    
-    if (currentScrollPosition >= initialNavPosition.value) {
-      if (!isScrolled.value) {
-        isScrolled.value = true;
-        nextTick(() => {
-          const nav = document.querySelector('.navigation-section') as HTMLElement;
-          if (nav) {
-            const navHeight = Math.round(nav.offsetHeight);
-            document.documentElement.style.setProperty('--nav-height', `${navHeight}px`);
-          }
-        });
-      }
-    } else {
-      if (isScrolled.value) {
-        isScrolled.value = false;
-        document.documentElement.style.setProperty('--nav-height', '0px');
-      }
+
+    const stickyStart = Math.max(initialNavPosition.value, MOBILE_STICKY_ACTIVATION_OFFSET);
+    const stickyRelease = Math.max(initialNavPosition.value - STICKY_RELEASE_OFFSET, 0);
+
+    if (!isScrolled.value && currentScrollPosition > stickyStart) {
+      isScrolled.value = true;
+      nextTick(() => {
+        const nav = document.querySelector('.navigation-section') as HTMLElement;
+        if (nav) {
+          const navHeight = Math.round(nav.offsetHeight);
+          document.documentElement.style.setProperty('--nav-height', `${navHeight}px`);
+        }
+      });
+    } else if (isScrolled.value && currentScrollPosition <= stickyRelease) {
+      isScrolled.value = false;
+      document.documentElement.style.setProperty('--nav-height', '0px');
     }
     
     lastScrollPosition.value = currentScrollPosition;

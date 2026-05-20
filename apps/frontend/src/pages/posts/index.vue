@@ -12,6 +12,8 @@ import type { CategoryTranslation } from "../../types/category-translation";
 import Breadcrumb from "../../components/common/Breadcrumb.vue";
 import { SearchX, FilterX } from 'lucide-vue-next';
 import { usePageSeo } from '~/composables/usePageSeo';
+import { getAuthorName } from '~/utils/author';
+import { buildPostListQuery, parsePostListQuery } from '~/utils/postFilters';
 
 const { t, locale } = useLocalization();
 const route = useRoute();
@@ -35,6 +37,7 @@ const totalPages = ref(0);
 const categoryData = ref<any>(null);
 const seoData = ref<any>(null);
 const shouldResetSidebar = ref(false);
+const initialQueryFilters = parsePostListQuery(route.query as Record<string, unknown>);
 
 // Filter state với tất cả các query parameters có thể có
 const filters = reactive<{
@@ -43,15 +46,14 @@ const filters = reactive<{
   sort: string;
   page: number;
   limit: number;
-  tags?: string[];
-  category?: string;
-  [key: string]: any; // Thêm index signature để cho phép truy cập động
+  tags: string[];
 }>({
-  search: route.query.search as string || '',
-  categories: route.query.categories ? (route.query.categories as string).split(',') : [],
-  sort: (route.query.sort as string) || 'newest',
-  page: Number(route.query.page || 1),
-  limit: Number(route.query.limit) || 12,
+  search: initialQueryFilters.search,
+  categories: initialQueryFilters.categories,
+  sort: initialQueryFilters.sort,
+  page: initialQueryFilters.page,
+  limit: initialQueryFilters.limit,
+  tags: initialQueryFilters.tags,
 });
 
 // Đảm bảo page được đồng bộ với URL khi SSR
@@ -136,20 +138,6 @@ const fetchPosts = async () => {
       queryParams.tags = filters.tags.join(',');
     }
 
-    // Add category if exists
-    if (filters.category) {
-      queryParams.category = filters.category;
-    }
-
-    // Add all other query params
-    Object.entries(filters).forEach(([key, value]) => {
-      if (!['search', 'categories', 'tags', 'sort', 'danh-muc', 'page', 'limit'].includes(key) && value) {
-        queryParams[key] = value;
-      }
-    });
-
-
-
     // Fetch posts
     const result = await trpc.post.byLocale.query(queryParams);
     posts.value = Array.isArray(result.items) ? result.items.map(transformPost) : [];
@@ -168,19 +156,13 @@ const fetchPosts = async () => {
 };
 
 const syncFiltersFromQuery = (newQuery: Record<string, any>) => {
-  Object.entries(newQuery).forEach(([key, value]) => {
-    if (key === 'categories' && value) {
-      filters.categories = (value as string).split(',');
-    } else if (key === 'page' || key === 'limit') {
-      filters[key] = Number(value) || 1;
-    } else if (key === 'danh-muc') {
-      filters.category = value as string;
-    } else if (['search', 'sort'].includes(key)) {
-      filters[key] = value as string;
-    } else {
-      filters[key] = value as string;
-    }
-  });
+  const parsed = parsePostListQuery(newQuery as Record<string, unknown>);
+  filters.search = parsed.search;
+  filters.categories = parsed.categories;
+  filters.sort = parsed.sort;
+  filters.page = parsed.page;
+  filters.limit = parsed.limit;
+  filters.tags = parsed.tags;
 };
 
 if (import.meta.client) {
@@ -231,27 +213,19 @@ const handleFilterChange = (newFilters: any) => {
   filters.categories = newFilters.categories || [];
   filters.tags = newFilters.tags || [];
   filters.page = newFilters.page || 1;
-
-  // Fetch posts with new filters
-  fetchPosts();
 };
 
 // Update URL query params
 const updateQueryParams = () => {
-  const query: Record<string, string> = {};
-  
-  if (filters.search) query.search = filters.search;
-  if (filters.categories && filters.categories.length > 0) query.categories = filters.categories.join(',');
-  if (filters.sort && filters.sort !== 'newest') query.sort = filters.sort;
-  if (filters.category) query['danh-muc'] = filters.category;
-  
-  // Giữ nguyên tham số page từ URL hiện tại
-  if (route.query.page) {
-    query.page = route.query.page as string;
-  }
-  
-  if (filters.limit !== 12) query.limit = String(filters.limit);
-  
+  const query = buildPostListQuery({
+    search: filters.search,
+    categories: filters.categories,
+    sort: filters.sort,
+    page: filters.page,
+    limit: filters.limit,
+    tags: filters.tags,
+  });
+
   // Sử dụng replace thay vì push để tránh thêm vào history
   router.replace({ query });
 };
@@ -264,6 +238,7 @@ const resetAllFilters = () => {
   // Reset main filters
   filters.search = '';
   filters.categories = [];
+  filters.tags = [];
   filters.page = 1;
   filters.sort = 'newest';
   
@@ -274,14 +249,8 @@ const resetAllFilters = () => {
 
 // Handle page change
 const handlePageChange = (page: number) => {
-
-  
-  // Cập nhật URL trước
-  const query = { ...route.query, page: String(page) };
-  router.replace({ query });
-  
-  // Fetch posts sau khi URL đã được cập nhật
-  fetchPosts();
+  filters.page = page;
+  updateQueryParams();
   
   // Scroll to top
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -300,7 +269,6 @@ const handleSortChange = (event: Event) => {
   filters.sort = target.value;
   filters.page = 1; // Reset to page 1 when sort changes
   updateQueryParams();
-  fetchPosts();
 };
 
 /**
@@ -318,17 +286,6 @@ function getPostSlug(post: Post): string {
     .replace(/--+/g, '-') // Loại bỏ nhiều dấu gạch ngang liên tiếp
     .trim() || 'untitled';
 }
-
-const getAuthorName = (author: Post['author']) => {
-  if (author?.profile) {
-    const firstName = author.profile.firstName || '';
-    const lastName = author.profile.lastName || '';
-    if (firstName || lastName) {
-      return `${firstName} ${lastName}`.trim();
-    }
-  }
-  return author?.username || author?.email?.split('@')[0] || 'Không xác định';
-};
 
 // Computed property để lấy translation hiện tại của category
 const currentCategoryTranslation = computed<CategoryTranslation | null>(() => {
@@ -417,7 +374,7 @@ usePageSeo({
               </svg>
               {{ t('posts.parentCategory') }}:
               <NuxtLink
-                :to="`/posts?danh-muc=${categoryData.parent.slug}`"
+                :to="`/posts?categories=${categoryData.parent.slug}`"
                 class="text-primary-600 hover:text-primary-700 ml-1 font-medium transition-colors duration-200"
               >
                 {{ categoryData.parent.translations?.find((t: CategoryTranslation) => t.locale === locale)?.name || categoryData.parent.name }}

@@ -3,9 +3,11 @@ interface ResolveCategoryPageStateInput {
   totalProducts: number;
   hasActiveFilters: boolean;
   errorMessage?: string | null;
+  isPending?: boolean;
 }
 
 export type CategoryPageStateKind =
+  | 'loading'
   | 'invalid-category'
   | 'empty-category'
   | 'filtered-empty'
@@ -44,6 +46,14 @@ export function hasActiveCategoryFilters(filters: {
 }
 
 export function resolveCategoryPageState(input: ResolveCategoryPageStateInput): CategoryPageState {
+  if (input.isPending) {
+    return {
+      kind: 'loading',
+      shouldIndex: false,
+      shouldShowFilters: false,
+    };
+  }
+
   if (!input.categoryId || isCategoryNotFoundMessage(input.errorMessage)) {
     return {
       kind: 'invalid-category',

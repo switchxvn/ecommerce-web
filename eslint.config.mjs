@@ -1,4 +1,6 @@
-import nxPlugin from '@nx/eslint-plugin';
+import js from '@eslint/js';
+import tseslint from '@typescript-eslint/eslint-plugin';
+import tsParser from '@typescript-eslint/parser';
 import vuePlugin from 'eslint-plugin-vue';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
@@ -7,10 +9,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
 export default [
-  // Nx configs
-  ...nxPlugin.configs['flat/base'],
-  ...nxPlugin.configs['flat/typescript'],
-  ...nxPlugin.configs['flat/javascript'],
+  js.configs.recommended,
   
   // Ignore patterns
   {
@@ -21,15 +20,16 @@ export default [
   {
     files: ['**/*.vue'],
     languageOptions: {
-      parser: require.resolve('vue-eslint-parser'),
+      parser: require('vue-eslint-parser'),
       parserOptions: {
-        parser: require.resolve('@typescript-eslint/parser'),
+        parser: tsParser,
         ecmaVersion: 2020,
         sourceType: 'module',
         extraFileExtensions: ['.vue'],
       },
     },
     plugins: {
+      '@typescript-eslint': tseslint,
       vue: vuePlugin,
     },
     rules: {
@@ -40,38 +40,32 @@ export default [
       'vue/valid-template-root': 'error',
       'vue/html-indent': ['error', 2],
       'vue/html-self-closing': 'warn',
-      // Disable Nx module boundaries for Vue files
-      '@nx/enforce-module-boundaries': 'off',
     },
   },
   
   // TS/JS files configuration
   {
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
+    plugins: {
+      '@typescript-eslint': tseslint,
+    },
+    languageOptions: {
+      parser: tsParser,
+      ecmaVersion: 2020,
+      sourceType: 'module',
+    },
     rules: {
-      '@nx/enforce-module-boundaries': [
-        'error',
-        {
-          enforceBuildableLibDependency: true,
-          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?js$'],
-          depConstraints: [
-            {
-              sourceTag: '*',
-              onlyDependOnLibsWithTags: ['*'],
-            },
-          ],
-        },
-      ],
+      ...tseslint.configs.recommended.rules,
       'unicode-bom': 'off',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
   
   // Frontend specific overrides
   {
     files: ['apps/frontend/**/*.ts', 'apps/frontend/**/*.js'],
-    rules: {
-      // Disable Nx module boundaries for frontend app files temporarily
-      '@nx/enforce-module-boundaries': 'off',
-    },
+    rules: {},
   },
 ];

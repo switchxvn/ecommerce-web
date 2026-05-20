@@ -4,14 +4,14 @@ import { setResponseStatus } from 'h3'
 import { useRequestEvent } from 'nuxt/app'
 import { useLocalization } from '../../composables/useLocalization'
 import { useTrpc } from '../../composables/useTrpc'
-import { useCategory } from '../../composables/useCategory'
 import { useRoute, useRouter } from 'vue-router'
+import type { CategoryTranslation as SharedCategoryTranslation } from '@ew/shared'
 import CategorySidebar from '../../components/sidebar/CategorySidebar.vue'
 import CategoryMobileSidebar from '../../components/sidebar/CategoryMobileSidebar.vue'
 import ProductCard from '../../components/cards/ProductCard.vue'
 import { useProduct, type ProductFilter, type ProductSortBy } from '../../composables/useProduct'
 import { usePageSeo } from '~/composables/usePageSeo'
-import { getCategoryDetailRoute, getCategoryListRoute, getContactRoute } from '~/utils/routes'
+import { getCategoryDetailRoute, getCategoryListRoute, getContactRoute, getRouteLocale } from '~/utils/routes'
 import { buildCollectionPageSchema, resolveSeoCanonicalUrl } from '~/utils/seo'
 import { hasActiveCategoryFilters, resolveCategoryPageState } from '~/utils/categoryPageState'
 
@@ -20,8 +20,18 @@ const trpc = useTrpc()
 const route = useRoute()
 const router = useRouter()
 const siteUrl = useRuntimeConfig().public.siteUrl
-const { fetchCategoryBySlug } = useCategory()
 const slug = computed(() => route.params.slug as string)
+const routeLocale = computed(() => {
+  if (route.path.startsWith('/categories')) {
+    return 'en'
+  }
+
+  if (route.path.startsWith('/danh-muc-san-pham')) {
+    return 'vi'
+  }
+
+  return getRouteLocale(locale.value)
+})
 
 definePageMeta({
   layout: 'default',
@@ -41,16 +51,26 @@ interface Category {
   canonicalUrl?: string;
   parent?: Category | null;
   children?: Category[];
-  translations?: Array<{
-    locale: string;
-    name: string;
-    description?: string;
-    slug?: string;
-  }>;
+  translations?: CategoryTranslation[];
   type?: string;
   active?: boolean;
   isFeatured?: boolean;
 }
+
+type CategoryTranslation = Pick<
+  SharedCategoryTranslation,
+  | 'locale'
+  | 'name'
+  | 'description'
+  | 'slug'
+  | 'metaTitle'
+  | 'metaDescription'
+  | 'metaKeywords'
+  | 'ogTitle'
+  | 'ogDescription'
+  | 'ogImage'
+  | 'canonicalUrl'
+>
 
 interface LocalizedCategoryLink {
   id: number;
@@ -60,7 +80,7 @@ interface LocalizedCategoryLink {
 
 interface CategoryProductFilter extends Omit<ProductFilter, 'categories'> {
   includeNullPrice: boolean;
-  categories: string[];
+  categories: number[];
   isFeatured: boolean;
   isNew: boolean;
   isSale: boolean;
@@ -106,40 +126,45 @@ const initialFilters: CategoryProductFilter = {
   sortBy: 'newest',
   page: 1,
   limit: 12,
-  locale: locale.value
+  locale: routeLocale.value
 }
 
-const { data: category, error: categoryError, refresh: refreshCategory } = await useAsyncData<Category | null>(
-  `category-${slug.value}-${locale.value}`,
+const { data: category, pending: isCategoryPending, error: categoryError, refresh: refreshCategory } = await useAsyncData<Category | null>(
+  `category-${slug.value}-${routeLocale.value}`,
   async () => {
-    const result = await fetchCategoryBySlug(slug.value)
+    const result = await trpc.category.bySlug.query({
+      slug: slug.value,
+      locale: routeLocale.value,
+    })
     return result ? result as unknown as Category : null
   },
   {
     immediate: true,
-    watch: [slug, locale]
+    watch: [slug, routeLocale]
   }
 )
 
 const { data: suggestedCategoriesData } = await useAsyncData<Category[]>(
-  `category-suggestions-${locale.value}`,
+  `category-suggestions-${routeLocale.value}`,
   async () => {
     const result = await trpc.category.byType.query({
       type: 'product',
-      locale: locale.value,
+      locale: routeLocale.value,
     })
 
     return (result as Category[]) || []
   },
   {
     default: () => [],
-    watch: [locale],
+    watch: [routeLocale],
   }
 )
 
 const categoryData = computed<Category>(() => category.value || {} as Category)
-const categoryTranslation = computed(() =>
-  categoryData.value.translations?.find((translation) => translation.locale === locale.value),
+const categoryTranslation = computed<CategoryTranslation | undefined>(() =>
+  categoryData.value.translations?.find((translation: CategoryTranslation) => translation.locale === routeLocale.value)
+  || categoryData.value.translations?.find((translation: CategoryTranslation) => translation.locale === locale.value)
+  || categoryData.value.translations?.[0],
 )
 const categoryName = computed(() => categoryTranslation.value?.name || categoryData.value.name || '')
 const categoryDescription = computed(() => categoryTranslation.value?.description || categoryData.value.description || '')
@@ -160,12 +185,13 @@ const pageState = computed(() =>
     totalProducts: totalProducts.value,
     hasActiveFilters: hasActiveFilters.value,
     errorMessage: error.value,
+    isPending: isCategoryPending.value,
   }),
 )
 const isInvalidCategory = computed(() => pageState.value.kind === 'invalid-category')
 const isFilteredEmptyState = computed(() => pageState.value.kind === 'filtered-empty')
 const isEmptyCategoryState = computed(() => pageState.value.kind === 'empty-category')
-const showCategoryError = computed(() => Boolean(error.value) && !isInvalidCategory.value)
+const showCategoryError = computed(() => Boolean(error.value) && !isInvalidCategory.value && !isCategoryPending.value)
 
 const resolveCategoryLink = (item: Category): LocalizedCategoryLink => {
   const translation = item.translations?.find((entry) => entry.locale === locale.value)
@@ -202,7 +228,7 @@ const resolvedCanonicalUrl = computed(() =>
   resolveSeoCanonicalUrl({
     siteUrl,
     currentPath: route.path,
-    locale: locale.value === 'en' ? 'en' : 'vi',
+    locale: routeLocale.value,
     routeKey: 'category-detail',
     slugByLocale: categorySlugByLocale.value,
   }),
@@ -234,12 +260,12 @@ usePageSeo({
   robots: computed(() => pageState.value.shouldIndex ? 'index,follow' : 'noindex,nofollow'),
   canonicalUrl: computed(() => resolvedCanonicalUrl.value),
   currentPath: computed(() => route.path),
-  locale: computed(() => (locale.value === 'en' ? 'en' : 'vi')),
+  locale: routeLocale,
   routeKey: 'category-detail',
   slugByLocale: categorySlugByLocale,
   breadcrumbs: computed(() => [
     { name: t('common.home') || 'Home', item: '/' },
-    { name: t('common.categories') || 'Categories', item: getCategoryListRoute(locale.value) },
+    { name: t('common.categories') || 'Categories', item: getCategoryListRoute(routeLocale.value) },
     { name: isInvalidCategory.value ? (t('categories.invalidCategoryTitle') || 'Không tìm thấy danh mục') : (categoryName.value || 'Category') },
   ]),
   schemas: computed(() => isInvalidCategory.value ? [] : [
@@ -251,9 +277,6 @@ usePageSeo({
     ),
   ]),
 })
-
-const convertCategoryIds = (ids: (string | number)[]): number[] =>
-  ids.map((id) => typeof id === 'string' ? parseInt(id, 10) : id)
 
 const sortOptions = computed(() => [
   { value: 'newest' as ProductSortBy, label: t('sort.newest') },
@@ -272,7 +295,7 @@ watch([() => slug.value, () => categoryData.value?.id], async ([, newId]) => {
     minPrice: route.query.minPrice ? Number(route.query.minPrice) : undefined,
     maxPrice: route.query.maxPrice ? Number(route.query.maxPrice) : undefined,
     includeNullPrice: true,
-    categories: [newId.toString()],
+    categories: [newId],
     isFeatured: route.query.isFeatured === 'true',
     isNew: route.query.isNew === 'true',
     isSale: route.query.isSale === 'true',
@@ -285,8 +308,8 @@ watch([() => slug.value, () => categoryData.value?.id], async ([, newId]) => {
   Object.assign(filters, updatedFilters)
   productFilters.value = {
     ...updatedFilters,
-    categories: convertCategoryIds(updatedFilters.categories),
-    locale: locale.value
+    categories: updatedFilters.categories,
+    locale: routeLocale.value
   }
 
   if (!isLoading.value) {
@@ -299,7 +322,7 @@ const handleFilterChange = (newFilters: ProductFilter) => {
 
   const updatedFilters: FilterState = {
     ...newFilters,
-    categories: [categoryData.value.id.toString()],
+    categories: [categoryData.value.id],
     categorySlug: slug.value,
     search: newFilters.search || '',
     limit: newFilters.limit || 12,
@@ -314,8 +337,8 @@ const handleFilterChange = (newFilters: ProductFilter) => {
   Object.assign(filters, updatedFilters)
   productFilters.value = {
     ...updatedFilters,
-    categories: convertCategoryIds(updatedFilters.categories),
-    locale: locale.value
+    categories: updatedFilters.categories,
+    locale: routeLocale.value
   }
 
   updateQueryParams()
@@ -336,14 +359,14 @@ const handleSortChange = (event: Event) => {
 const resetAllFilters = () => {
   handleFilterChange({
     ...initialFilters,
-    locale: locale.value,
+    locale: routeLocale.value,
   })
 }
 
 const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
   const items: BreadcrumbItem[] = [
     { label: t('common.home'), to: '/' },
-    { label: t('common.categories'), to: getCategoryListRoute(locale.value) }
+    { label: t('common.categories'), to: getCategoryListRoute(routeLocale.value) }
   ]
 
   if (isInvalidCategory.value) {
@@ -359,13 +382,13 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
   if (categoryData.value?.parent) {
     items.push({
       label: categoryData.value.parent.name,
-      to: getCategoryDetailRoute(categoryData.value.parent.slug, locale.value)
+      to: getCategoryDetailRoute(categoryData.value.parent.slug, routeLocale.value)
     })
   }
 
   items.push({
     label: categoryName.value || slug.value,
-    to: getCategoryDetailRoute(slug.value, locale.value),
+    to: getCategoryDetailRoute(slug.value, routeLocale.value),
     active: true
   })
 
@@ -413,6 +436,10 @@ const updateQueryParams = () => {
         <UButton color="red" variant="soft" class="mt-4" @click="refreshCategory">
           {{ t('common.tryAgain') }}
         </UButton>
+      </div>
+
+      <div v-else-if="isCategoryPending" class="py-2">
+        <CardGridSkeleton :item-count="6" :columns="3" />
       </div>
 
       <template v-else>

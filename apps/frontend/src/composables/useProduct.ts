@@ -13,7 +13,7 @@ export interface ProductFilter {
   minPrice?: number;
   maxPrice?: number;
   includeNullPrice?: boolean;
-  categories?: string[];
+  categories?: number[];
   isFeatured?: boolean;
   isNew?: boolean;
   isSale?: boolean;
@@ -271,12 +271,12 @@ export function useProduct(initialFilters?: ProductFilter) {
   /**
    * Toggle category selection
    */
-  const toggleCategory = (categorySlug: string) => {
+  const toggleCategory = (categoryId: number) => {
     const categories = filters.value.categories || [];
-    const index = categories.indexOf(categorySlug);
+    const index = categories.indexOf(categoryId);
     
     if (index === -1) {
-      filters.value.categories = [...categories, categorySlug];
+      filters.value.categories = [...categories, categoryId];
     } else {
       categories.splice(index, 1);
       filters.value.categories = categories;

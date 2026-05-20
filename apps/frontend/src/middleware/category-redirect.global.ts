@@ -1,16 +1,18 @@
+import { resolveLegacyRedirect } from '../utils/legacyRedirects';
+
 export default defineNuxtRouteMiddleware((to) => {
-  if (to.path !== '/categories' && !to.path.startsWith('/categories/')) {
+  const redirect = resolveLegacyRedirect(to.path);
+
+  if (!redirect) {
     return;
   }
 
-  const redirectedPath = to.path.replace(/^\/categories/, '/danh-muc-san-pham');
-
   return navigateTo(
     {
-      path: redirectedPath,
+      path: redirect.destination,
       query: to.query,
       hash: to.hash,
     },
-    { redirectCode: 301 },
+    { redirectCode: redirect.statusCode },
   );
 });

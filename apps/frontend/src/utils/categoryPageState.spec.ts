@@ -5,6 +5,20 @@ import {
 } from './categoryPageState';
 
 describe('categoryPageState', () => {
+  it('keeps the page in loading state while the category request is still pending', () => {
+    expect(resolveCategoryPageState({
+      categoryId: null,
+      totalProducts: 0,
+      hasActiveFilters: false,
+      errorMessage: null,
+      isPending: true,
+    })).toEqual({
+      kind: 'loading',
+      shouldIndex: false,
+      shouldShowFilters: false,
+    });
+  });
+
   it('marks missing categories as invalid and non-indexable', () => {
     expect(resolveCategoryPageState({
       categoryId: null,

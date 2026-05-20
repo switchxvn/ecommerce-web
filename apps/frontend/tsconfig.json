@@ -28,6 +28,14 @@
     "../../libs/shared/src/**/*"
   ],
   "exclude": [
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.js",
+    "src/**/*.spec.jsx",
+    "src/**/*.test.js",
+    "src/**/*.test.jsx",
     "node_modules",
     "../../apps/backend/**/*",
     "../../libs/database/**/*"

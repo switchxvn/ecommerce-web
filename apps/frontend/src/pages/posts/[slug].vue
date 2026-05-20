@@ -13,6 +13,7 @@ import { useI18n } from 'vue-i18n';
 import type { Post, Profile, Author, Tag } from '@ew/shared';
 import { usePost } from '~/composables/usePost';
 import { formatDateTime } from '~/utils/date';
+import { getAuthorName as resolveAuthorName } from '~/utils/author';
 import { usePageSeo } from '~/composables/usePageSeo';
 import { buildArticleSchema, resolveSeoCanonicalUrl } from '~/utils/seo';
 
@@ -54,28 +55,20 @@ const postOgImage = computed(() => currentTranslation.value?.ogImage || '');
 const postMetaKeywords = computed(() => currentTranslation.value?.metaKeywords || '');
 const postTags = computed(() => postData.value.tags || []);
 
-const getAuthorName = computed(() => {
-  if (!postData.value.author) return 'Không xác định';
-  
-  const author = postData.value.author;
-  if (author.profile) {
-    const firstName = author.profile.firstName || '';
-    const lastName = author.profile.lastName || '';
-    if (firstName || lastName) {
-      return `${firstName} ${lastName}`.trim();
-    }
-  }
-  return author.username || author.email?.split('@')[0] || 'Không xác định';
+const authorName = computed(() => {
+  return resolveAuthorName(postData.value.author);
 });
 
 const authorInfo = computed(() => {
-  if (!postData.value.author) return undefined;
-  
-  const author = postData.value.author;
   return {
-    name: getAuthorName.value,
-    bio: author.profile?.bio || null
+    name: authorName.value,
+    bio: postData.value.author?.profile?.bio || null
   };
+});
+
+const authorInitial = computed(() => {
+  const firstCharacter = authorName.value.trim().charAt(0);
+  return firstCharacter ? firstCharacter.toUpperCase() : '?';
 });
 
 // Watch locale changes to update content
@@ -145,7 +138,7 @@ usePageSeo({
       image: currentTranslation.value?.ogImage || postThumbnail.value || '',
       datePublished: postCreatedAt.value || undefined,
       dateModified: postUpdatedAt.value || undefined,
-      authorName: getAuthorName.value,
+      authorName: authorName.value,
     }),
   ]),
 });
@@ -240,12 +233,12 @@ usePageSeo({
               <div class="post-detail__meta">
                 <div class="post-detail__author">
                   <div class="post-detail__author-avatar">
-                    {{ authorInfo?.name.charAt(0) }}
+                    {{ authorInitial }}
                   </div>
                   <div class="post-detail__author-info">
                     <div class="post-detail__author-name">
                       <Icon name="User" :size="16" class="mr-1" />
-                      <span>{{ authorInfo?.name }}</span>
+                      <span>{{ authorInfo.name }}</span>
                     </div>
                     <div class="post-detail__date">
                       <Icon name="Calendar" :size="16" class="mr-1" />
