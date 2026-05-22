@@ -99,6 +99,8 @@ interface BreadcrumbItem {
   active?: boolean;
 }
 
+const tr = (key: string, fallback: string) => t(key) || fallback
+
 const filters = reactive<FilterState>({
   search: route.query.search as string || '',
   minPrice: route.query.minPrice ? Number(route.query.minPrice) : undefined,
@@ -264,9 +266,9 @@ usePageSeo({
   routeKey: 'category-detail',
   slugByLocale: categorySlugByLocale,
   breadcrumbs: computed(() => [
-    { name: t('common.home') || 'Home', item: '/' },
-    { name: t('common.categories') || 'Categories', item: getCategoryListRoute(routeLocale.value) },
-    { name: isInvalidCategory.value ? (t('categories.invalidCategoryTitle') || 'Không tìm thấy danh mục') : (categoryName.value || 'Category') },
+    { name: tr('common.home', routeLocale.value === 'vi' ? 'Trang chủ' : 'Home'), item: '/' },
+    { name: tr('common.categories', routeLocale.value === 'vi' ? 'Danh mục sản phẩm' : 'Product Categories'), item: getCategoryListRoute(routeLocale.value) },
+    { name: isInvalidCategory.value ? tr('categories.invalidCategoryTitle', routeLocale.value === 'vi' ? 'Không tìm thấy danh mục' : 'Category not found') : (categoryName.value || 'Category') },
   ]),
   schemas: computed(() => isInvalidCategory.value ? [] : [
     buildCollectionPageSchema(
@@ -365,13 +367,13 @@ const resetAllFilters = () => {
 
 const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
   const items: BreadcrumbItem[] = [
-    { label: t('common.home'), to: '/' },
-    { label: t('common.categories'), to: getCategoryListRoute(routeLocale.value) }
+    { label: tr('common.home', routeLocale.value === 'vi' ? 'Trang chủ' : 'Home'), to: '/' },
+    { label: tr('common.categories', routeLocale.value === 'vi' ? 'Danh mục sản phẩm' : 'Product Categories'), to: getCategoryListRoute(routeLocale.value) }
   ]
 
   if (isInvalidCategory.value) {
     items.push({
-      label: t('categories.invalidCategoryTitle') || 'Không tìm thấy danh mục',
+      label: tr('categories.invalidCategoryTitle', routeLocale.value === 'vi' ? 'Không tìm thấy danh mục' : 'Category not found'),
       to: route.path,
       active: true,
     })

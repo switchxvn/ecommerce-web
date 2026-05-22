@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const localizationLocale = ref('vi');
+const localizationT = vi.fn((key: string) => key);
 const mockedProductFilters = ref({
   search: '',
   minPrice: undefined as number | undefined,
@@ -25,6 +26,15 @@ const categoryBySlugQuery = vi.fn().mockResolvedValue({
   slug: 'may-nen-khi',
   translations: [{ locale: 'vi', name: 'Máy nén khí', slug: 'may-nen-khi' }],
 });
+const NuxtLinkStub = defineComponent({
+  props: {
+    to: {
+      type: String,
+      required: false,
+    },
+  },
+  template: '<a :href="to"><slot /></a>',
+});
 
 vi.mock('h3', () => ({
   setResponseStatus: vi.fn(),
@@ -36,7 +46,7 @@ vi.mock('nuxt/app', () => ({
 
 vi.mock('../../composables/useLocalization', () => ({
   useLocalization: () => ({
-    t: (key: string) => key,
+    t: localizationT,
     locale: localizationLocale,
   }),
 }));
@@ -108,6 +118,8 @@ Object.assign(globalThis, {
 describe('category slug page', () => {
   beforeEach(() => {
     localizationLocale.value = 'vi';
+    localizationT.mockReset();
+    localizationT.mockImplementation((key: string) => key);
     categoryBySlugQuery.mockClear();
     categoryByTypeQuery.mockClear();
     mockedProductFilters.value = {
@@ -149,7 +161,7 @@ describe('category slug page', () => {
           UButton: true,
           UPagination: true,
           Pagination: true,
-          NuxtLink: true,
+          NuxtLink: NuxtLinkStub,
           CardGridSkeleton: true,
         },
       },
@@ -197,7 +209,7 @@ describe('category slug page', () => {
           UButton: true,
           UPagination: true,
           Pagination: true,
-          NuxtLink: true,
+          NuxtLink: NuxtLinkStub,
           CardGridSkeleton: true,
         },
       },
@@ -229,7 +241,7 @@ describe('category slug page', () => {
           UButton: true,
           UPagination: true,
           Pagination: true,
-          NuxtLink: true,
+          NuxtLink: NuxtLinkStub,
           CardGridSkeleton: true,
         },
       },
@@ -274,7 +286,7 @@ describe('category slug page', () => {
             UButton: true,
             UPagination: true,
             Pagination: true,
-            NuxtLink: true,
+            NuxtLink: NuxtLinkStub,
             CardGridSkeleton: true,
           },
         },
@@ -289,5 +301,40 @@ describe('category slug page', () => {
         useAsyncData: originalUseAsyncData,
       });
     }
+  });
+
+  it('falls back to literal breadcrumb labels when translations resolve to an empty string', async () => {
+    localizationT.mockImplementation(() => '');
+
+    const page = (await import('./[slug].vue')).default;
+    const TestHost = defineComponent({
+      components: { Page: page },
+      template: `
+        <Suspense>
+          <Page />
+        </Suspense>
+      `,
+    });
+
+    const wrapper = mount(TestHost, {
+      global: {
+        stubs: {
+          CategorySidebar: true,
+          CategoryMobileSidebar: true,
+          ProductCard: true,
+          UIcon: true,
+          UButton: true,
+          UPagination: true,
+          Pagination: true,
+          NuxtLink: NuxtLinkStub,
+          CardGridSkeleton: true,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Trang chủ');
+    expect(wrapper.text()).toContain('Danh mục sản phẩm');
   });
 });

@@ -28,6 +28,7 @@ const props = defineProps<{
 }>();
 
 const { t } = useLocalization();
+const tr = (key: string, fallback: string) => t(key) || fallback;
 const formRef = ref<InstanceType<typeof ProductReviewForm> | null>(null);
 const formContainerRef = ref<HTMLElement | null>(null);
 const isFormOpen = ref(props.reviews.length === 0);
@@ -109,7 +110,7 @@ const handleSubmitError = () => {
           Customer Voice
         </p>
         <h2 class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
-          {{ t('reviews.title') || 'Đánh giá' }}
+          {{ tr('reviews.title', 'Đánh giá') }}
         </h2>
         <p class="mt-3 max-w-2xl text-sm leading-6 text-gray-600 dark:text-gray-300">
           Phản hồi thực tế từ khách hàng đã sử dụng sản phẩm để bạn tham khảo trước khi chốt cấu hình phù hợp.
@@ -136,7 +137,7 @@ const handleSubmitError = () => {
         </div>
 
         <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
-          {{ t('reviews.basedOn') }} <strong>{{ normalizedTotalReviews }}</strong> {{ t('reviews.reviews') }}
+          {{ tr('reviews.basedOn', 'Dựa trên') }} <strong>{{ normalizedTotalReviews }}</strong> {{ tr('reviews.reviews', 'đánh giá') }}
         </p>
 
         <UButton
@@ -147,7 +148,7 @@ const handleSubmitError = () => {
           <template #leading>
             <PencilLine class="h-4 w-4" />
           </template>
-          {{ t('reviews.writeReview') }}
+          {{ tr('reviews.writeReview', 'Viết đánh giá') }}
         </UButton>
       </div>
     </div>
@@ -199,10 +200,10 @@ const handleSubmitError = () => {
       <div
         v-else
         class="rounded-3xl border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center dark:border-gray-700 dark:bg-gray-900/40"
-      >
+        >
         <MessageSquareQuote class="mx-auto h-10 w-10 text-gray-400" />
         <h3 class="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
-          {{ t('reviews.noReviews') }}
+          {{ tr('reviews.noReviews', 'Không tìm thấy đánh giá nào') }}
         </h3>
         <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
           Hãy là người đầu tiên chia sẻ trải nghiệm thực tế với sản phẩm này.
@@ -215,10 +216,10 @@ const handleSubmitError = () => {
         <div>
           <p class="text-sm font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-400">
             <PencilLine class="mr-2 inline h-4 w-4" />
-            {{ t('reviews.writeReview') }}
+            {{ tr('reviews.writeReview', 'Viết đánh giá') }}
           </p>
           <h3 class="mt-2 text-xl font-bold text-gray-900 dark:text-white">
-            {{ t('reviews.shareYourExperience') }}
+            {{ tr('reviews.shareYourExperience', 'Chia sẻ trải nghiệm của bạn') }}
           </h3>
         </div>
 
@@ -228,7 +229,7 @@ const handleSubmitError = () => {
           variant="soft"
           @click="openForm"
         >
-          {{ t('reviews.writeReview') }}
+          {{ tr('reviews.writeReview', 'Viết đánh giá') }}
         </UButton>
       </div>
 
@@ -237,16 +238,16 @@ const handleSubmitError = () => {
         data-testid="product-review-success"
         class="mt-5 rounded-2xl border border-green-200 bg-green-50 px-4 py-4 text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200"
       >
-        <p class="font-medium">{{ t('reviews.thankYou') }}</p>
-        <p class="mt-1 text-sm">{{ t('reviews.reviewSubmitSuccessDetail') }}</p>
-        <p class="mt-1 text-sm">{{ t('reviews.moderationNotice') }}</p>
+        <p class="font-medium">{{ tr('reviews.thankYou', 'Cảm ơn bạn!') }}</p>
+        <p class="mt-1 text-sm">{{ tr('reviews.reviewSubmitSuccessDetail', 'Đánh giá của bạn đã được gửi thành công!') }}</p>
+        <p class="mt-1 text-sm">{{ tr('reviews.moderationNotice', 'Đánh giá của bạn sẽ được hiển thị sau khi được kiểm duyệt.') }}</p>
       </div>
 
       <div
         v-if="submitError"
         class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
       >
-        {{ t('reviews.reviewSubmitError') }}
+        {{ tr('reviews.reviewSubmitError', 'Đã xảy ra lỗi khi gửi đánh giá của bạn. Vui lòng thử lại sau.') }}
       </div>
 
       <ProductReviewForm

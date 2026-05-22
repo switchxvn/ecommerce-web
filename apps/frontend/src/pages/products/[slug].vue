@@ -264,7 +264,7 @@ const breadcrumbCategory = computed(() =>
 const breadcrumbItems = computed(() => [
   breadcrumbCategory.value
     ? { label: breadcrumbCategory.value.label, to: breadcrumbCategory.value.to }
-    : { label: t('products.title'), to: productListPath.value },
+    : { label: translateWithFallback('products.title', currentLocale.value === 'en' ? 'Products' : 'Sản phẩm'), to: productListPath.value },
   { label: productTitle.value || seoTitle.value },
 ]);
 const categoryBadges = computed(() =>
@@ -392,7 +392,7 @@ watch(activeTab, (newTab, oldTab) => {
 
 <template>
   <div class="product-detail min-h-screen bg-gray-50 dark:bg-gray-900">
-    <div class="container mx-auto px-4 py-8">
+    <div class="container mx-auto px-4 pb-8 pt-0 md:py-8">
       <!-- Breadcrumb -->
       <div class="mb-6">
         <Breadcrumb :items="breadcrumbItems" />
@@ -960,22 +960,22 @@ watch(activeTab, (newTab, oldTab) => {
               v-if="productContent || productData.videoReview || productData.id"
               class="product-tabs bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden"
             >
-              <div class="border-b border-gray-200 dark:border-gray-700 px-6">
-                <div class="flex flex-wrap space-x-4 md:space-x-8">
+              <div class="product-tabs-header border-b border-gray-200 dark:border-gray-700 px-4 py-3 md:px-6 md:py-0">
+                <div class="product-tabs-scroll flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:gap-0 md:space-x-8 md:pb-0">
                   <button
                     v-for="tab in tabs"
                     :key="tab.id"
                     @click="activeTab = tab.id"
-                    class="inline-flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm md:text-base uppercase tracking-wide"
+                    class="product-tab-button inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-all md:rounded-none md:px-1 md:py-4 md:text-base md:font-medium md:uppercase md:tracking-wide"
                     :class="[
                       activeTab === tab.id
-                        ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300',
+                        ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-sm dark:bg-primary-500/10 dark:text-primary-300 md:bg-transparent md:text-primary-600 md:shadow-none md:dark:text-primary-400'
+                        : 'border-transparent bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 dark:bg-gray-700/70 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100 md:bg-transparent md:text-gray-500 md:hover:bg-transparent md:hover:text-gray-700 md:hover:border-gray-300 md:dark:text-gray-400 md:dark:hover:text-gray-300',
                     ]"
                   >
                     <component 
                       :is="getTabIcon(tab.id)" 
-                      class="h-5 w-5"
+                      class="h-4 w-4 md:h-5 md:w-5"
                     />
                     {{ tab.label }}
                     <UBadge v-if="tab.badge" color="blue" variant="soft" size="xs">

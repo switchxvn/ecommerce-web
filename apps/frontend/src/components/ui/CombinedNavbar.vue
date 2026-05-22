@@ -214,17 +214,6 @@ const { checkCartFeatureFlag } = useNavbarFeatures();
 // Thêm ref để kiểm soát mounted state
 const isMounted = ref(true);
 
-// Watch for logo changes to update navbar height
-watch([logo, isLoadingLogo], () => {
-  nextTick(() => {
-    const nav = document.querySelector(".navigation-section") as HTMLElement;
-    if (nav) {
-      const navHeight = nav.offsetHeight;
-      document.documentElement.style.setProperty("--nav-height", `${navHeight}px`);
-    }
-  });
-});
-
 onMounted(() => {
   const init = async () => {
     try {
@@ -467,12 +456,7 @@ const translateMenuLabel = (label: string, isTranslated = false) => {
             <div class="flex-shrink-0 md:hidden">
               <NuxtLink to="/" class="block py-3">
                 <div
-                  class="mobile-logo flex items-center justify-center"
-                  :style="
-                    logo
-                      ? `width: ${logo.width * 0.5}px; height: ${logo.height * 0.5}px`
-                      : ''
-                  "
+                  class="mobile-logo flex h-10 w-[140px] items-center justify-start"
                 >
                   <span
                     v-if="showLogoSkeleton"
@@ -588,12 +572,7 @@ const translateMenuLabel = (label: string, isTranslated = false) => {
           >
             <NuxtLink to="/" class="block" @click="isMobileMenuOpen = false">
               <div
-                class="flex items-center justify-center"
-                :style="
-                  logo
-                    ? `width: ${logo.width * 0.6}px; height: ${logo.height * 0.6}px`
-                    : ''
-                "
+                class="flex h-10 w-[160px] items-center justify-start"
               >
                 <span
                   v-if="showLogoSkeleton"

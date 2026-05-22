@@ -1,21 +1,24 @@
 import { mount } from '@vue/test-utils';
 import ProductReviewsSection from './ProductReviewsSection.vue';
 
+const translate = vi.fn((key: string) =>
+  ({
+    'reviews.title': 'Đánh giá',
+    'reviews.basedOn': 'Dựa trên',
+    'reviews.reviews': 'đánh giá',
+    'reviews.writeReview': 'Viết đánh giá',
+    'reviews.shareYourExperience': 'Chia sẻ trải nghiệm của bạn',
+    'reviews.noReviews': 'Không tìm thấy đánh giá nào',
+    'reviews.thankYou': 'Cảm ơn bạn!',
+    'reviews.reviewSubmitSuccessDetail': 'Đánh giá của bạn đã được gửi thành công!',
+    'reviews.moderationNotice': 'Đánh giá của bạn sẽ được hiển thị sau khi được kiểm duyệt.',
+    'reviews.reviewSubmitError': 'Đã xảy ra lỗi khi gửi đánh giá của bạn. Vui lòng thử lại sau.',
+  }[key] || key),
+);
+
 vi.mock('~/composables/useLocalization', () => ({
   useLocalization: () => ({
-    t: (key: string) =>
-      ({
-        'reviews.title': 'Đánh giá',
-        'reviews.basedOn': 'Dựa trên',
-        'reviews.reviews': 'đánh giá',
-        'reviews.writeReview': 'Viết đánh giá',
-        'reviews.shareYourExperience': 'Chia sẻ trải nghiệm của bạn',
-        'reviews.noReviews': 'Không tìm thấy đánh giá nào',
-        'reviews.thankYou': 'Cảm ơn bạn!',
-        'reviews.reviewSubmitSuccessDetail': 'Đánh giá của bạn đã được gửi thành công!',
-        'reviews.moderationNotice': 'Đánh giá của bạn sẽ được hiển thị sau khi được kiểm duyệt.',
-        'reviews.reviewSubmitError': 'Đã xảy ra lỗi khi gửi đánh giá của bạn. Vui lòng thử lại sau.',
-      }[key] || key),
+    t: translate,
   }),
 }));
 
@@ -42,6 +45,24 @@ const makeReview = (id: number) => ({
 });
 
 describe('ProductReviewsSection', () => {
+  beforeEach(() => {
+    translate.mockReset();
+    translate.mockImplementation((key: string) =>
+      ({
+        'reviews.title': 'Đánh giá',
+        'reviews.basedOn': 'Dựa trên',
+        'reviews.reviews': 'đánh giá',
+        'reviews.writeReview': 'Viết đánh giá',
+        'reviews.shareYourExperience': 'Chia sẻ trải nghiệm của bạn',
+        'reviews.noReviews': 'Không tìm thấy đánh giá nào',
+        'reviews.thankYou': 'Cảm ơn bạn!',
+        'reviews.reviewSubmitSuccessDetail': 'Đánh giá của bạn đã được gửi thành công!',
+        'reviews.moderationNotice': 'Đánh giá của bạn sẽ được hiển thị sau khi được kiểm duyệt.',
+        'reviews.reviewSubmitError': 'Đã xảy ra lỗi khi gửi đánh giá của bạn. Vui lòng thử lại sau.',
+      }[key] || key),
+    );
+  });
+
   it('renders up to three product reviews', () => {
     const wrapper = mount(ProductReviewsSection, {
       props: {
@@ -119,5 +140,31 @@ describe('ProductReviewsSection', () => {
 
     expect(wrapper.find('[data-testid="product-review-success"]').exists()).toBe(true);
     expect(wrapper.find('button.mock-review-form').exists()).toBe(false);
+  });
+
+  it('falls back to literal review labels when translations resolve to an empty string', () => {
+    translate.mockImplementation(() => '');
+
+    const wrapper = mount(ProductReviewsSection, {
+      props: {
+        productId: 228,
+        reviews: [],
+        locale: 'vi',
+        averageRating: 0,
+        totalReviews: 0,
+      },
+      global: {
+        stubs: {
+          UButton: {
+            props: ['color', 'variant', 'icon'],
+            template: '<button><slot /></button>',
+          },
+        },
+      },
+    });
+
+    expect(wrapper.text()).toContain('Đánh giá');
+    expect(wrapper.text()).toContain('Viết đánh giá');
+    expect(wrapper.text()).toContain('Chia sẻ trải nghiệm của bạn');
   });
 });

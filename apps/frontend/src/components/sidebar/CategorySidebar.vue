@@ -38,6 +38,8 @@ const emit = defineEmits<{
   (e: 'filter-change', filters: ProductFilter): void;
 }>();
 
+const tr = (key: string, fallback: string) => t(key) || fallback;
+
 // Initialize product composable
 const {
   filters,
@@ -280,7 +282,7 @@ watch(() => props.categoryId, (newId) => {
           <div class="custom-input-container">
             <UInput
               v-model="filters.search"
-              :placeholder="t('products.searchPlaceholder')"
+              :placeholder="tr('products.searchPlaceholder', 'Tìm kiếm sản phẩm...')"
               class="w-full search-input"
               size="md"
               :loading="isSearching"
@@ -293,7 +295,7 @@ watch(() => props.categoryId, (newId) => {
             </UInput>
           </div>
           <div v-if="filters.search" class="mt-2 text-xs text-gray-500">
-            {{ t('products.searchingFor') }}: <span class="font-medium">{{ filters.search }}</span>
+            {{ tr('products.searchingFor', 'Đang tìm kiếm') }}: <span class="font-medium">{{ filters.search }}</span>
           </div>
         </div>
       </div>
@@ -308,7 +310,7 @@ watch(() => props.categoryId, (newId) => {
         >
           <div class="flex items-center gap-2.5">
             <DollarSign class="h-5 w-5 text-primary-500" />
-            <h3 class="font-medium text-gray-900 dark:text-white">{{ t('products.priceRange') }}</h3>
+            <h3 class="font-medium text-gray-900 dark:text-white">{{ tr('products.priceRange', 'Khoảng giá') }}</h3>
           </div>
           <component 
             :is="expandedSections.priceRange ? ChevronUp : ChevronDown" 
@@ -394,7 +396,7 @@ watch(() => props.categoryId, (newId) => {
         >
           <div class="flex items-center gap-2.5">
             <Tag class="h-5 w-5 text-primary-500" />
-            <h3 class="font-medium text-gray-900 dark:text-white">{{ t('products.productType') }}</h3>
+            <h3 class="font-medium text-gray-900 dark:text-white">{{ tr('products.productType', 'Loại sản phẩm') }}</h3>
           </div>
           <component 
             :is="expandedSections.productType ? ChevronUp : ChevronDown" 
@@ -412,7 +414,7 @@ watch(() => props.categoryId, (newId) => {
               />
               <label for="featured" class="ml-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
                 <Star class="h-4 w-4 text-amber-500" />
-                {{ t('products.featured') }}
+                {{ tr('products.featured', 'Nổi bật') }}
               </label>
             </div>
             
@@ -424,7 +426,7 @@ watch(() => props.categoryId, (newId) => {
               />
               <label for="new" class="ml-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
                 <Sparkles class="h-4 w-4 text-blue-500" />
-                {{ t('products.new') }}
+                {{ tr('products.new', 'Hàng mới về') }}
               </label>
             </div>
             
@@ -436,7 +438,7 @@ watch(() => props.categoryId, (newId) => {
               />
               <label for="sale" class="ml-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
                 <Flame class="h-4 w-4 text-red-500" />
-                {{ t('products.sale') }}
+                {{ tr('products.sale', 'Khuyến mãi') }}
               </label>
             </div>
           </div>
@@ -453,7 +455,7 @@ watch(() => props.categoryId, (newId) => {
         >
           <div class="flex items-center gap-2.5">
             <UIcon name="i-heroicons-adjustments-horizontal" class="h-5 w-5 text-primary-500" />
-            <h3 class="font-medium text-gray-900 dark:text-white">{{ t('products.attributes') }}</h3>
+            <h3 class="font-medium text-gray-900 dark:text-white">{{ tr('products.attributes', 'Thuộc tính') }}</h3>
           </div>
           <component 
             :is="expandedSections.attributes ? ChevronUp : ChevronDown" 
@@ -508,7 +510,7 @@ watch(() => props.categoryId, (newId) => {
           <template #leading>
             <RotateCcw class="h-4 w-4 mr-1.5" />
           </template>
-          {{ t('products.resetFilters') }}
+          {{ tr('products.resetFilters', 'Đặt lại bộ lọc') }}
         </UButton>
       </div>
     </div>

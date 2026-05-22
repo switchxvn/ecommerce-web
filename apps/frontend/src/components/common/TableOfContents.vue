@@ -291,14 +291,10 @@ onMounted(() => {
 
 .table-of-contents__title {
   margin: 0;
-  display: flex;
-  align-items: center;
-  min-height: 4rem;
   color: #111827;
   font-size: clamp(1.25rem, 1.1rem + 0.45vw, 1.6rem);
-  line-height: 1.2;
+  line-height: 1.05;
   font-weight: 650;
-  transform: translateY(0.06em);
 }
 
 .dark .table-of-contents__title {
@@ -442,7 +438,7 @@ onMounted(() => {
 
   .table-of-contents__title {
     font-size: 1.2rem;
-    min-height: 3.25rem;
+    line-height: 1.08;
   }
 
   .table-of-contents__toggle {

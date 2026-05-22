@@ -222,12 +222,12 @@ const handleLinkClick = () => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(-8px) translateX(-50%);
+  transform: translateY(-8px);
 }
 
 .fade-enter-to,
 .fade-leave-from {
   opacity: 1;
-  transform: translateY(0) translateX(-50%);
+  transform: translateY(0);
 }
-</style> 
+</style>

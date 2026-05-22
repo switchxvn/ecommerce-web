@@ -49,6 +49,11 @@ export default defineNuxtConfig({
           'cache-control': 'public, max-age=2592000, stale-while-revalidate=604800'
         }
       },
+      '/favicon.png': {
+        headers: {
+          'cache-control': 'public, max-age=2592000, stale-while-revalidate=604800'
+        }
+      },
       '/robots.txt': {
         headers: {
           'cache-control': 'public, max-age=3600, stale-while-revalidate=86400'

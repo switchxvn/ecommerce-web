@@ -2,6 +2,9 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 
 const MOBILE_STICKY_ACTIVATION_OFFSET = 12;
 const STICKY_RELEASE_OFFSET = 4;
+const MEGA_MENU_OPEN_DELAY = 150;
+const MEGA_MENU_CLOSE_DELAY = 220;
+const MOBILE_BREAKPOINT = 768;
 
 export const useNavbar = () => {
   const isMobileMenuOpen = ref(false);
@@ -12,7 +15,23 @@ export const useNavbar = () => {
   const isInitialized = ref(false);
   const activeMegaMenu = ref<number | null>(null);
   const activeMobileMegaMenu = ref<number | null>(null);
-  const megaMenuTimeout = ref<number | null>(null);
+  const navHeight = ref(0);
+  const megaMenuOpenTimeout = ref<number | null>(null);
+  const megaMenuCloseTimeout = ref<number | null>(null);
+
+  const clearMegaMenuOpenTimeout = () => {
+    if (megaMenuOpenTimeout.value) {
+      clearTimeout(megaMenuOpenTimeout.value);
+      megaMenuOpenTimeout.value = null;
+    }
+  };
+
+  const clearMegaMenuCloseTimeout = () => {
+    if (megaMenuCloseTimeout.value) {
+      clearTimeout(megaMenuCloseTimeout.value);
+      megaMenuCloseTimeout.value = null;
+    }
+  };
 
   const toggleMobileMenu = () => {
     isMobileMenuOpen.value = !isMobileMenuOpen.value;
@@ -23,24 +42,62 @@ export const useNavbar = () => {
   };
 
   const showMegaMenu = (id: number) => {
-    if (megaMenuTimeout.value) {
-      clearTimeout(megaMenuTimeout.value);
-      megaMenuTimeout.value = null;
+    clearMegaMenuCloseTimeout();
+
+    if (activeMegaMenu.value === id) {
+      clearMegaMenuOpenTimeout();
+      return;
     }
-    activeMegaMenu.value = id;
+
+    if (activeMegaMenu.value !== null) {
+      clearMegaMenuOpenTimeout();
+      activeMegaMenu.value = id;
+      return;
+    }
+
+    clearMegaMenuOpenTimeout();
+    megaMenuOpenTimeout.value = window.setTimeout(() => {
+      activeMegaMenu.value = id;
+      megaMenuOpenTimeout.value = null;
+    }, MEGA_MENU_OPEN_DELAY);
   };
 
   const hideMegaMenu = () => {
-    megaMenuTimeout.value = window.setTimeout(() => {
+    clearMegaMenuOpenTimeout();
+    clearMegaMenuCloseTimeout();
+
+    megaMenuCloseTimeout.value = window.setTimeout(() => {
       activeMegaMenu.value = null;
-    }, 300);
+      megaMenuCloseTimeout.value = null;
+    }, MEGA_MENU_CLOSE_DELAY);
   };
 
   const keepMegaMenu = () => {
-    if (megaMenuTimeout.value) {
-      clearTimeout(megaMenuTimeout.value);
-      megaMenuTimeout.value = null;
+    clearMegaMenuCloseTimeout();
+  };
+
+  const isMobileStickyMode = () =>
+    typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT;
+
+  const syncStickyHeight = () => {
+    if (!navWrapperRef.value) {
+      return;
     }
+
+    navHeight.value = Math.round(navWrapperRef.value.offsetHeight);
+    document.documentElement.style.setProperty('--nav-height', `${navHeight.value}px`);
+  };
+
+  const setStickyState = (sticky: boolean) => {
+    isScrolled.value = sticky;
+
+    if (sticky || isMobileStickyMode()) {
+      syncStickyHeight();
+    } else {
+      document.documentElement.style.setProperty('--nav-height', '0px');
+    }
+
+    updateBodyPadding();
   };
 
   const handleScroll = () => {
@@ -48,21 +105,19 @@ export const useNavbar = () => {
     
     const currentScrollPosition = Math.round(window.scrollY);
 
+    if (isMobileStickyMode()) {
+      isScrolled.value = currentScrollPosition > MOBILE_STICKY_ACTIVATION_OFFSET;
+      lastScrollPosition.value = currentScrollPosition;
+      return;
+    }
+
     const stickyStart = Math.max(initialNavPosition.value, MOBILE_STICKY_ACTIVATION_OFFSET);
     const stickyRelease = Math.max(initialNavPosition.value - STICKY_RELEASE_OFFSET, 0);
 
     if (!isScrolled.value && currentScrollPosition > stickyStart) {
-      isScrolled.value = true;
-      nextTick(() => {
-        const nav = document.querySelector('.navigation-section') as HTMLElement;
-        if (nav) {
-          const navHeight = Math.round(nav.offsetHeight);
-          document.documentElement.style.setProperty('--nav-height', `${navHeight}px`);
-        }
-      });
+      setStickyState(true);
     } else if (isScrolled.value && currentScrollPosition <= stickyRelease) {
-      isScrolled.value = false;
-      document.documentElement.style.setProperty('--nav-height', '0px');
+      setStickyState(false);
     }
     
     lastScrollPosition.value = currentScrollPosition;
@@ -72,7 +127,13 @@ export const useNavbar = () => {
     if (navWrapperRef.value) {
       const navRect = navWrapperRef.value.getBoundingClientRect();
       initialNavPosition.value = navRect.top + window.scrollY;
+
+      if (isScrolled.value) {
+        syncStickyHeight();
+      }
     }
+
+    updateBodyPadding();
   };
 
   const throttledHandleScroll = (() => {
@@ -91,7 +152,10 @@ export const useNavbar = () => {
 
   const updateBodyPadding = () => {
     if (typeof document !== 'undefined') {
-      document.body.classList.toggle('has-sticky-nav', isScrolled.value);
+      document.body.classList.toggle(
+        'has-sticky-nav',
+        isScrolled.value && !isMobileStickyMode()
+      );
     }
   };
 
@@ -101,6 +165,8 @@ export const useNavbar = () => {
         const navRect = navWrapperRef.value.getBoundingClientRect();
         initialNavPosition.value = navRect.top + window.scrollY;
         isInitialized.value = true;
+        syncStickyHeight();
+        updateBodyPadding();
         handleScroll();
       }
     });
@@ -111,6 +177,8 @@ export const useNavbar = () => {
   });
 
   onUnmounted(() => {
+    clearMegaMenuOpenTimeout();
+    clearMegaMenuCloseTimeout();
     document.body.style.overflow = '';
     window.removeEventListener('scroll', throttledHandleScroll);
     window.removeEventListener('resize', handleResize);
@@ -125,6 +193,7 @@ export const useNavbar = () => {
     navWrapperRef,
     activeMegaMenu,
     activeMobileMegaMenu,
+    navHeight,
     toggleMobileMenu,
     toggleMobileMegaMenu,
     showMegaMenu,
