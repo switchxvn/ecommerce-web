@@ -14,6 +14,7 @@ import { usePageSeo } from '~/composables/usePageSeo'
 import { getCategoryDetailRoute, getCategoryListRoute, getContactRoute, getRouteLocale } from '~/utils/routes'
 import { buildCollectionPageSchema, resolveSeoCanonicalUrl } from '~/utils/seo'
 import { hasActiveCategoryFilters, resolveCategoryPageState } from '~/utils/categoryPageState'
+import { formatProductRangeSummary } from '~/utils/productListingSummary'
 
 const { t, locale } = useLocalization()
 const trpc = useTrpc()
@@ -286,6 +287,17 @@ const sortOptions = computed(() => [
   { value: 'price_asc' as ProductSortBy, label: t('sort.price_asc') },
   { value: 'price_desc' as ProductSortBy, label: t('sort.price_desc') },
 ])
+
+const productResultsSummary = computed(() =>
+  formatProductRangeSummary({
+    currentPage: filters.page,
+    limit: filters.limit,
+    totalItems: totalProducts.value,
+    showingLabel: t('products.showing') || 'Hiển thị',
+    ofLabel: t('products.of') || 'trong số',
+    itemsLabel: t('products.items') || 'sản phẩm',
+  }),
+)
 
 watch([() => slug.value, () => categoryData.value?.id], async ([, newId]) => {
   if (!newId) {
@@ -577,7 +589,7 @@ const updateQueryParams = () => {
               <div v-if="pageState.kind === 'has-products' || isFilteredEmptyState" class="mb-6 flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center gap-2">
                   <span class="text-sm text-gray-600 dark:text-gray-400">
-                    {{ t('products.showing') }} {{ totalProducts }} {{ t('products.items') }}
+                    {{ productResultsSummary }}
                   </span>
                 </div>
 

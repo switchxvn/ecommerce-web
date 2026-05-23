@@ -1,5 +1,10 @@
 <template>
-  <div class="lazy-image-container relative" :style="containerStyle">
+  <div
+    class="lazy-image-container relative"
+    v-bind="forwardedAttrs"
+    :class="containerClass"
+    :style="containerStyle"
+  >
     <div
       v-if="isLoading && !hasError"
       class="absolute inset-0 bg-gray-200 animate-pulse dark:bg-gray-700"
@@ -16,7 +21,7 @@
       :decoding="decoding"
       :fetchpriority="resolvedFetchPriority"
       class="w-full h-full object-cover transition-opacity duration-300"
-      :class="imageClass"
+      :class="renderedImageClass"
       @load="handleLoad"
       @error="handleError"
     />
@@ -31,12 +36,12 @@
       :height="normalizedHeight"
       :sizes="sizes"
       :quality="quality"
-      :format="format"
+      :format="resolvedFormat"
       :loading="resolvedLoading"
       :decoding="decoding"
-      :fetchpriority="fetchpriority"
+      :fetchpriority="resolvedFetchPriority"
       class="w-full h-full object-cover transition-opacity duration-300"
-      :class="imageClass"
+      :class="renderedImageClass"
       @load="handleLoad"
       @error="handleError"
     />
@@ -48,7 +53,7 @@
       :width="normalizedWidth || undefined"
       :height="normalizedHeight || undefined"
       class="w-full h-full object-cover"
-      :class="[customClass]"
+      :class="fallbackImageClass"
       loading="lazy"
       decoding="async"
       @error="handleFallbackError"
@@ -57,8 +62,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, useAttrs, watch } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
+
+defineOptions({
+  inheritAttrs: false,
+});
 
 interface LazyImageProps {
   src: string;
@@ -73,7 +82,7 @@ interface LazyImageProps {
   loading?: 'lazy' | 'eager';
   decoding?: 'async' | 'sync' | 'auto';
   fetchpriority?: 'high' | 'low' | 'auto';
-  format?: string;
+  format?: string | null;
 }
 
 const props = withDefaults(defineProps<LazyImageProps>(), {
@@ -87,9 +96,10 @@ const props = withDefaults(defineProps<LazyImageProps>(), {
   loading: 'lazy',
   decoding: 'async',
   fetchpriority: 'auto',
-  format: 'avif,webp',
+  format: null,
 });
 
+const attrs = useAttrs();
 const isLoading = ref(true);
 const hasError = ref(false);
 const nativeImageRef = ref<HTMLImageElement | null>(null);
@@ -121,7 +131,7 @@ const containerStyle = computed(() => {
 
 const resolvedLoading = computed(() => (props.priority ? 'eager' : props.loading));
 const resolvedFetchPriority = computed(() => (props.priority ? 'high' : props.fetchpriority));
-const fetchpriority = computed(() => resolvedFetchPriority.value);
+const resolvedFormat = computed(() => props.format || undefined);
 const shouldUseNativeImage = computed(() => {
   if (!/^https?:\/\//i.test(props.src)) {
     return false;
@@ -142,11 +152,18 @@ const shouldUseNativeImage = computed(() => {
     return true;
   }
 });
+const attrClass = computed(() => attrs.class);
+const forwardedAttrs = computed(() => {
+  const { class: _class, ...rest } = attrs;
+  return rest;
+});
+const containerClass = computed(() => attrClass.value);
 const imageClass = computed(() => ({
   'opacity-0': isLoading.value,
   'opacity-100': !isLoading.value,
-  [props.customClass]: !!props.customClass,
 }));
+const renderedImageClass = computed(() => [attrClass.value, props.customClass, imageClass.value]);
+const fallbackImageClass = computed(() => [attrClass.value, props.customClass]);
 
 const getRenderedImage = () => {
   if (shouldUseNativeImage.value) {
