@@ -1,179 +1,195 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from "vue";
-import { useLocalization } from "../composables/useLocalization";
-import { useTrpc } from '~/composables/useTrpc';
-import { defineAsyncComponent, markRaw } from 'vue';
+import { useAsyncData, useRoute, useRuntimeConfig } from 'nuxt/app';
+import { computed, defineAsyncComponent, markRaw, watch } from 'vue';
 import type { Component } from 'vue';
+import { useLocalization } from '../composables/useLocalization';
+import { usePageSeo } from '../composables/usePageSeo';
+import { useTrpc } from '../composables/useTrpc';
+import {
+  buildAbsoluteUrl,
+  buildOrganizationSchema,
+} from '../utils/seo';
+import {
+  resolveAboutSectionComponentName,
+  translateAboutSections,
+  type AboutSectionRecord,
+} from '../utils/aboutPage';
 
-// Định nghĩa type cho components
 type ComponentType = Component;
 type ComponentRegistry = Record<string, ComponentType>;
 
-// Register components using defineAsyncComponent
 const registeredComponents = {
-  // About components
-  'AboutHeroSection': defineAsyncComponent(() => import("../components/sections/about/AboutHeroSection.vue")),
-  'AboutMilestoneSection': defineAsyncComponent(() => import("../components/sections/about/AboutMilestoneSection.vue")),
-  'AboutTeamSection': defineAsyncComponent(() => import("../components/sections/about/AboutTeamSection.vue")),
-  
-  // Tourism components
-  'TourismHeroSection': defineAsyncComponent(() => import("../components/sections/about/tourism/TourismHeroSection.vue")),
-  'TourismFeaturesSection': defineAsyncComponent(() => import("../components/sections/about/tourism/TourismFeaturesSection.vue")),
-  'TourismCulturalSection': defineAsyncComponent(() => import("../components/sections/about/tourism/TourismCulturalSection.vue")),
-  'TourismGallerySection': defineAsyncComponent(() => import("../components/sections/about/tourism/TourismGallerySection.vue")),
+  AboutHeroSection: defineAsyncComponent(() => import('../components/sections/about/AboutHeroSection.vue')),
+  AboutContentSection: defineAsyncComponent(() => import('../components/sections/about/AboutContentSection.vue')),
+  AboutFeaturesSection: defineAsyncComponent(() => import('../components/sections/about/AboutFeaturesSection.vue')),
+  AboutMilestoneSection: defineAsyncComponent(() => import('../components/sections/about/AboutMilestoneSection.vue')),
+  AboutTeamSection: defineAsyncComponent(() => import('../components/sections/about/AboutTeamSection.vue')),
+  TourismHeroSection: defineAsyncComponent(() => import('../components/sections/about/tourism/TourismHeroSection.vue')),
+  TourismFeaturesSection: defineAsyncComponent(() => import('../components/sections/about/tourism/TourismFeaturesSection.vue')),
+  TourismCulturalSection: defineAsyncComponent(() => import('../components/sections/about/tourism/TourismCulturalSection.vue')),
+  TourismGallerySection: defineAsyncComponent(() => import('../components/sections/about/tourism/TourismGallerySection.vue')),
 } as ComponentRegistry;
 
-// Resolve component function
-const resolveComponent = (section: any): ComponentType | null => {
-  if (!section?.type && !section?.componentName) {
-    console.warn('Invalid section configuration');
+const resolveComponent = (section: AboutSectionRecord): ComponentType | null => {
+  const componentName = resolveAboutSectionComponentName(section);
+
+  if (!componentName || !registeredComponents[componentName]) {
+    console.warn(`No component found for about section type: ${section?.type}`);
     return null;
   }
 
-  // First try componentName if specified
-  if (section.componentName && registeredComponents[section.componentName]) {
-    return markRaw(registeredComponents[section.componentName]);
-  }
-
-  // Then try type mapping
-  const typeToComponentName: Record<string, keyof typeof registeredComponents> = {
-    'hero': 'AboutHeroSection',
-    'milestone': 'AboutMilestoneSection',
-    'team': 'AboutTeamSection',
-    
-    // Tourism section types mapping
-    'tourism_hero': 'TourismHeroSection',
-    'tourism_features': 'TourismFeaturesSection', 
-    'tourism_cultural': 'TourismCulturalSection',
-    'tourism_gallery': 'TourismGallerySection'
-  };
-
-  const componentName = typeToComponentName[section.type];
-  if (componentName && registeredComponents[componentName]) {
-    return markRaw(registeredComponents[componentName]);
-  }
-
-  console.warn(`No component found for section type: ${section.type}`);
-  return null;
+  return markRaw(registeredComponents[componentName]);
 };
 
-const { t, locale } = useLocalization();
+const { locale } = useLocalization();
 const trpc = useTrpc();
+const route = useRoute();
+const config = useRuntimeConfig();
 
-// Fetch data using tRPC
-const sections = ref<any[]>([]);
-const isLoading = ref(true);
-const error = ref<string | null>(null);
-
-// Helper function to get translation by locale
-const getTranslation = (translations: any[] | undefined, fallback: any) => {
-  if (!translations || !Array.isArray(translations) || translations.length === 0) return fallback;
-  const translation = translations.find(t => t?.locale === locale.value);
-  return translation || translations.find(t => t?.locale === 'en') || fallback;
-};
-
-// Computed properties for translated content
-const translatedSections = computed(() => {
-  if (!sections.value) return [];
-  
-  return sections.value.map(section => {
-    if (!section) return null;
-    const translation = getTranslation(section.translations, {});
-    return {
-      ...section,
-      title: translation?.title || section.title,
-      subtitle: translation?.subtitle || '',
-      content: translation?.content || '',
-      data: translation?.data || {}
-    };
-  }).filter(Boolean);
+definePageMeta({
+  layout: 'default',
 });
 
-// Helper function to get team members from section data
-const teamMembers = computed(() => {
-  const teamSection = translatedSections.value.find(section => section.type === 'team');
-  if (!teamSection || !teamSection.settings || !teamSection.settings.teamMembers) return [];
-  return teamSection.settings.teamMembers;
-});
+const fallbackSeoByLocale = computed(() =>
+  locale.value === 'en'
+    ? {
+        title: 'About MGA Vietnam | Forklifts, spare parts, and technical service',
+        description:
+          'Learn how MGA Vietnam supports forklift operations with equipment consulting, genuine spare parts, maintenance, and technical service.',
+      }
+    : {
+        title: 'Giới thiệu MGA Vietnam | Xe nâng, phụ tùng và dịch vụ kỹ thuật',
+        description:
+          'Tìm hiểu MGA Vietnam qua năng lực tư vấn xe nâng, phụ tùng chính hãng, bảo trì kỹ thuật và đồng hành vận hành cho doanh nghiệp.',
+      },
+);
 
-// Helper function to get milestones from section data
-const milestones = computed(() => {
-  const milestoneSection = translatedSections.value.find(section => section.type === 'milestone');
-  if (!milestoneSection || !milestoneSection.settings || !milestoneSection.settings.milestones) return [];
-  return milestoneSection.settings.milestones;
-});
-
-// Helper function to get hero section
-const heroSection = computed(() => {
-  return translatedSections.value.find(section => section.type === 'hero');
-});
-
-const fetchData = async () => {
-  try {
-    isLoading.value = true;
-    error.value = null;
-
+const { data: sectionsState, pending, error } = await useAsyncData(
+  () => `about-sections-${locale.value}`,
+  async () => {
     const data = await trpc.about.getActiveSections.query(locale.value);
+    return Array.isArray(data) ? data : [];
+  },
+  {
+    watch: [locale],
+    default: () => [],
+  },
+);
 
-    if (!data || data.length === 0) {
-      error.value = 'No active about sections found';
-      return;
+const { data: seoDataState } = await useAsyncData(
+  () => `seo-about-${locale.value}`,
+  () => trpc.seo.getSeoByPath.query(locale.value === 'en' ? '/about' : '/gioi-thieu').catch(() => null),
+  {
+    watch: [locale],
+    default: () => null,
+  },
+);
+
+const sections = computed<AboutSectionRecord[]>(() => sectionsState.value || []);
+
+const translatedSections = computed(() =>
+  translateAboutSections(sections.value, locale.value).filter((section) => section.isActive !== false),
+);
+
+const activeHeroSection = computed(() =>
+  translatedSections.value.find((section) => section.type === 'hero'),
+);
+
+const pageTitle = computed(() => seoDataState.value?.title || fallbackSeoByLocale.value.title);
+const pageDescription = computed(
+  () => seoDataState.value?.description || fallbackSeoByLocale.value.description,
+);
+const pageImage = computed(() => {
+  const heroImage = activeHeroSection.value?.settings?.heroBackgroundImage;
+  const seoImage = seoDataState.value?.ogImage;
+  const candidate = seoImage || heroImage || '/images/og-default.jpg';
+
+  return candidate.startsWith('http')
+    ? candidate
+    : buildAbsoluteUrl(config.public.siteUrl, candidate);
+});
+
+const pageCanonical = computed(() => seoDataState.value?.canonicalUrl || null);
+
+usePageSeo({
+  title: pageTitle,
+  description: pageDescription,
+  keywords: computed(() => seoDataState.value?.keywords || ''),
+  ogTitle: computed(() => seoDataState.value?.ogTitle || pageTitle.value),
+  ogDescription: computed(() => seoDataState.value?.ogDescription || pageDescription.value),
+  image: pageImage,
+  canonicalUrl: pageCanonical,
+  currentPath: computed(() => route.path),
+  locale: computed(() => (locale.value === 'en' ? 'en' : 'vi')),
+  routeKey: 'about',
+  breadcrumbs: computed(() => [
+    {
+      name: locale.value === 'en' ? 'Home' : 'Trang chu',
+      item: '/',
+    },
+    {
+      name: pageTitle.value,
+    },
+  ]),
+  schemas: computed(() => {
+    const organizationSchema = buildOrganizationSchema(
+      config.public.siteUrl,
+      config.public.siteName || 'MGA Vietnam',
+      pageImage.value,
+    ) as Record<string, unknown>;
+
+    organizationSchema.description = pageDescription.value;
+
+    return [organizationSchema];
+  }),
+});
+
+const hasSections = computed(() => translatedSections.value.length > 0);
+
+watch(
+  () => error.value,
+  (value) => {
+    if (value) {
+      console.error('Error fetching about sections:', value);
     }
-
-    sections.value = data;
-
-  } catch (e) {
-    console.error('Error fetching about sections:', e);
-    error.value = 'Failed to load about sections';
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-onMounted(() => {
-  fetchData();
-});
-
-// Watch for locale changes and refetch data
-watch(locale, () => {
-  fetchData();
-});
+  },
+);
 </script>
 
 <template>
   <div class="about w-full bg-gray-50">
-    <div v-if="isLoading" class="container mx-auto space-y-10 py-10 px-4">
+    <div v-if="pending" class="container mx-auto space-y-10 px-4 py-10">
       <HeroSkeleton />
       <CardGridSkeleton :item-count="3" :columns="3" />
     </div>
 
-    <div v-else-if="error" class="container mx-auto py-10 px-4">
-      <div class="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-        <p class="text-red-600 dark:text-red-400">{{ error }}</p>
+    <div v-else-if="error" class="container mx-auto px-4 py-10">
+      <div class="rounded-lg bg-red-50 p-4 dark:bg-red-900/20">
+        <p class="text-red-600 dark:text-red-400">
+          Failed to load about sections
+        </p>
+      </div>
+    </div>
+
+    <div v-else-if="!hasSections" class="container mx-auto px-4 py-10">
+      <div class="rounded-lg border border-slate-200 bg-white p-6 text-slate-700 shadow-sm">
+        No active about sections found.
       </div>
     </div>
 
     <template v-else>
-      <template v-for="(section, index) in translatedSections" :key="index">
-        <ClientOnly>
-          <component
-            v-if="section.isActive"
-            :is="resolveComponent(section)"
-            :settings="section.settings"
-            :translations="{
-              title: section.title,
-              subtitle: section.subtitle,
-              content: section.content,
-              data: section.data
-            }"
-          />
-          <template #fallback>
-            <div class="p-4">
-              <CardGridSkeleton :item-count="2" :columns="2" />
-            </div>
-          </template>
-        </ClientOnly>
-      </template>
+      <component
+        v-for="section in translatedSections"
+        :key="section.id || `${section.type}-${section.componentName}`"
+        :is="resolveComponent(section)"
+        :settings="section.settings || {}"
+        :translations="{
+          title: section.title,
+          subtitle: section.subtitle,
+          content: section.content,
+          data: section.data,
+        }"
+      />
     </template>
   </div>
 </template>

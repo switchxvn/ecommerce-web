@@ -7,6 +7,7 @@ import {
   buildCollectionPageSchema,
   buildOrganizationSchema,
   buildWebSiteSchema,
+  coalesceSeoText,
   normalizePath,
   resolveSeoCanonicalUrl,
   sanitizeCanonicalUrl,
@@ -82,6 +83,19 @@ export function usePageSeo(options: PageSeoOptions) {
   const fallbackPath = computed(() => normalizePath(toValue(options.currentPath) || '/'));
   const normalizedLocale = computed(() => toValue(options.locale));
   const normalizedSlugByLocale = computed(() => toValue(options.slugByLocale));
+  const fallbackTitle = computed(() => coalesceSeoText(siteName, 'Website'));
+  const resolvedTitle = computed(() =>
+    coalesceSeoText(toValue(options.title), fallbackTitle.value),
+  );
+  const resolvedDescription = computed(() =>
+    coalesceSeoText(toValue(options.description), resolvedTitle.value),
+  );
+  const resolvedOgTitle = computed(() =>
+    coalesceSeoText(toValue(options.ogTitle), resolvedTitle.value),
+  );
+  const resolvedOgDescription = computed(() =>
+    coalesceSeoText(toValue(options.ogDescription), resolvedDescription.value),
+  );
   const canonicalUrl = computed(() => {
     return resolveSeoCanonicalUrl({
       siteUrl,
@@ -124,27 +138,27 @@ export function usePageSeo(options: PageSeoOptions) {
       siteName,
       canonicalUrl.value,
       options.routeKey,
-      toValue(options.title),
-      toValue(options.description),
+      resolvedTitle.value,
+      resolvedDescription.value,
     ),
     ...(breadcrumbItems.value && breadcrumbItems.value.length > 1 ? [buildBreadcrumbSchema(breadcrumbItems.value)] : []),
     ...(toValue(options.schemas) || []),
   ].filter(Boolean));
 
   useSeoMeta({
-    title: () => toValue(options.title),
-    description: () => toValue(options.description),
+    title: resolvedTitle,
+    description: resolvedDescription,
     keywords: () => toValue(options.keywords),
     robots: () => toValue(options.robots),
-    ogTitle: () => toValue(options.ogTitle) || toValue(options.title),
-    ogDescription: () => toValue(options.ogDescription) || toValue(options.description),
+    ogTitle: resolvedOgTitle,
+    ogDescription: resolvedOgDescription,
     ogImage: imageUrl,
     ogUrl: canonicalUrl,
     ogType: () => toValue(options.ogType) || 'website',
     ogSiteName: siteName,
     twitterCard: 'summary_large_image',
-    twitterTitle: () => toValue(options.ogTitle) || toValue(options.title),
-    twitterDescription: () => toValue(options.ogDescription) || toValue(options.description),
+    twitterTitle: resolvedOgTitle,
+    twitterDescription: resolvedOgDescription,
     twitterImage: imageUrl,
   });
 

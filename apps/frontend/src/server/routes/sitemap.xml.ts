@@ -246,6 +246,8 @@ async function buildDynamicEntries(event: H3Event, siteUrl: string): Promise<Sit
 function buildStaticEntries(siteUrl: string): SitemapEntry[] {
   const entries: SitemapEntry[] = [];
 
+  entries.push({ loc: buildAbsoluteUrl(siteUrl, '/llms.txt') });
+
   for (const routeKey of STATIC_ROUTE_KEYS) {
     const viPath = buildLocalizedPath(routeKey, 'vi');
     const enPath = buildLocalizedPath(routeKey, 'en');

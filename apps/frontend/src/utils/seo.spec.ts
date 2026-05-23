@@ -1,9 +1,11 @@
 import {
   buildAlternateLinks,
   buildArticleSchema,
+  buildLlmsTxt,
   buildProductSchema,
   buildRobotsTxt,
   buildSitemapXml,
+  coalesceSeoText,
   getRouteIndexPolicy,
   inferSeoRoute,
   resolveSeoCanonicalUrl,
@@ -131,6 +133,12 @@ describe('seo utils', () => {
     ).toBe('https://example.test/san-pham/xe-nang-dau');
   });
 
+  it('falls back when SEO title values are blank', () => {
+    expect(coalesceSeoText('   ', 'Default title')).toBe('Default title');
+    expect(coalesceSeoText('', 'Default title')).toBe('Default title');
+    expect(coalesceSeoText('Posts', 'Default title')).toBe('Posts');
+  });
+
   it('builds robots.txt content with sitemap and disallow rules', () => {
     const robots = buildRobotsTxt(siteUrl);
 
@@ -150,11 +158,32 @@ describe('seo utils', () => {
       { loc: 'https://example.test/san-pham', lastmod: '2026-05-15T00:00:00.000Z' },
       { loc: 'https://example.test/san-pham', lastmod: '2026-05-15T00:00:00.000Z' },
       { loc: 'https://example.test/products' },
+      { loc: 'https://example.test/llms.txt' },
     ]);
 
     expect(xml).toContain('<loc>https://example.test/san-pham</loc>');
     expect(xml).toContain('<loc>https://example.test/products</loc>');
-    expect(xml.match(/<url>/g)).toHaveLength(2);
+    expect(xml).toContain('<loc>https://example.test/llms.txt</loc>');
+    expect(xml.match(/<url>/g)).toHaveLength(3);
+  });
+
+  it('builds bilingual llms.txt content with prioritized canonical urls', () => {
+    const llms = buildLlmsTxt(siteUrl);
+
+    expect(llms).toContain('# MGA Vietnam');
+    expect(llms).toContain('MGA Vietnam là website chính thức về xe nâng MGA Forklift');
+    expect(llms).toContain('xe nâng dầu, xe nâng điện, thiết bị nâng hạ, phụ tùng');
+    expect(llms).toContain('MGA Vietnam is the official website for MGA Forklift');
+    expect(llms).toContain('diesel forklifts, electric forklifts, material handling equipment, spare parts');
+    expect(llms).toContain('Preferred URLs:');
+    expect(llms).toContain('- https://example.test/');
+    expect(llms).toContain('- https://example.test/gioi-thieu');
+    expect(llms).toContain('- https://example.test/about');
+    expect(llms).toContain('- https://example.test/danh-muc-san-pham');
+    expect(llms).toContain('- https://example.test/lien-he');
+    expect(llms).toContain('- https://example.test/contact');
+    expect(llms).toContain('Avoid transactional, quote-request, or session-specific flows');
+    expect(llms).toContain('- https://example.test/order-ticket');
   });
 
   it('adds aggregateRating to product schema only when valid review stats exist', () => {
