@@ -40,4 +40,17 @@ describe('nuxt startup config', () => {
       },
     });
   });
+
+  it('publishes the default favicon assets referenced by the frontend head config', () => {
+    const requiredPublicAssets = [
+      'public/favicon.ico',
+      'public/favicon-32x32.png',
+      'public/favicon-16x16.png',
+      'public/apple-touch-icon.png',
+    ];
+
+    for (const relativePath of requiredPublicAssets) {
+      expect(existsSync(resolve(frontendRoot, relativePath))).toBe(true);
+    }
+  });
 });

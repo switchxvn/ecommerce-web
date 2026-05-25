@@ -57,7 +57,7 @@ Project-specific SEO execution notes for future category, product, and article S
   - Ảnh 1: sau phần mở đầu hoặc đoạn tư vấn nhu cầu thực tế.
   - Ảnh 2: sau section so sánh dòng xe, tải trọng hoặc cấu hình ảnh hưởng đến giá.
   - Ảnh 3: gần phần chốt nhóm khách hàng phù hợp, tải nặng hoặc ngân sách đầu tư.
-- Ảnh tạo bằng ChatGPT/Vivaldi phải tải file gốc về local, upload lại lên `mgamv`, rồi mới chèn URL `https://cdn.mgavietnam.com/...` vào `posts.thumbnail`, `post_translations.og_image` và `post_translations.content`.
+- Ảnh tạo trực tiếp trong Codex hoặc từ nguồn ngoài phải lưu file gốc về local, upload lại lên `mgamv`, rồi mới chèn URL `https://cdn.mgavietnam.com/...` vào `posts.thumbnail`, `post_translations.og_image` và `post_translations.content`.
 
 1. Use `$seo` plus live SERP checks before drafting any article.
 2. Identify the dominant search intent first:
@@ -104,7 +104,7 @@ Project-specific SEO execution notes for future category, product, and article S
    - place them between major sections, not as a block at the top
    - vary the scene by intent, for example comparison / operation / maintenance / buying context
    - use meaningful `alt` text that describes the scene naturally
-14. When inline article images are generated in ChatGPT through Vivaldi:
+14. When inline article images are generated directly in Codex or from another approved generator:
    - save the original rendered files, not screenshots
    - rename them to stable slug-based filenames
    - upload them to MGA storage before inserting into `post_translations.content`
