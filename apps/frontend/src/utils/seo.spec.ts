@@ -282,7 +282,25 @@ describe('seo utils', () => {
         price: 4500000,
         priceCurrency: 'VND',
         availability: 'https://schema.org/InStock',
+        itemCondition: 'https://schema.org/NewCondition',
         url: 'https://example.test/san-pham/bom-thuy-luc',
+      },
+    });
+  });
+
+  it('allows product offers to emit item condition explicitly', () => {
+    expect(
+      buildProductSchema({
+        name: 'Xe nang dau cu',
+        description: 'Mo ta',
+        url: 'https://example.test/san-pham/xe-nang-dau-cu',
+        price: 550000000,
+        itemCondition: 'https://schema.org/UsedCondition',
+      }),
+    ).toMatchObject({
+      offers: {
+        '@type': 'Offer',
+        itemCondition: 'https://schema.org/UsedCondition',
       },
     });
   });
@@ -337,4 +355,5 @@ describe('seo utils', () => {
       },
     });
   });
+
 });

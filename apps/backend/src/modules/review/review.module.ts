@@ -7,6 +7,7 @@ import { ReviewServiceTypeTranslation } from './entities/review-service-type-tra
 import { AdminReviewService } from './admin/services/admin-review.service';
 import { FrontendReviewService } from './frontend/services/frontend-review.service';
 import { Product } from '../product/entities/product.entity';
+import { Service } from '../service/entities/service.entity';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { Product } from '../product/entities/product.entity';
       ReviewServiceType,
       ReviewServiceTypeTranslation,
       Product,
+      Service,
     ]),
   ],
   providers: [

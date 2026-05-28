@@ -42,6 +42,8 @@ interface CategoryForm {
   type: CategoryTypeValue
   active: boolean
   icon?: string
+  priceRangeMin: number | null
+  priceRangeMax: number | null
   translations: Record<string, Translation>
 }
 
@@ -50,6 +52,7 @@ interface ValidationErrors {
   slug?: string
   type?: string
   icon?: string
+  priceRangeMax?: string
 }
 
 interface CategoryFilter {
@@ -76,6 +79,8 @@ export function useCategory() {
     type: CategoryType.NEWS,
     active: true,
     icon: '',
+    priceRangeMin: null,
+    priceRangeMax: null,
     translations: {}
   })
   const errors = ref<ValidationErrors>({})
@@ -125,6 +130,8 @@ export function useCategory() {
       type: CategoryType.NEWS,
       active: true,
       icon: '',
+      priceRangeMin: null,
+      priceRangeMax: null,
       translations: {}
     }
     errors.value = {}
@@ -163,6 +170,15 @@ export function useCategory() {
     // Validate type
     if (!form.value.type) {
       errors.value.type = 'Type is required'
+      isValid = false
+    }
+
+    if (
+      form.value.priceRangeMin !== null &&
+      form.value.priceRangeMax !== null &&
+      form.value.priceRangeMin > form.value.priceRangeMax
+    ) {
+      errors.value.priceRangeMax = 'Giá đến phải lớn hơn hoặc bằng giá từ'
       isValid = false
     }
 
@@ -226,6 +242,8 @@ export function useCategory() {
           type: category.type as CategoryTypeValue,
           active: category.active,
           icon: category.icon || '',
+          priceRangeMin: category.priceRangeMin ?? null,
+          priceRangeMax: category.priceRangeMax ?? null,
           translations
         }
       }
@@ -271,6 +289,8 @@ export function useCategory() {
         type: form.value.type,
         active: form.value.active,
         icon: form.value.icon,
+        priceRangeMin: form.value.type === CategoryType.PRODUCT || form.value.type === CategoryType.BOTH ? form.value.priceRangeMin : null,
+        priceRangeMax: form.value.type === CategoryType.PRODUCT || form.value.type === CategoryType.BOTH ? form.value.priceRangeMax : null,
         translations: Object.entries(form.value.translations).map(([locale, content]) => {
           const seoContent = withSeoFallbacks(content)
           return {
@@ -355,6 +375,8 @@ export function useCategory() {
           type: form.value.type,
           active: form.value.active,
           icon: form.value.icon,
+          priceRangeMin: form.value.type === CategoryType.PRODUCT || form.value.type === CategoryType.BOTH ? form.value.priceRangeMin : null,
+          priceRangeMax: form.value.type === CategoryType.PRODUCT || form.value.type === CategoryType.BOTH ? form.value.priceRangeMax : null,
           translations: Object.entries(form.value.translations).map(([locale, content]) => {
             const seoContent = withSeoFallbacks(content)
             return {

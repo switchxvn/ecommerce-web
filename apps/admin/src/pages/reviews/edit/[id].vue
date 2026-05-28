@@ -41,6 +41,7 @@ const title = ref("");
 const content = ref("");
 const serviceTypeId = ref<number | null>(null);
 const productId = ref<number | null>(null);
+const serviceId = ref<number | null>(null);
 const visitDate = ref("");
 const featured = ref(false);
 const status = ref<ReviewStatus>(ReviewStatus.ACTIVE);
@@ -54,6 +55,10 @@ const products = ref<
   { id: number; sku?: string | null; translations?: { title?: string }[] }[]
 >([]);
 const isLoadingProducts = ref(true);
+const services = ref<
+  { id: number; translations?: { locale: string; title?: string }[] }[]
+>([]);
+const isLoadingServices = ref(true);
 
 // Get review by ID
 async function fetchReview() {
@@ -73,6 +78,7 @@ async function fetchReview() {
     rating.value = review.rating;
     serviceTypeId.value = review.serviceTypeId || null;
     productId.value = review.productId || null;
+    serviceId.value = review.serviceId || null;
     visitDate.value = review.visitDate ? new Date(review.visitDate).toISOString().split("T")[0] : "";
     featured.value = review.featured;
     status.value = review.status;
@@ -128,6 +134,20 @@ async function fetchProducts() {
   }
 }
 
+async function fetchServices() {
+  try {
+    isLoadingServices.value = true;
+    const response = await trpc.service.all.query({
+      locale: locale.value,
+    });
+    services.value = response || [];
+  } catch (err: any) {
+    console.error("Error loading services:", err);
+  } finally {
+    isLoadingServices.value = false;
+  }
+}
+
 // Watch for locale changes to reload the content
 watch(locale, async () => {
   await fetchReview();
@@ -166,6 +186,7 @@ async function submitForm() {
         rating: rating.value,
         serviceTypeId: serviceTypeId.value || null,
         productId: productId.value || null,
+        serviceId: serviceId.value || null,
         visitDate: visitDate.value || null,
         featured: featured.value,
         status: status.value,
@@ -234,7 +255,7 @@ function cancel() {
 // Load data on mounted
 onMounted(async () => {
   await checkAuth();
-  await Promise.all([fetchReview(), fetchServiceTypes(), fetchProducts()]);
+  await Promise.all([fetchReview(), fetchServiceTypes(), fetchProducts(), fetchServices()]);
 });
 </script>
 
@@ -428,6 +449,35 @@ onMounted(async () => {
                 class="mt-1 text-sm text-gray-500"
               >
                 Loading service types...
+              </div>
+            </div>
+            <div>
+              <label
+                for="service"
+                class="block text-sm font-medium text-gray-700"
+              >
+                Service
+              </label>
+              <select
+                id="service"
+                v-model="serviceId"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                :disabled="isLoadingServices"
+              >
+                <option :value="null">Select a service</option>
+                <option
+                  v-for="service in services"
+                  :key="service.id"
+                  :value="service.id"
+                >
+                  {{ service.translations?.[0]?.title || `Service #${service.id}` }}
+                </option>
+              </select>
+              <div
+                v-if="isLoadingServices"
+                class="mt-1 text-sm text-gray-500"
+              >
+                Loading services...
               </div>
             </div>
             <div>

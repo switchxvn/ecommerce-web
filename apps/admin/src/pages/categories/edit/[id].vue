@@ -161,6 +161,26 @@
                   </UFormGroup>
                 </div>
 
+                <div v-if="showPriceRangeFields" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <UFormGroup label="Giá từ">
+                    <UInput
+                      v-model.number="form.priceRangeMin"
+                      type="number"
+                      min="0"
+                      placeholder="190000000"
+                    />
+                  </UFormGroup>
+
+                  <UFormGroup label="Giá đến" :error="errors.priceRangeMax">
+                    <UInput
+                      v-model.number="form.priceRangeMax"
+                      type="number"
+                      min="0"
+                      placeholder="495000000"
+                    />
+                  </UFormGroup>
+                </div>
+
                 <UFormGroup :label="t('categories.slug')" required :error="errors.slug">
                   <div class="flex gap-2">
                     <UInput
@@ -297,6 +317,10 @@ const tabs = [
     icon: SettingsIcon
   }
 ]
+
+const showPriceRangeFields = computed(() =>
+  form.value.type === CategoryType.PRODUCT || form.value.type === CategoryType.BOTH,
+)
 
 const handleClickOutside = (event: Event) => {
   const target = event.target as HTMLElement;

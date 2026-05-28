@@ -1,19 +1,17 @@
-# Tạo file mới cho trang chi tiết dịch vụ
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router';
 import { useTrpc } from '~/composables/useTrpc';
-import { computed, ref, watch } from 'vue';
+import { computed, watch } from 'vue';
 import Breadcrumb from '~/components/common/Breadcrumb.vue';
-import AppImage from '~/components/ui/AppImage.vue';
-import Icon from '~/components/ui/Icon.vue';
 import { useI18n } from 'vue-i18n';
 import type { Service } from '@ew/shared';
 import { useLocalization } from '~/composables/useLocalization';
-import { getLocalizedRoute } from '../../utils/routes';
 import * as LucideIcons from 'lucide-vue-next';
 import { usePageSeo } from '~/composables/usePageSeo';
 import { buildLocalBusinessSchema, buildServiceSchema, resolveSeoCanonicalUrl } from '~/utils/seo';
 import { normalizeLocaleCode } from '~/utils/locale';
+import ServiceReviewsSection from '~/components/service/ServiceReviewsSection.vue';
+import { fetchServiceDetailPayload } from '~/composables/serviceDetailPayload';
 
 // Định nghĩa meta cho trang
 definePageMeta({
@@ -43,13 +41,22 @@ const getIconComponent = (iconName: string) => {
 };
 
 // Fetch service data
-const { data: service, pending: loading, error, refresh } = await useAsyncData(
+const { data: payload, pending: loading, error, refresh } = await useAsyncData(
   `service-${slug}`,
-  () => trpc.service.bySlug.query({ slug, locale: normalizeLocaleCode(locale.value) })
+  () => fetchServiceDetailPayload({
+    slug,
+    locale: normalizeLocaleCode(locale.value),
+    trpc: {
+      service: trpc.service,
+      review: trpc.review,
+    },
+  }),
 );
 
 // Computed properties
-const serviceData = computed(() => service.value || {} as Service);
+const serviceData = computed(() => payload.value?.service || {} as Service);
+const serviceReviewAggregate = computed(() => payload.value?.serviceReviewAggregate ?? null);
+const serviceReviews = computed(() => payload.value?.serviceReviews ?? []);
 
 const currentTranslation = computed(() => {
   if (!serviceData.value.translations) return null;
@@ -104,7 +111,7 @@ const resolvedCanonicalUrl = computed(() =>
 );
 
 usePageSeo({
-  title: computed(() => currentTranslation.value?.metaTitle || serviceTitle.value || 'Dich vu'),
+  title: computed(() => currentTranslation.value?.metaTitle || serviceTitle.value || 'Dịch vụ'),
   description: computed(() => currentTranslation.value?.metaDescription || serviceShortDescription.value || ''),
   keywords: computed(() => currentTranslation.value?.metaKeywords || ''),
   ogTitle: computed(() => currentTranslation.value?.ogTitle || serviceTitle.value || ''),
@@ -117,8 +124,8 @@ usePageSeo({
   routeKey: 'service-detail',
   slugByLocale: serviceSlugByLocale,
   breadcrumbs: computed(() => [
-    { name: locale.value === 'vi' ? 'Trang chu' : 'Home', item: '/' },
-    { name: locale.value === 'vi' ? 'Dich vu' : 'Services', item: locale.value === 'vi' ? '/dich-vu' : '/services' },
+    { name: locale.value === 'vi' ? 'Trang chủ' : 'Home', item: '/' },
+    { name: locale.value === 'vi' ? 'Dịch vụ' : 'Services', item: locale.value === 'vi' ? '/dich-vu' : '/services' },
     { name: serviceTitle.value || 'Service' },
   ]),
   schemas: computed(() => [
@@ -169,7 +176,7 @@ usePageSeo({
       </div>
       
       <!-- Service content -->
-      <div v-else-if="service" class="service-detail__main mt-8 flex-grow">
+      <div v-else-if="payload?.service" class="service-detail__main mt-8 flex-grow gap-8">
         <!-- Service article content -->
         <article class="service-detail__article bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 h-full w-full">
           <!-- Service icon -->
@@ -195,6 +202,15 @@ usePageSeo({
             <div class="service-prose" v-html="serviceContent"></div>
           </div>
         </article>
+
+        <ServiceReviewsSection
+          v-if="serviceId"
+          :service-id="serviceId"
+          :reviews="serviceReviews"
+          :locale="locale"
+          :average-rating="serviceReviewAggregate ? Number(serviceReviewAggregate.averageRating) : null"
+          :total-reviews="serviceReviewAggregate?.totalReviews ?? null"
+        />
       </div>
       
       <!-- Not found state -->

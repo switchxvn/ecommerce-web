@@ -14,7 +14,7 @@ export class ReviewTranslation {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ name: 'review_id' })
+  @Column({ name: 'review_id', type: 'integer' })
   reviewId!: number;
 
   @Column({ length: 5 })

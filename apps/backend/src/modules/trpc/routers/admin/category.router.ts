@@ -25,6 +25,30 @@ const categoryTranslationSchema = z.object({
   canonicalUrl: z.string().optional(),
 });
 
+const categoryPriceRangeFields = {
+  priceRangeMin: z.number().nonnegative().nullable().optional(),
+  priceRangeMax: z.number().nonnegative().nullable().optional(),
+};
+
+const validateCategoryPriceRange = <T extends { priceRangeMin?: number | null; priceRangeMax?: number | null }>(
+  data: T,
+  ctx: z.RefinementCtx,
+) => {
+  if (
+    data.priceRangeMin !== undefined &&
+    data.priceRangeMax !== undefined &&
+    data.priceRangeMin !== null &&
+    data.priceRangeMax !== null &&
+    data.priceRangeMin > data.priceRangeMax
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'priceRangeMin must be less than or equal to priceRangeMax',
+      path: ['priceRangeMax'],
+    });
+  }
+};
+
 const createCategorySchema = z.object({
   name: z.string(),
   slug: z.string(),
@@ -33,8 +57,9 @@ const createCategorySchema = z.object({
   active: z.boolean().default(true),
   type: z.enum(['news', 'product', 'both', 'gallery']).default('news'),
   icon: z.string().nullable().optional(),
+  ...categoryPriceRangeFields,
   translations: z.array(categoryTranslationSchema).optional(),
-});
+}).superRefine(validateCategoryPriceRange);
 
 const updateCategorySchema = z.object({
   id: z.number(),
@@ -42,8 +67,9 @@ const updateCategorySchema = z.object({
     type: z.enum(['news', 'product', 'both', 'gallery']).optional(),
     active: z.boolean().optional(),
     icon: z.string().nullable().optional(),
+    ...categoryPriceRangeFields,
     translations: z.array(categoryTranslationSchema).optional(),
-  })
+  }).superRefine(validateCategoryPriceRange)
 });
 
 // Helper function to transform category data
@@ -55,6 +81,8 @@ const transformCategory = (category: any) => {
     type: category.type,
     active: category.active,
     icon: category.icon,
+    priceRangeMin: category.priceRangeMin === null || category.priceRangeMin === undefined ? null : Number(category.priceRangeMin),
+    priceRangeMax: category.priceRangeMax === null || category.priceRangeMax === undefined ? null : Number(category.priceRangeMax),
     createdAt: category.createdAt,
     updatedAt: category.updatedAt,
     translations: category.translations?.map((translation: any) => ({

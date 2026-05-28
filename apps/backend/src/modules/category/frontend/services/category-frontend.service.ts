@@ -19,6 +19,8 @@ export class CategoryFrontendService {
         'category.active',
         'category.isFeatured',
         'category.type',
+        'category.priceRangeMin',
+        'category.priceRangeMax',
         'category.parentId',
         'category.createdAt',
         'category.updatedAt'
@@ -39,6 +41,8 @@ export class CategoryFrontendService {
         'category.active',
         'category.isFeatured',
         'category.type',
+        'category.priceRangeMin',
+        'category.priceRangeMax',
         'category.parentId',
         'category.createdAt',
         'category.updatedAt'
@@ -64,6 +68,8 @@ export class CategoryFrontendService {
         'category.active',
         'category.isFeatured',
         'category.type',
+        'category.priceRangeMin',
+        'category.priceRangeMax',
         'category.parentId',
         'category.createdAt',
         'category.updatedAt'
@@ -90,6 +96,8 @@ export class CategoryFrontendService {
         'category.active',
         'category.isFeatured',
         'category.type',
+        'category.priceRangeMin',
+        'category.priceRangeMax',
         'category.parentId',
         'category.createdAt',
         'category.updatedAt'
@@ -116,6 +124,8 @@ export class CategoryFrontendService {
         'category.active',
         'category.isFeatured',
         'category.type',
+        'category.priceRangeMin',
+        'category.priceRangeMax',
         'category.parentId',
         'category.createdAt',
         'category.updatedAt'
@@ -137,6 +147,8 @@ export class CategoryFrontendService {
         'category.active',
         'category.isFeatured',
         'category.type',
+        'category.priceRangeMin',
+        'category.priceRangeMax',
         'category.parentId',
         'category.createdAt',
         'category.updatedAt'

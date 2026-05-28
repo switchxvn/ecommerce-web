@@ -824,10 +824,13 @@ onMounted(() => {
         
         <!-- Review Content Column -->
         <td class="px-6 py-4 whitespace-nowrap">
-          <div class="max-w-xs">
+            <div class="max-w-xs">
             <div class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ getReviewTitle(review) }}</div>
             <div v-if="review.serviceType" class="text-xs text-gray-500 dark:text-gray-400">
               {{ review.serviceType.name || review.serviceType.slug }}
+            </div>
+            <div v-if="review.service?.translations?.[0]?.title" class="text-xs text-gray-500 dark:text-gray-400">
+              {{ review.service.translations[0].title }}
             </div>
           </div>
         </td>

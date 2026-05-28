@@ -27,6 +27,12 @@ export class Category {
   @Column({ nullable: true, length: 50 })
   icon?: string;
 
+  @Column({ name: 'price_range_min', type: 'decimal', precision: 15, scale: 0, nullable: true })
+  priceRangeMin!: string | null;
+
+  @Column({ name: 'price_range_max', type: 'decimal', precision: 15, scale: 0, nullable: true })
+  priceRangeMax!: string | null;
+
   // Parent-child relationship
   @Column({ name: 'parent_id', nullable: true })
   parentId!: number | null;

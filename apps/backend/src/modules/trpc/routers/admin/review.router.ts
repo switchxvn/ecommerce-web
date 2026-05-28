@@ -17,6 +17,7 @@ const createSchema = z.object({
   rating: z.number().min(1).max(5),
   serviceTypeId: z.number().optional(),
   productId: z.number().optional(),
+  serviceId: z.number().optional(),
   visitDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
   featured: z.boolean().optional(),
   status: z.nativeEnum(ReviewStatus).optional(),
@@ -30,6 +31,7 @@ const updateSchema = z.object({
   rating: z.number().min(1).max(5).optional(),
   serviceTypeId: z.number().optional().nullable(),
   productId: z.number().optional().nullable(),
+  serviceId: z.number().optional().nullable(),
   visitDate: z.string().optional().nullable().transform(val => {
     if (val === null) return null;
     return val ? new Date(val) : undefined;
@@ -45,6 +47,7 @@ const paginationSchema = z.object({
   search: z.string().optional(),
   featured: z.boolean().optional(),
   serviceTypeId: z.number().optional(),
+  serviceId: z.number().optional(),
   minRating: z.number().optional(),
   maxRating: z.number().optional(),
   status: z.nativeEnum(ReviewStatus).optional(),

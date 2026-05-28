@@ -18,6 +18,7 @@ import { getAuthorName as resolveAuthorName } from '~/utils/author';
 import { usePageSeo } from '~/composables/usePageSeo';
 import { buildArticleSchema, resolveSeoCanonicalUrl } from '~/utils/seo';
 import { formatFullPostContent } from '~/utils/contentFormatter';
+import { getCategoryDetailRoute } from '~/utils/routes';
 
 // Định nghĩa alias cho URL tiếng Việt và tiếng Anh
 definePageMeta({
@@ -58,6 +59,7 @@ const postThumbnail = computed(() => postData.value.thumbnail || '');
 const postOgImage = computed(() => currentTranslation.value?.ogImage || '');
 const postMetaKeywords = computed(() => currentTranslation.value?.metaKeywords || '');
 const postTags = computed(() => postData.value.tags || []);
+const postCategories = computed(() => postData.value.categories || []);
 const postContentId = computed(() => `post-content-${postId.value || 'detail'}`);
 const formattedPostContent = computed(() => formatFullPostContent(postContent.value));
 const hasTableOfContents = computed(() => /<h2\b[^>]*>.*?<\/h2>/i.test(formattedPostContent.value));
@@ -113,11 +115,26 @@ const getLocalizedPath = () => {
   return locale.value === 'vi' ? '/bai-viet' : '/posts';
 };
 
+const postPrimaryCategory = computed(() => {
+  const category = postCategories.value[0];
+  const translation = category?.translations?.find((item: any) => item.locale === locale.value)
+    || category?.translations?.[0];
+
+  if (!category || !translation?.name || !translation?.slug) {
+    return null;
+  }
+
+  return {
+    name: translation.name,
+    to: getCategoryDetailRoute(String(translation.slug), locale.value),
+  };
+});
+
 // Breadcrumb items with localized paths
 const breadcrumbItems = computed(() => [
   {
-    label: locale.value === 'vi' ? 'Bài viết' : 'Posts',
-    to: getLocalizedPath()
+    label: postPrimaryCategory.value?.name || (locale.value === 'vi' ? 'Bài viết' : 'Posts'),
+    to: postPrimaryCategory.value?.to || getLocalizedPath()
   },
   {
     label: postTitle.value || (locale.value === 'vi' ? 'Chi tiết bài viết' : 'Post Detail')
@@ -158,8 +175,8 @@ usePageSeo({
   routeKey: 'post-detail',
   slugByLocale: postSlugByLocale,
   breadcrumbs: computed(() => [
-    { name: locale.value === 'vi' ? 'Trang chu' : 'Home', item: '/' },
-    { name: locale.value === 'vi' ? 'Bai viet' : 'Posts', item: locale.value === 'vi' ? '/bai-viet' : '/posts' },
+    { name: locale.value === 'vi' ? 'Trang chủ' : 'Home', item: '/' },
+    { name: postPrimaryCategory.value?.name || (locale.value === 'vi' ? 'Bài viết' : 'Posts'), item: postPrimaryCategory.value?.to || getLocalizedPath() },
     { name: postTitle.value || 'Post' },
   ]),
   schemas: computed(() => [

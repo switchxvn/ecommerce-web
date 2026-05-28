@@ -14,6 +14,7 @@ import { usePageSeo } from '~/composables/usePageSeo'
 import { getCategoryDetailRoute, getCategoryListRoute, getContactRoute, getRouteLocale } from '~/utils/routes'
 import { buildCollectionPageSchema, resolveSeoCanonicalUrl } from '~/utils/seo'
 import { hasActiveCategoryFilters, resolveCategoryPageState } from '~/utils/categoryPageState'
+import { formatCategoryPriceRange, formatCategoryPriceRangeSummary } from '~/utils/categoryPriceRange'
 import { formatProductRangeSummary } from '~/utils/productListingSummary'
 
 const { t, locale } = useLocalization()
@@ -56,6 +57,8 @@ interface Category {
   type?: string;
   active?: boolean;
   isFeatured?: boolean;
+  priceRangeMin?: number | null;
+  priceRangeMax?: number | null;
 }
 
 type CategoryTranslation = Pick<
@@ -209,6 +212,12 @@ const categoryTranslation = computed<CategoryTranslation | undefined>(() =>
 )
 const categoryName = computed(() => categoryTranslation.value?.name || categoryData.value.name || '')
 const categoryDescription = computed(() => categoryTranslation.value?.description || categoryData.value.description || '')
+const categoryPriceRange = computed(() =>
+  formatCategoryPriceRange(categoryData.value?.priceRangeMin, categoryData.value?.priceRangeMax),
+)
+const categoryPriceRangeSummary = computed(() =>
+  formatCategoryPriceRangeSummary(categoryData.value?.priceRangeMin, categoryData.value?.priceRangeMax),
+)
 const error = computed(() => categoryError.value ? (categoryError.value as Error).message : null)
 const hasActiveFilters = computed(() => hasActiveCategoryFilters(filters))
 
@@ -406,7 +415,11 @@ const pageDescription = computed(() => {
     return t('categories.invalidCategoryDescription') || 'Danh mục bạn đang tìm không tồn tại hoặc đã được cập nhật đường dẫn.'
   }
 
-  return categoryTranslation.value?.metaDescription || `${t('categories.productsIn')} ${categoryName.value}`
+  const fallbackDescription = categoryTranslation.value?.metaDescription || `${t('categories.productsIn')} ${categoryName.value}`
+
+  return categoryPriceRangeSummary.value
+    ? `${fallbackDescription}. ${categoryPriceRangeSummary.value}`
+    : fallbackDescription
 })
 
 usePageSeo({
@@ -431,7 +444,9 @@ usePageSeo({
     buildCollectionPageSchema(
       siteUrl,
       categoryName.value || 'Category',
-      categoryDescription.value || `${t('categories.productsIn')} ${categoryName.value}`,
+      categoryPriceRangeSummary.value
+        ? [categoryDescription.value || `${t('categories.productsIn')} ${categoryName.value}`, categoryPriceRangeSummary.value].filter(Boolean).join('. ')
+        : (categoryDescription.value || `${t('categories.productsIn')} ${categoryName.value}`),
       resolvedCanonicalUrl.value,
     ),
   ]),
@@ -634,6 +649,12 @@ const updateQueryParams = () => {
           <h1 class="text-3xl font-bold text-gray-900 dark:text-white md:text-4xl">
             {{ isInvalidCategory ? (t('categories.invalidCategoryTitle') || 'Không tìm thấy danh mục') : (categoryName || slug) }}
           </h1>
+          <p
+            v-if="!isInvalidCategory && categoryPriceRange"
+            class="mt-3 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-900/20 dark:text-emerald-200"
+          >
+            {{ categoryPriceRange }}
+          </p>
           <p v-if="isInvalidCategory" class="mt-2 max-w-3xl text-gray-600 dark:text-gray-400">
             {{ t('categories.invalidCategoryDescription') || 'Danh mục bạn đang tìm không tồn tại hoặc đã được cập nhật đường dẫn.' }}
           </p>

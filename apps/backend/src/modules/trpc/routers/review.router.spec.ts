@@ -25,6 +25,25 @@ describe('submitReviewSchema', () => {
     expect(parsed.productId).toBe(228);
     expect(parsed.serviceTypeId).toBeUndefined();
   });
+
+  it('accepts service detail review payloads with serviceId', () => {
+    const parsed = submitReviewSchema.parse({
+      authorName: 'Nguyen Van B',
+      profession: 'Quan ly van hanh',
+      rating: 4,
+      serviceId: 12,
+      translations: [
+        {
+          locale: 'vi',
+          title: 'Ho tro nhanh',
+          content: 'Dich vu phan hoi nhanh va xu ly dung hen.',
+        },
+      ],
+    });
+
+    expect(parsed.serviceId).toBe(12);
+    expect(parsed.serviceTypeId).toBeUndefined();
+  });
 });
 
 describe('buildPublicReviewCreateInput', () => {
@@ -46,6 +65,27 @@ describe('buildPublicReviewCreateInput', () => {
 
     expect(result.serviceTypeId).toBe(DEFAULT_PUBLIC_PRODUCT_REVIEW_SERVICE_TYPE_ID);
     expect(result.productId).toBe(228);
+    expect(result.status).toBe(ReviewStatus.PENDING);
+    expect(result.featured).toBe(false);
+  });
+
+  it('keeps service-linked reviews pending and preserves serviceId', () => {
+    const result = buildPublicReviewCreateInput({
+      authorName: 'Nguyen Van B',
+      profession: 'Quan ly van hanh',
+      rating: 4,
+      serviceId: 12,
+      visitDate: undefined,
+      translations: [
+        {
+          locale: 'vi',
+          title: 'Ho tro nhanh',
+          content: 'Dich vu phan hoi nhanh va xu ly dung hen.',
+        },
+      ],
+    });
+
+    expect(result.serviceId).toBe(12);
     expect(result.status).toBe(ReviewStatus.PENDING);
     expect(result.featured).toBe(false);
   });

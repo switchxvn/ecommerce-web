@@ -688,6 +688,7 @@ export function buildProductSchema(input: {
   price?: number | string | null;
   priceCurrency?: string;
   availability?: string;
+  itemCondition?: string;
   ratingValue?: number | null;
   reviewCount?: number | null;
   reviews?: Array<{
@@ -771,6 +772,7 @@ export function buildProductSchema(input: {
             price: normalizedPrice,
             priceCurrency: input.priceCurrency || 'VND',
             availability: input.availability || 'https://schema.org/InStock',
+            itemCondition: input.itemCondition || 'https://schema.org/NewCondition',
             url: input.url,
           }
         : undefined,

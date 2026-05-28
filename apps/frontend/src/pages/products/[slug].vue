@@ -253,6 +253,27 @@ const seoImage = computed(
     ""
 );
 
+function normalizeConditionText(value: string | null | undefined): string {
+  return (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+const schemaItemCondition = computed(() => {
+  const signals = [
+    productTitle.value,
+    activeTranslation.value?.slug,
+    productData.value?.slug,
+  ]
+    .map((value) => normalizeConditionText(value))
+    .filter(Boolean);
+
+  return signals.some((value) => value.includes('used') || value.includes('cu') || value.includes('thanh-ly'))
+    ? 'https://schema.org/UsedCondition'
+    : 'https://schema.org/NewCondition';
+});
+
 const homeLabel = computed(() => (currentLocale.value === 'en' ? 'Home' : 'Trang chủ'));
 
 const productListPath = computed(() =>
@@ -345,6 +366,7 @@ usePageSeo({
       brand: 'MGA Vietnam',
       price: productData.value?.price ?? minVariantPrice.value ?? null,
       availability: schemaAvailability.value,
+      itemCondition: schemaItemCondition.value,
       ratingValue: productReviewAggregate.value?.averageRating
         ? Number.parseFloat(productReviewAggregate.value.averageRating)
         : null,
