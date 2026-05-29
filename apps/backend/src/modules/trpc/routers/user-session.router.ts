@@ -6,6 +6,23 @@ import { CreateSessionData } from '../../user-session/interfaces/user-session-se
 // Định nghĩa router cho user-session
 export const userSessionRouter = router({
   // Frontend routes - Public
+  getSession: publicProcedure
+    .input(z.object({
+      sessionId: z.string(),
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await ctx.services.userSessionFrontendService.getSession(input.sessionId);
+      } catch (error) {
+        ctx.logger.error('Failed to get session:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to get session',
+          cause: error,
+        });
+      }
+    }),
+
   startSession: publicProcedure
     .input(z.object({
       sessionId: z.string(),

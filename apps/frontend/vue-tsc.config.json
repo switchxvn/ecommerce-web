@@ -1,13 +1,30 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "noCheck": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "useUnknownInCatchVariables": false
+  },
+  "vueCompilerOptions": {
+    "strictTemplates": false,
+    "skipTemplateCodegen": true
+  },
   "include": [
     ".nuxt/nuxt.d.ts",
     ".nuxt/types/app.d.ts",
-    "src/**/*"
+    ".nuxt/types/imports.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "src/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",
     "../../apps/backend/**/*",
-    "../../libs/database/**/*"
+    "../../libs/database/**/*",
+    "src/**/*.js",
+    "src/**/*.js.map"
   ]
-} 
+}

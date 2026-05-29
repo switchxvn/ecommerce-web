@@ -2,6 +2,19 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { publicProcedure, adminProcedure, router } from '../procedures';
 
+export async function resolvePublicLogoByType<T>(
+  findOneByType: (type: string) => Promise<T | null>,
+  requestedType: string,
+): Promise<T | null> {
+  const logo = await findOneByType(requestedType);
+
+  if (logo || requestedType === 'main' || requestedType === 'favicon') {
+    return logo;
+  }
+
+  return findOneByType('main');
+}
+
 export const logoRouter = router({
   getActiveLogo: publicProcedure
     .input(z.object({
@@ -9,15 +22,15 @@ export const logoRouter = router({
     }))
     .query(async ({ ctx, input }) => {
       try {
-        const logo = await ctx.services.logoFrontendService.findOneByType(input.type);
-        if (!logo) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: `No active logo found for type ${input.type}`,
-          });
-        }
+        const logo = await resolvePublicLogoByType(
+          (type) => ctx.services.logoFrontendService.findOneByType(type),
+          input.type,
+        );
+
         return logo;
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
+
         ctx.logger.error('Failed to fetch active logo:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',

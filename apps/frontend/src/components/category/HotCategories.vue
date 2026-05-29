@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { useCategory } from '../composables/useCategory';
+import { useCategory } from '~/composables/useCategory';
+import { useLocalization } from '~/composables/useLocalization';
+import { getCategoryDetailRoute } from '~/utils/routes';
 
 // Props
 const props = defineProps({
@@ -17,10 +19,11 @@ const {
   error, 
   fetchHotCategories 
 } = useCategory();
+const { locale } = useLocalization();
 
 // Tải dữ liệu khi component được mount
 onMounted(async () => {
-  await fetchHotCategories(props.limit);
+  await fetchHotCategories();
 });
 </script>
 
@@ -37,7 +40,7 @@ onMounted(async () => {
     <div v-else-if="error" class="hot-categories__error">
       <p class="hot-categories__error-message">{{ error }}</p>
       <button 
-        @click="() => fetchHotCategories(limit)" 
+        @click="() => fetchHotCategories()" 
         class="hot-categories__error-button"
       >
         Thử lại
@@ -49,7 +52,7 @@ onMounted(async () => {
       <NuxtLink
         v-for="category in hotCategories"
         :key="category.id"
-        :to="`/danh-muc/${category.slug}`"
+        :to="getCategoryDetailRoute(category.slug, locale)"
         class="hot-categories__item"
       >
         <div class="hot-categories__item-badge">

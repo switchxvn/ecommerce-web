@@ -1,30 +1,47 @@
 import { useUserSession } from '@/composables/useUserSession';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 
-export default defineNuxtPlugin(() => {
+export default defineNuxtPlugin((nuxtApp) => {
   // Chỉ chạy ở phía client
   if (process.client) {
+    const trackingWindow = window as Window & {
+      __mgaUserSessionPluginInitialized?: boolean;
+    };
+
+    if (trackingWindow.__mgaUserSessionPluginInitialized) {
+      return;
+    }
+
+    trackingWindow.__mgaUserSessionPluginInitialized = true;
     const userSession = useUserSession();
     const router = useRouter();
-    
-    // Khởi tạo session ngay khi ứng dụng khởi động
-    setTimeout(() => {
-      userSession.initSession().then((sessionId) => {
-        // Ghi nhận page view ban đầu
-        const currentPath = window.location.pathname;
-        userSession.trackPageView(currentPath);
-      });
-    }, 500); // Chờ một chút để đảm bảo các thành phần khác đã được tải
-    
+    const bootstrapTracking = () => {
+      try {
+        userSession.setupTracking();
+        userSession.trackPageView(window.location.pathname);
+      } catch (error) {
+        console.error('User session bootstrap failed:', error);
+      }
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(bootstrapTracking, { timeout: 1500 });
+    } else {
+      window.setTimeout(bootstrapTracking, 250);
+    }
+
     // Lắng nghe sự kiện thay đổi route để theo dõi page views
     router.afterEach((to) => {
-      // Theo dõi page view cho mỗi lần chuyển trang
-      userSession.trackPageView(to.path);
+      try {
+        userSession.trackPageView(to.path);
+      } catch (error) {
+        console.error('User session route tracking failed:', error);
+      }
     });
-    
-    // Cập nhật session định kỳ khi người dùng đang ở trên trang
-    setInterval(() => {
-      userSession.pingActivity();
-    }, 30000); // Cập nhật mỗi 30 giây nếu người dùng đang active
+
+    nuxtApp.hook('app:beforeUnmount', () => {
+      userSession.teardownTracking();
+      trackingWindow.__mgaUserSessionPluginInitialized = false;
+    });
   }
 }); 

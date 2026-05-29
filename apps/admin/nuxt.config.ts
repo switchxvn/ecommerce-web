@@ -11,13 +11,17 @@ export default defineNuxtConfig({
   },
 
   devServer: {
-    host: process.env.NUXT_HOST || 'localhost',
-    port: process.env.NUXT_PORT ? parseInt(process.env.NUXT_PORT) : 4300,
+    host: process.env.ADMIN_NUXT_HOST || process.env.NUXT_HOST || 'localhost',
+    port: process.env.ADMIN_NUXT_PORT
+      ? parseInt(process.env.ADMIN_NUXT_PORT)
+      : process.env.NUXT_PORT
+        ? parseInt(process.env.NUXT_PORT)
+        : 4300,
   },
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3000'
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || process.env.ADMIN_API_BASE || 'http://localhost:3333'
     },
   },
 
@@ -47,6 +51,7 @@ export default defineNuxtConfig({
   },
 
   app: {
+    baseURL: process.env.ADMIN_BASE_URL || process.env.NUXT_APP_BASE_URL || '/',
     head: {
       title: 'Admin Dashboard',
       meta: [
@@ -77,7 +82,7 @@ export default defineNuxtConfig({
     server: {
       proxy: {
         '/api/trpc': {
-          target: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3000',
+          target: process.env.NUXT_PUBLIC_API_BASE || process.env.ADMIN_API_BASE || 'http://localhost:3333',
           changeOrigin: true,
           secure: false,
           ws: true,

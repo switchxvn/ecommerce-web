@@ -5,6 +5,8 @@ import { useTrpc } from "../../composables/useTrpc";
 import { useRoute, useRouter } from "vue-router";
 import ServiceCardWithThumbnail from "../../components/ui/card/ServiceCardWithThumbnail.vue";
 import { useService, type ServiceFilter } from "../../composables/useService";
+import { usePageSeo } from "~/composables/usePageSeo";
+import { normalizeLocaleCode } from "~/utils/locale";
 
 const { t, locale } = useLocalization();
 const trpc = useTrpc();
@@ -15,8 +17,13 @@ definePageMeta({
   layout: "default",
 });
 
-// SEO data
-const seoData = ref({
+const { data: seoDataState } = await useAsyncData(
+  () => `seo-services-${locale.value}`,
+  () => trpc.seo.getSeoByPath.query("/services").catch(() => null),
+  { watch: [locale] },
+);
+
+const seoData = computed(() => seoDataState.value || {
   title: "",
   description: "",
   keywords: "",
@@ -26,42 +33,18 @@ const seoData = ref({
   canonicalUrl: "",
 });
 
-// Fetch SEO data
-const fetchSeoData = async () => {
-  try {
-    const seo = await trpc.seo.getSeoByPath.query("/services");
-    if (seo) {
-      seoData.value = seo;
-
-      // Update head with SEO data
-      useHead({
-        title: seo.title || t("services.title"),
-        meta: [
-          { name: "description", content: seo.description || t("services.description") },
-          { name: "keywords", content: seo.keywords || "" },
-          {
-            property: "og:title",
-            content: seo.ogTitle || seo.title || t("services.title"),
-          },
-          {
-            property: "og:description",
-            content: seo.ogDescription || seo.description || t("services.description"),
-          },
-          { property: "og:image", content: seo.ogImage || "" },
-        ],
-        link: [{ rel: "canonical", href: seo.canonicalUrl || window.location.href }],
-      });
-    }
-  } catch (error) {
-    console.error("Error fetching SEO data:", error);
-
-    // Fallback to default SEO
-    useHead({
-      title: t("services.title"),
-      meta: [{ name: "description", content: t("services.description") }],
-    });
-  }
-};
+usePageSeo({
+  title: computed(() => seoData.value.title || t("services.title")),
+  description: computed(() => seoData.value.description || t("services.description")),
+  keywords: computed(() => seoData.value.keywords || ""),
+  ogTitle: computed(() => seoData.value.ogTitle || seoData.value.title || t("services.title")),
+  ogDescription: computed(() => seoData.value.ogDescription || seoData.value.description || t("services.description")),
+  image: computed(() => seoData.value.ogImage || ""),
+  canonicalUrl: computed(() => seoData.value.canonicalUrl || null),
+  currentPath: computed(() => route.path),
+  locale: computed(() => (locale.value === 'en' ? 'en' : 'vi')),
+  routeKey: 'services',
+});
 
 // State
 const currentPage = ref(Number(route.query.page) || 1);
@@ -76,16 +59,16 @@ const filters = computed<ServiceFilter>(() => ({
   sortBy: currentSort.value,
   page: currentPage.value,
   limit: itemsPerPage.value,
-  locale: locale.value,
+  locale: normalizeLocaleCode(locale.value),
 }));
 
 // Sort options
-const sortOptions = [
+const sortOptions = computed(() => [
   { value: 'newest', label: t('sort.newest') },
   { value: 'oldest', label: t('sort.oldest') },
   { value: 'name_asc', label: t('sort.title_asc') },
   { value: 'name_desc', label: t('sort.title_desc') },
-] as const;
+] as const);
 
 // Use service composable
 const { services, totalServices, isLoading, error, fetchServices } = useService();
@@ -109,7 +92,7 @@ const handleFilterChange = (newFilters: ServiceFilter) => {
   // Fetch services
   fetchServices(currentPage.value, itemsPerPage.value, {
     ...newFilters,
-    locale: locale.value,
+    locale: normalizeLocaleCode(locale.value),
     sortBy: currentSort.value,
   });
 };
@@ -125,6 +108,7 @@ const handleSortChange = (event: Event) => {
   // Fetch services with new sort
   fetchServices(currentPage.value, itemsPerPage.value, {
     ...filters.value,
+    locale: normalizeLocaleCode(locale.value),
     sortBy: currentSort.value,
   });
 };
@@ -150,16 +134,14 @@ const handlePageChange = (page: number) => {
 
 // Initial fetch
 onMounted(async () => {
-  await fetchSeoData();
   fetchServices(currentPage.value, itemsPerPage.value, filters.value);
 });
 
 // Watch for locale changes
 watch(locale, async () => {
-  await fetchSeoData();
   fetchServices(1, itemsPerPage.value, {
     ...filters.value,
-    locale: locale.value,
+    locale: normalizeLocaleCode(locale.value),
   });
 });
 </script>
@@ -208,19 +190,7 @@ watch(locale, async () => {
         <!-- Main Content Area -->
         <div class="min-h-[400px]">
           <template v-if="isLoading">
-            <!-- Loading State -->
-            <div class="flex items-center justify-center py-12">
-              <div class="text-center">
-                <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-500 border-r-transparent align-[-0.125em]" role="status">
-                  <span class="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">
-                    {{ t('common.loading') }}...
-                  </span>
-                </div>
-                <div class="mt-4 text-sm text-gray-600 dark:text-gray-400">
-                  {{ t('common.loading') }}...
-                </div>
-              </div>
-            </div>
+            <CardGridSkeleton :item-count="6" :columns="3" media-height-class="h-56" />
           </template>
 
           <template v-else-if="services && services.length > 0">

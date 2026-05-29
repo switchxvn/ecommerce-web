@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { TRPCError } from '@trpc/server';
 import { publicProcedure, protectedProcedure, router } from '../procedures';
 import { z } from 'zod';
@@ -7,7 +8,6 @@ export const seoRouter = router({
   getSeoByPath: publicProcedure
     .input(z.string())
     .query(async ({ input, ctx }) => {
-      console.log(ctx.user);
       try {
         ctx.logger.log(`Fetching SEO for path: ${input}`);
         const seo = await ctx.services.seoFrontendService.findActiveSeoByPath(input);
@@ -22,13 +22,17 @@ export const seoRouter = router({
 
         return seo;
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        const mappedError = mapSeoLookupError(error);
+
+        if (mappedError instanceof TRPCError) {
+          throw mappedError;
+        }
         
-        ctx.logger.error(`Error fetching SEO for path ${input}: ${error instanceof Error ? error.message : String(error)}`);
+        ctx.logger.error(`Error fetching SEO for path ${input}: ${mappedError instanceof Error ? mappedError.message : String(mappedError)}`);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to retrieve SEO information',
-          cause: error,
+          cause: mappedError,
         });
       }
     }),
@@ -143,4 +147,20 @@ export const seoRouter = router({
         });
       }
     }),
-}); 
+});
+
+export function mapSeoLookupError(error: unknown): TRPCError | unknown {
+  if (error instanceof TRPCError) {
+    return error;
+  }
+
+  if (error instanceof NotFoundException) {
+    return new TRPCError({
+      code: 'NOT_FOUND',
+      message: error.message,
+      cause: error,
+    });
+  }
+
+  return error;
+}

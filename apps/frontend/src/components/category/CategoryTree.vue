@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useLocalization } from '~/composables/useLocalization';
 import { useCategory } from '~/composables/useCategory';
+import { getCategoryDetailRoute } from '~/utils/routes';
 
 // Sử dụng composable
 const { 
@@ -9,6 +11,7 @@ const {
   error, 
   fetchCategoryTree 
 } = useCategory();
+const { locale } = useLocalization();
 
 // State để theo dõi các danh mục đang mở rộng
 const expandedCategories = ref<number[]>([]);
@@ -38,45 +41,6 @@ const hasChildren = (category: any) => {
   return category.children && category.children.length > 0;
 };
 
-// Component đệ quy để hiển thị cây danh mục
-const CategoryNode = (props: { category: any, level: number }) => {
-  const { category, level } = props;
-  const hasChildCategories = hasChildren(category);
-  const isExpanded = isCategoryExpanded(category.id);
-  
-  return (
-    <div class={`category-tree__node category-tree__node--level-${level}`}>
-      <div 
-        class="category-tree__node-header"
-        onClick={() => hasChildCategories && toggleCategory(category.id)}
-      >
-        {hasChildCategories && (
-          <span class={`category-tree__toggle ${isExpanded ? 'category-tree__toggle--expanded' : ''}`}>
-            {isExpanded ? '−' : '+'}
-          </span>
-        )}
-        <NuxtLink 
-          to={`/danh-muc/${category.slug}`}
-          class="category-tree__link"
-        >
-          {category.name}
-        </NuxtLink>
-      </div>
-      
-      {hasChildCategories && isExpanded && (
-        <div class="category-tree__children">
-          {category.children.map((child: any) => (
-            <CategoryNode 
-              key={child.id} 
-              category={child} 
-              level={level + 1} 
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 </script>
 
 <template>
@@ -118,7 +82,7 @@ const CategoryNode = (props: { category: any, level: number }) => {
             {{ isCategoryExpanded(category.id) ? '−' : '+' }}
           </span>
           <NuxtLink 
-            :to="`/danh-muc/${category.slug}`"
+            :to="getCategoryDetailRoute(category.slug, locale)"
             class="category-tree__link"
           >
             {{ category.name }}
@@ -146,7 +110,7 @@ const CategoryNode = (props: { category: any, level: number }) => {
                 {{ isCategoryExpanded(child.id) ? '−' : '+' }}
               </span>
               <NuxtLink 
-                :to="`/danh-muc/${child.slug}`"
+                :to="getCategoryDetailRoute(child.slug, locale)"
                 class="category-tree__link"
               >
                 {{ child.name }}
@@ -164,7 +128,7 @@ const CategoryNode = (props: { category: any, level: number }) => {
               >
                 <div class="category-tree__node-header">
                   <NuxtLink 
-                    :to="`/danh-muc/${grandchild.slug}`"
+                    :to="getCategoryDetailRoute(grandchild.slug, locale)"
                     class="category-tree__link"
                   >
                     {{ grandchild.name }}

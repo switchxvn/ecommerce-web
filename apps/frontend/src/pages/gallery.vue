@@ -1,6 +1,14 @@
 <template>
   <div class="bg-white dark:bg-gray-900 min-h-screen">
     <div class="container mx-auto px-4 py-16">
+      <header class="mb-12 text-center">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white md:text-4xl">
+          {{ t('gallery.title') || 'Thu vien anh' }}
+        </h1>
+        <p class="mx-auto mt-4 max-w-3xl text-base text-gray-600 dark:text-gray-400 md:text-lg">
+          {{ t('gallery.description') || 'Khám phá bộ sưu tập ảnh đẹp của chúng tôi' }}
+        </p>
+      </header>
 
       <!-- Video Gallery Section -->
       <div class="mb-16">
@@ -48,19 +56,37 @@
               class="video-card group relative h-[480px] bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300"
             >
               <div class="relative h-[280px] overflow-hidden">
-                <!-- YouTube iframe -->
-                <iframe
-                  v-if="getVideoId(video.videoUrl)"
-                  :src="getEmbedUrl(video.videoUrl)"
-                  class="w-full h-full object-cover"
-                  :title="video.title"
-                  frameborder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowfullscreen
-                ></iframe>
+                <template v-if="getVideoId(video.videoUrl)">
+                  <img
+                    v-if="!isVideoActivated(video.id)"
+                    :src="getVideoThumbnail(video.videoUrl, video.thumbnailUrl)"
+                    :alt="video.title"
+                    class="w-full h-full object-cover"
+                    loading="lazy"
+                    @error="handleImageError"
+                  />
+                  <iframe
+                    v-else
+                    :src="getEmbedUrl(video.videoUrl)"
+                    class="w-full h-full object-cover"
+                    :title="video.title"
+                    loading="lazy"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                  ></iframe>
+                  <button
+                    v-if="!isVideoActivated(video.id)"
+                    class="absolute inset-0 flex items-center justify-center bg-black/25 hover:bg-black/35 transition-colors"
+                    :aria-label="`Play ${video.title}`"
+                    @click="activateVideo(video.id)"
+                  >
+                    <PlayCircle class="w-16 h-16 text-white drop-shadow-lg" />
+                  </button>
+                </template>
                 <!-- Fallback for non-YouTube videos or invalid URLs -->
                 <img
-                  v-else
+                  v-else-if="!getVideoId(video.videoUrl)"
                   :src="video.thumbnailUrl"
                   :alt="video.title"
                   class="w-full h-full object-cover"
@@ -327,16 +353,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useTrpc } from '~/composables/useTrpc';
+import { usePageSeo } from '~/composables/usePageSeo';
+import { useToastNotification } from '~/utils/vueToast';
 
 import { ChevronLeft, ChevronRight, Image, Utensils, PlayCircle, Route } from 'lucide-vue-next';
-
-// Define SEO metadata
-useHead({
-  title: 'Thư viện ảnh',
-  meta: [
-    { name: 'description', content: 'Khám phá bộ sưu tập ảnh đẹp của chúng tôi' }
-  ]
-});
 
 interface GalleryTranslation {
   id: number;
@@ -367,6 +387,14 @@ interface VideoIntro {
 
 // i18n
 const { t, locale } = useI18n();
+
+usePageSeo({
+  title: computed(() => t('gallery.title') || 'Thu vien anh'),
+  description: computed(() => t('gallery.description') || 'Khám phá bộ sưu tập ảnh đẹp của chúng tôi'),
+  currentPath: computed(() => (locale.value === 'en' ? '/gallery' : '/thu-vien-hinh-anh')),
+  locale: computed(() => (locale.value === 'en' ? 'en' : 'vi')),
+  routeKey: 'gallery',
+});
 
 // tRPC client
 const trpc = useTrpc();
@@ -509,6 +537,7 @@ const lightboxIndex = ref(0);
 const touchStartX = ref(0);
 const touchEndX = ref(0);
 const allGalleryItems = ref<Gallery[]>([]);
+const activatedVideos = ref<Set<number>>(new Set());
 
 // Add click handler for gallery items
 const handleGalleryClick = (event: Event, index: number) => {
@@ -576,13 +605,30 @@ const getEmbedUrl = (url: string): string => {
   
   // Add parameters for better performance and user experience
   const params = new URLSearchParams({
-    autoplay: '0',
+    autoplay: '1',
     rel: '0', // Don't show related videos
     modestbranding: '1', // Minimal YouTube branding
-    enablejsapi: '1'
+    playsinline: '1'
   });
   
   return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+};
+
+const getVideoThumbnail = (url: string, fallback?: string): string => {
+  const videoId = getVideoId(url);
+  if (videoId) {
+    return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+  }
+
+  return fallback || "https://placehold.co/800x600/e2e8f0/a0aec0?text=Video";
+};
+
+const activateVideo = (videoId: number) => {
+  activatedVideos.value.add(videoId);
+};
+
+const isVideoActivated = (videoId: number) => {
+  return activatedVideos.value.has(videoId);
 };
 
 // Handle image error
@@ -612,7 +658,7 @@ const fetchGalleries = async () => {
     });
   } catch (error) {
     console.error('Error fetching galleries:', error);
-    useToast().add({
+    useToastNotification().add({
       id: 'gallery-error',
       title: t('common.error'),
       description: t('gallery.fetchError'),
@@ -648,7 +694,7 @@ const fetchCategories = async () => {
     }
   } catch (error) {
     console.error('Error fetching categories:', error);
-    useToast().add({
+    useToastNotification().add({
       id: 'category-error',
       title: t('common.error'),
       description: t('category.fetchError'),
@@ -666,7 +712,7 @@ const fetchVideos = async () => {
     videos.value = result as VideoIntro[];
   } catch (error) {
     console.error('Error fetching videos:', error);
-    useToast().add({
+    useToastNotification().add({
       id: 'video-error',
       title: t('common.error'),
       description: t('gallery.fetchVideoError'),

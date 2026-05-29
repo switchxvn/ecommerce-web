@@ -6,6 +6,28 @@ import { CategoryType } from '@ew/shared';
 
 @Injectable()
 export class CategoryFrontendService {
+  private readonly baseSelect: string[] = [
+    'category.id',
+    'category.active',
+    'category.isFeatured',
+    'category.type',
+    'category.parentId',
+    'category.createdAt',
+    'category.updatedAt',
+  ];
+
+  private buildSelectForAlias(alias: string): string[] {
+    return [
+      `${alias}.id`,
+      `${alias}.active`,
+      `${alias}.isFeatured`,
+      `${alias}.type`,
+      `${alias}.parentId`,
+      `${alias}.createdAt`,
+      `${alias}.updatedAt`,
+    ];
+  }
+
   constructor(
     @InjectRepository(Category)
     private categoryRepository: Repository<Category>,
@@ -14,15 +36,7 @@ export class CategoryFrontendService {
   async findAll(locale: string = 'vi'): Promise<Category[]> {
     return this.categoryRepository
       .createQueryBuilder('category')
-      .select([
-        'category.id',
-        'category.active',
-        'category.isFeatured',
-        'category.type',
-        'category.parentId',
-        'category.createdAt',
-        'category.updatedAt'
-      ])
+      .select(this.baseSelect)
       .leftJoinAndSelect('category.translations', 'translations')
       .leftJoinAndSelect('category.posts', 'posts')
       .where('category.active = :active', { active: true })
@@ -34,15 +48,7 @@ export class CategoryFrontendService {
   async findByType(type: CategoryType, locale: string = 'vi'): Promise<Category[]> {
     return this.categoryRepository
       .createQueryBuilder('category')
-      .select([
-        'category.id',
-        'category.active',
-        'category.isFeatured',
-        'category.type',
-        'category.parentId',
-        'category.createdAt',
-        'category.updatedAt'
-      ])
+      .select(this.baseSelect)
       .leftJoinAndSelect('category.translations', 'translations')
       .leftJoinAndSelect('category.posts', 'posts')
       .leftJoinAndSelect('category.products', 'products')
@@ -59,20 +65,14 @@ export class CategoryFrontendService {
   async findOne(id: number, locale: string = 'vi'): Promise<Category> {
     return this.categoryRepository
       .createQueryBuilder('category')
-      .select([
-        'category.id',
-        'category.active',
-        'category.isFeatured',
-        'category.type',
-        'category.parentId',
-        'category.createdAt',
-        'category.updatedAt'
-      ])
+      .select(this.baseSelect)
       .leftJoinAndSelect('category.translations', 'translations')
       .leftJoinAndSelect('category.posts', 'posts')
-      .leftJoinAndSelect('category.parent', 'parent')
+      .leftJoin('category.parent', 'parent')
+      .addSelect(this.buildSelectForAlias('parent'))
       .leftJoinAndSelect('parent.translations', 'parentTranslations')
-      .leftJoinAndSelect('category.children', 'children')
+      .leftJoin('category.children', 'children')
+      .addSelect(this.buildSelectForAlias('children'))
       .leftJoinAndSelect('children.translations', 'childrenTranslations')
       .where('category.id = :id', { id })
       .andWhere('category.active = :active', { active: true })
@@ -85,20 +85,14 @@ export class CategoryFrontendService {
   async findBySlug(slug: string, locale: string = 'vi'): Promise<Category> {
     return this.categoryRepository
       .createQueryBuilder('category')
-      .select([
-        'category.id',
-        'category.active',
-        'category.isFeatured',
-        'category.type',
-        'category.parentId',
-        'category.createdAt',
-        'category.updatedAt'
-      ])
+      .select(this.baseSelect)
       .leftJoinAndSelect('category.translations', 'translations')
       .leftJoinAndSelect('category.posts', 'posts')
-      .leftJoinAndSelect('category.parent', 'parent')
+      .leftJoin('category.parent', 'parent')
+      .addSelect(this.buildSelectForAlias('parent'))
       .leftJoinAndSelect('parent.translations', 'parentTranslations')
-      .leftJoinAndSelect('category.children', 'children')
+      .leftJoin('category.children', 'children')
+      .addSelect(this.buildSelectForAlias('children'))
       .leftJoinAndSelect('children.translations', 'childrenTranslations')
       .where('category.active = :active', { active: true })
       .andWhere('translations.slug = :slug', { slug })
@@ -111,15 +105,7 @@ export class CategoryFrontendService {
   async findFeatured(locale: string = 'vi'): Promise<Category[]> {
     return this.categoryRepository
       .createQueryBuilder('category')
-      .select([
-        'category.id',
-        'category.active',
-        'category.isFeatured',
-        'category.type',
-        'category.parentId',
-        'category.createdAt',
-        'category.updatedAt'
-      ])
+      .select(this.baseSelect)
       .leftJoinAndSelect('category.translations', 'translations')
       .leftJoinAndSelect('category.posts', 'posts')
       .where('category.active = :active', { active: true })
@@ -132,17 +118,10 @@ export class CategoryFrontendService {
   async findRootCategories(locale: string = 'vi'): Promise<Category[]> {
     return this.categoryRepository
       .createQueryBuilder('category')
-      .select([
-        'category.id',
-        'category.active',
-        'category.isFeatured',
-        'category.type',
-        'category.parentId',
-        'category.createdAt',
-        'category.updatedAt'
-      ])
+      .select(this.baseSelect)
       .leftJoinAndSelect('category.translations', 'translations')
-      .leftJoinAndSelect('category.children', 'children')
+      .leftJoin('category.children', 'children')
+      .addSelect(this.buildSelectForAlias('children'))
       .leftJoinAndSelect('children.translations', 'childrenTranslations')
       .where('category.active = :active', { active: true })
       .andWhere('category.parentId IS NULL')

@@ -53,6 +53,8 @@ interface Props {
     content?: string;
     data?: Record<string, any>;
   };
+  titleTag?: string;
+  fallbackTitleTag?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -97,7 +99,9 @@ const props = withDefaults(defineProps<Props>(), {
     defaultButtonText: 'Đặt vé ngay',
     defaultButtonLink: '#ticket-order'
   }),
-  translations: () => ({})
+  translations: () => ({}),
+  titleTag: 'h1',
+  fallbackTitleTag: 'div',
 });
 
 const containerClasses = computed(() => [
@@ -250,9 +254,13 @@ const animationProps = computed(() => {
             class="max-w-4xl mx-auto text-center"
             v-bind="animationProps"
           >
-            <h1 class="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-4 leading-tight" v-if="slide.title">
+            <component
+              :is="index === 0 ? titleTag : fallbackTitleTag"
+              v-if="slide.title"
+              class="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-4 leading-tight"
+            >
               {{ slide.title }}
-            </h1>
+            </component>
             
             <p class="text-lg md:text-xl lg:text-2xl mb-6 opacity-90" v-if="slide.subtitle">
               {{ slide.subtitle }}
@@ -390,4 +398,4 @@ const animationProps = computed(() => {
     padding-right: 1rem;
   }
 }
-</style> 
+</style>

@@ -19,7 +19,35 @@ const categoryTranslationSchema = z.object({
   metaTitle: z.string().optional(),
   metaDescription: z.string().optional(),
   metaKeywords: z.string().optional(),
+  ogTitle: z.string().optional(),
+  ogDescription: z.string().optional(),
+  ogImage: z.string().optional(),
+  canonicalUrl: z.string().optional(),
 });
+
+const categoryPriceRangeFields = {
+  priceRangeMin: z.number().nonnegative().nullable().optional(),
+  priceRangeMax: z.number().nonnegative().nullable().optional(),
+};
+
+const validateCategoryPriceRange = <T extends { priceRangeMin?: number | null; priceRangeMax?: number | null }>(
+  data: T,
+  ctx: z.RefinementCtx,
+) => {
+  if (
+    data.priceRangeMin !== undefined &&
+    data.priceRangeMax !== undefined &&
+    data.priceRangeMin !== null &&
+    data.priceRangeMax !== null &&
+    data.priceRangeMin > data.priceRangeMax
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'priceRangeMin must be less than or equal to priceRangeMax',
+      path: ['priceRangeMax'],
+    });
+  }
+};
 
 const createCategorySchema = z.object({
   name: z.string(),
@@ -29,8 +57,9 @@ const createCategorySchema = z.object({
   active: z.boolean().default(true),
   type: z.enum(['news', 'product', 'both', 'gallery']).default('news'),
   icon: z.string().nullable().optional(),
+  ...categoryPriceRangeFields,
   translations: z.array(categoryTranslationSchema).optional(),
-});
+}).superRefine(validateCategoryPriceRange);
 
 const updateCategorySchema = z.object({
   id: z.number(),
@@ -38,8 +67,9 @@ const updateCategorySchema = z.object({
     type: z.enum(['news', 'product', 'both', 'gallery']).optional(),
     active: z.boolean().optional(),
     icon: z.string().nullable().optional(),
+    ...categoryPriceRangeFields,
     translations: z.array(categoryTranslationSchema).optional(),
-  })
+  }).superRefine(validateCategoryPriceRange)
 });
 
 // Helper function to transform category data
@@ -51,6 +81,8 @@ const transformCategory = (category: any) => {
     type: category.type,
     active: category.active,
     icon: category.icon,
+    priceRangeMin: category.priceRangeMin === null || category.priceRangeMin === undefined ? null : Number(category.priceRangeMin),
+    priceRangeMax: category.priceRangeMax === null || category.priceRangeMax === undefined ? null : Number(category.priceRangeMax),
     createdAt: category.createdAt,
     updatedAt: category.updatedAt,
     translations: category.translations?.map((translation: any) => ({
@@ -59,6 +91,13 @@ const transformCategory = (category: any) => {
       name: translation.name,
       slug: translation.slug,
       description: translation.description,
+      metaTitle: translation.metaTitle,
+      metaDescription: translation.metaDescription,
+      metaKeywords: translation.metaKeywords,
+      ogTitle: translation.ogTitle,
+      ogDescription: translation.ogDescription,
+      ogImage: translation.ogImage,
+      canonicalUrl: translation.canonicalUrl,
       createdAt: translation.createdAt,
       updatedAt: translation.updatedAt
     })) || [],
@@ -72,7 +111,14 @@ const transformCategory = (category: any) => {
         locale: translation.locale,
         name: translation.name,
         slug: translation.slug,
-        description: translation.description
+        description: translation.description,
+        metaTitle: translation.metaTitle,
+        metaDescription: translation.metaDescription,
+        metaKeywords: translation.metaKeywords,
+        ogTitle: translation.ogTitle,
+        ogDescription: translation.ogDescription,
+        ogImage: translation.ogImage,
+        canonicalUrl: translation.canonicalUrl,
       })) || []
     } : null,
     children: category.children?.map((child: any) => ({
@@ -85,7 +131,14 @@ const transformCategory = (category: any) => {
         locale: translation.locale,
         name: translation.name,
         slug: translation.slug,
-        description: translation.description
+        description: translation.description,
+        metaTitle: translation.metaTitle,
+        metaDescription: translation.metaDescription,
+        metaKeywords: translation.metaKeywords,
+        ogTitle: translation.ogTitle,
+        ogDescription: translation.ogDescription,
+        ogImage: translation.ogImage,
+        canonicalUrl: translation.canonicalUrl,
       })) || []
     })) || []
   };

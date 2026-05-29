@@ -3,6 +3,7 @@ import { useToast } from './useToast'
 import { useRouter } from 'vue-router'
 import { useTrpc } from './useTrpc'
 import slugify from 'slugify'
+import { createEmptyCategoryTranslation, normalizeCategoryTranslation, withSeoFallbacks } from '../utils/categoryTranslation'
 
 const CategoryType = {
   NEWS: 'news',
@@ -17,6 +18,13 @@ interface Translation {
   name: string
   slug: string
   description: string
+  metaTitle: string
+  metaDescription: string
+  metaKeywords: string
+  ogTitle: string
+  ogDescription: string
+  ogImage: string
+  canonicalUrl: string
 }
 
 interface CategoryTranslation {
@@ -34,6 +42,8 @@ interface CategoryForm {
   type: CategoryTypeValue
   active: boolean
   icon?: string
+  priceRangeMin: number | null
+  priceRangeMax: number | null
   translations: Record<string, Translation>
 }
 
@@ -42,6 +52,7 @@ interface ValidationErrors {
   slug?: string
   type?: string
   icon?: string
+  priceRangeMax?: string
 }
 
 interface CategoryFilter {
@@ -68,6 +79,8 @@ export function useCategory() {
     type: CategoryType.NEWS,
     active: true,
     icon: '',
+    priceRangeMin: null,
+    priceRangeMax: null,
     translations: {}
   })
   const errors = ref<ValidationErrors>({})
@@ -90,9 +103,7 @@ export function useCategory() {
   const currentTranslation = computed(() => {
     if (!selectedLanguage.value || !form.value.translations[selectedLanguage.value]) {
       return {
-        name: '',
-        slug: '',
-        description: ''
+        ...createEmptyCategoryTranslation(),
       }
     }
     return form.value.translations[selectedLanguage.value]
@@ -119,6 +130,8 @@ export function useCategory() {
       type: CategoryType.NEWS,
       active: true,
       icon: '',
+      priceRangeMin: null,
+      priceRangeMax: null,
       translations: {}
     }
     errors.value = {}
@@ -127,11 +140,7 @@ export function useCategory() {
   const generateSlug = () => {
     if (form.value.name) {
       if (!form.value.translations[selectedLanguage.value]) {
-        form.value.translations[selectedLanguage.value] = {
-          name: '',
-          slug: '',
-          description: ''
-        }
+        form.value.translations[selectedLanguage.value] = createEmptyCategoryTranslation()
       }
       form.value.translations[selectedLanguage.value].slug = slugify(form.value.name, {
         lower: true,
@@ -161,6 +170,15 @@ export function useCategory() {
     // Validate type
     if (!form.value.type) {
       errors.value.type = 'Type is required'
+      isValid = false
+    }
+
+    if (
+      form.value.priceRangeMin !== null &&
+      form.value.priceRangeMax !== null &&
+      form.value.priceRangeMin > form.value.priceRangeMax
+    ) {
+      errors.value.priceRangeMax = 'Giá đến phải lớn hơn hoặc bằng giá từ'
       isValid = false
     }
 
@@ -216,11 +234,7 @@ export function useCategory() {
         const translations: Record<string, any> = {}
         
         category.translations?.forEach((translation: any) => {
-          translations[translation.locale] = {
-            name: translation.name,
-            slug: translation.slug,
-            description: translation.description || ''
-          }
+          translations[translation.locale] = normalizeCategoryTranslation(translation)
         })
 
         form.value = {
@@ -228,6 +242,8 @@ export function useCategory() {
           type: category.type as CategoryTypeValue,
           active: category.active,
           icon: category.icon || '',
+          priceRangeMin: category.priceRangeMin ?? null,
+          priceRangeMax: category.priceRangeMax ?? null,
           translations
         }
       }
@@ -255,7 +271,14 @@ export function useCategory() {
         form.value.translations[selectedLanguage.value] = {
           name: form.value.name,
           slug: currentTranslation.value.slug,
-          description: currentTranslation.value.description
+          description: currentTranslation.value.description,
+          metaTitle: currentTranslation.value.metaTitle,
+          metaDescription: currentTranslation.value.metaDescription,
+          metaKeywords: currentTranslation.value.metaKeywords,
+          ogTitle: currentTranslation.value.ogTitle,
+          ogDescription: currentTranslation.value.ogDescription,
+          ogImage: currentTranslation.value.ogImage,
+          canonicalUrl: currentTranslation.value.canonicalUrl
         }
       }
 
@@ -266,12 +289,24 @@ export function useCategory() {
         type: form.value.type,
         active: form.value.active,
         icon: form.value.icon,
-        translations: Object.entries(form.value.translations).map(([locale, content]) => ({
-          locale,
-          name: content.name,
-          slug: content.slug,
-          description: content.description || undefined
-        }))
+        priceRangeMin: form.value.type === CategoryType.PRODUCT || form.value.type === CategoryType.BOTH ? form.value.priceRangeMin : null,
+        priceRangeMax: form.value.type === CategoryType.PRODUCT || form.value.type === CategoryType.BOTH ? form.value.priceRangeMax : null,
+        translations: Object.entries(form.value.translations).map(([locale, content]) => {
+          const seoContent = withSeoFallbacks(content)
+          return {
+            locale,
+            name: seoContent.name,
+            slug: seoContent.slug,
+            description: seoContent.description || undefined,
+            metaTitle: seoContent.metaTitle || undefined,
+            metaDescription: seoContent.metaDescription || undefined,
+            metaKeywords: seoContent.metaKeywords || undefined,
+            ogTitle: seoContent.ogTitle || undefined,
+            ogDescription: seoContent.ogDescription || undefined,
+            ogImage: seoContent.ogImage || undefined,
+            canonicalUrl: seoContent.canonicalUrl || undefined
+          }
+        })
       }
 
       const result = await trpc.admin.category.createCategory.mutate(createData)
@@ -322,7 +357,14 @@ export function useCategory() {
         form.value.translations[selectedLanguage.value] = {
           name: form.value.name,
           slug: currentTranslation.value.slug,
-          description: currentTranslation.value.description
+          description: currentTranslation.value.description,
+          metaTitle: currentTranslation.value.metaTitle,
+          metaDescription: currentTranslation.value.metaDescription,
+          metaKeywords: currentTranslation.value.metaKeywords,
+          ogTitle: currentTranslation.value.ogTitle,
+          ogDescription: currentTranslation.value.ogDescription,
+          ogImage: currentTranslation.value.ogImage,
+          canonicalUrl: currentTranslation.value.canonicalUrl
         }
       }
 
@@ -333,12 +375,24 @@ export function useCategory() {
           type: form.value.type,
           active: form.value.active,
           icon: form.value.icon,
-          translations: Object.entries(form.value.translations).map(([locale, content]) => ({
-            locale,
-            name: content.name, 
-            slug: content.slug,
-            description: content.description || undefined
-          }))
+          priceRangeMin: form.value.type === CategoryType.PRODUCT || form.value.type === CategoryType.BOTH ? form.value.priceRangeMin : null,
+          priceRangeMax: form.value.type === CategoryType.PRODUCT || form.value.type === CategoryType.BOTH ? form.value.priceRangeMax : null,
+          translations: Object.entries(form.value.translations).map(([locale, content]) => {
+            const seoContent = withSeoFallbacks(content)
+            return {
+              locale,
+              name: seoContent.name,
+              slug: seoContent.slug,
+              description: seoContent.description || undefined,
+              metaTitle: seoContent.metaTitle || undefined,
+              metaDescription: seoContent.metaDescription || undefined,
+              metaKeywords: seoContent.metaKeywords || undefined,
+              ogTitle: seoContent.ogTitle || undefined,
+              ogDescription: seoContent.ogDescription || undefined,
+              ogImage: seoContent.ogImage || undefined,
+              canonicalUrl: seoContent.canonicalUrl || undefined
+            }
+          })
         }
       }
 

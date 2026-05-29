@@ -1,6 +1,7 @@
 <!-- Team section for about page -->
 <script setup lang="ts">
 import { computed } from 'vue';
+import { Icon } from '@iconify/vue';
 
 interface TeamMember {
   name: string;
@@ -54,6 +55,21 @@ const gridClass = computed(() => {
 const teamMembers = computed(() => {
   return props.translations.data?.teamMembers || props.settings.teamMembers || [];
 });
+
+const socialIconMap: Record<string, string> = {
+  facebook: 'mdi:facebook',
+  instagram: 'mdi:instagram',
+  linkedin: 'mdi:linkedin',
+  youtube: 'mdi:youtube',
+  tiktok: 'ic:baseline-tiktok',
+  twitter: 'mdi:twitter',
+  x: 'mdi:twitter',
+  zalo: 'simple-icons:zalo'
+};
+
+const getSocialIcon = (platform: string) => {
+  return socialIconMap[platform.toLowerCase()] || 'mdi:web';
+};
 </script>
 
 <template>
@@ -105,7 +121,7 @@ const teamMembers = computed(() => {
                 rel="noopener noreferrer"
                 class="text-muted-foreground hover:text-primary transition-colors"
               >
-                <i :class="'fab fa-' + platform"></i>
+                <Icon :icon="getSocialIcon(platform)" class="h-5 w-5" />
               </a>
             </div>
           </div>

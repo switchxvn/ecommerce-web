@@ -5,6 +5,8 @@ import { Review } from '../../entities/review.entity';
 import { ReviewTranslation } from '../../entities/review-translation.entity';
 import { ReviewServiceType } from '../../entities/review-service-type.entity';
 import { ReviewStatus } from '@ew/shared';
+import { Product } from '../../../product/entities/product.entity';
+import { Service } from '../../../service/entities/service.entity';
 
 export interface CreateReviewInput {
   authorName: string;
@@ -12,6 +14,8 @@ export interface CreateReviewInput {
   profession?: string;
   rating: number;
   serviceTypeId?: number;
+  productId?: number;
+  serviceId?: number;
   visitDate?: Date;
   featured?: boolean;
   status?: ReviewStatus;
@@ -28,6 +32,8 @@ export interface UpdateReviewInput {
   profession?: string;
   rating?: number;
   serviceTypeId?: number;
+  productId?: number | null;
+  serviceId?: number | null;
   visitDate?: Date;
   featured?: boolean;
   status?: ReviewStatus;
@@ -44,6 +50,7 @@ export interface ReviewsPaginationParams {
   search?: string;
   featured?: boolean;
   serviceTypeId?: number;
+  serviceId?: number;
   minRating?: number;
   maxRating?: number;
   status?: ReviewStatus;
@@ -59,7 +66,33 @@ export class AdminReviewService {
     private readonly reviewTranslationRepository: Repository<ReviewTranslation>,
     @InjectRepository(ReviewServiceType)
     private readonly reviewServiceTypeRepository: Repository<ReviewServiceType>,
+    @InjectRepository(Product)
+    private readonly productRepository: Repository<Product>,
+    @InjectRepository(Service)
+    private readonly serviceRepository: Repository<Service>,
   ) {}
+
+  private async assertProductExists(productId: number) {
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+      select: ['id'],
+    });
+
+    if (!product) {
+      throw new Error(`Product with ID ${productId} not found`);
+    }
+  }
+
+  private async assertServiceExists(serviceId: number) {
+    const service = await this.serviceRepository.findOne({
+      where: { id: serviceId },
+      select: ['id'],
+    });
+
+    if (!service) {
+      throw new Error(`Service with ID ${serviceId} not found`);
+    }
+  }
 
   async findAll(params: ReviewsPaginationParams = {}) {
     const {
@@ -68,6 +101,7 @@ export class AdminReviewService {
       search = '',
       featured,
       serviceTypeId,
+      serviceId,
       minRating,
       maxRating,
       status,
@@ -77,7 +111,9 @@ export class AdminReviewService {
     const query = this.reviewRepository.createQueryBuilder('review')
       .leftJoinAndSelect('review.translations', 'translations')
       .leftJoinAndSelect('review.serviceType', 'serviceType')
-      .leftJoinAndSelect('serviceType.translations', 'serviceTypeTranslations');
+      .leftJoinAndSelect('serviceType.translations', 'serviceTypeTranslations')
+      .leftJoinAndSelect('review.service', 'service')
+      .leftJoinAndSelect('service.translations', 'serviceTranslations');
 
     if (locale) {
       query.andWhere('translations.locale = :locale', { locale });
@@ -96,6 +132,10 @@ export class AdminReviewService {
 
     if (serviceTypeId) {
       query.andWhere('review.serviceTypeId = :serviceTypeId', { serviceTypeId });
+    }
+
+    if (serviceId) {
+      query.andWhere('review.serviceId = :serviceId', { serviceId });
     }
 
     if (minRating !== undefined) {
@@ -134,6 +174,8 @@ export class AdminReviewService {
       .leftJoinAndSelect('review.translations', 'translations')
       .leftJoinAndSelect('review.serviceType', 'serviceType')
       .leftJoinAndSelect('serviceType.translations', 'serviceTypeTranslations')
+      .leftJoinAndSelect('review.service', 'service')
+      .leftJoinAndSelect('service.translations', 'serviceTranslations')
       .where('review.id = :id', { id });
 
     if (locale) {
@@ -144,12 +186,22 @@ export class AdminReviewService {
   }
 
   async create(data: CreateReviewInput) {
+    if (typeof data.productId === 'number') {
+      await this.assertProductExists(data.productId);
+    }
+
+    if (typeof data.serviceId === 'number') {
+      await this.assertServiceExists(data.serviceId);
+    }
+
     const review = this.reviewRepository.create({
       authorName: data.authorName,
       authorAvatar: data.authorAvatar,
       profession: data.profession,
       rating: data.rating,
       serviceTypeId: data.serviceTypeId,
+      productId: data.productId,
+      serviceId: data.serviceId,
       visitDate: data.visitDate,
       featured: data.featured,
       status: data.status ?? ReviewStatus.ACTIVE,
@@ -177,6 +229,22 @@ export class AdminReviewService {
     if (data.profession !== undefined) review.profession = data.profession;
     if (data.rating !== undefined) review.rating = data.rating;
     if (data.serviceTypeId !== undefined) review.serviceTypeId = data.serviceTypeId;
+    if (data.productId !== undefined) {
+      if (data.productId === null) {
+        review.productId = null;
+      } else {
+        await this.assertProductExists(data.productId);
+        review.productId = data.productId;
+      }
+    }
+    if (data.serviceId !== undefined) {
+      if (data.serviceId === null) {
+        review.serviceId = null;
+      } else {
+        await this.assertServiceExists(data.serviceId);
+        review.serviceId = data.serviceId;
+      }
+    }
     if (data.visitDate !== undefined) review.visitDate = data.visitDate;
     if (data.featured !== undefined) review.featured = data.featured;
     if (data.status !== undefined) review.status = data.status;

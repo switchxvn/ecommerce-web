@@ -24,6 +24,14 @@ export default defineNuxtPlugin(() => {
   };
 
   if (process.client) {
-    initFacebookSDK();
+    const scheduleInit = () => {
+      void initFacebookSDK();
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(scheduleInit, { timeout: 3000 });
+    } else {
+      window.setTimeout(scheduleInit, 1500);
+    }
   }
-}); 
+});

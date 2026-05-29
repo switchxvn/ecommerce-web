@@ -1,6 +1,6 @@
 <!-- Clone from NavbarWithTheme.vue but remove logo section -->
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from "vue";
+import { ref, onMounted, onUnmounted, computed, nextTick } from "vue";
 import { useMenuItems } from "~/composables/useMenuItems";
 import type { MenuItem } from "@ew/shared";
 import Icon from "./Icon.vue";
@@ -49,20 +49,11 @@ const isLoadingFeatureFlag = ref(true);
 // Localization
 const { locale } = useLocalization();
 
-// Debug logs
-watch([isCartEnabled], () => {
-  console.log('NavbarWithoutLogo - Cart state:', {
-    isCartEnabled: isCartEnabled.value,
-    isLoading: isLoadingFeatureFlag.value
-  });
-}, { immediate: true });
-
 // Kiểm tra feature flag enable_add_to_cart
 const checkCartFeatureFlag = async () => {
   try {
     isLoadingFeatureFlag.value = true;
     isCartEnabled.value = await isFeatureEnabled("enable_add_to_cart", true);
-    console.log("Cart feature flag in NavbarWithoutLogo:", isCartEnabled.value);
   } catch (err) {
     console.error("Error checking cart feature flag:", err);
     isCartEnabled.value = false;
@@ -300,7 +291,7 @@ watch(locale, () => {
       <div class="flex items-center justify-between py-2">
         <!-- Desktop Navigation -->
         <nav class="hidden md:flex items-center space-x-6 flex-grow justify-center">
-          <div v-if="isLoading" class="text-sm text-neutral-500 dark:text-neutral-400">Đang tải menu...</div>
+          <InlineMenuSkeleton v-if="isLoading" :item-count="4" />
           <div v-else-if="error" class="text-sm text-red-500">{{ error }}</div>
           <template v-else>
             <div
@@ -398,9 +389,7 @@ watch(locale, () => {
       :class="{ hidden: !isMobileMenuOpen }"
     >
       <div class="px-4 py-3 space-y-1">
-        <div v-if="isLoading" class="text-sm text-neutral-500 dark:text-neutral-400 px-3 py-2">
-          Đang tải menu...
-        </div>
+        <InlineMenuSkeleton v-if="isLoading" :item-count="5" mobile />
         <div v-else-if="error" class="text-sm text-red-500 px-3 py-2">{{ error }}</div>
         <template v-else>
           <NuxtLink
@@ -450,4 +439,4 @@ watch(locale, () => {
 .mobile-menu-active {
   @apply bg-neutral-100 dark:bg-neutral-800 text-primary-600 dark:text-primary-400;
 }
-</style> 
+</style>

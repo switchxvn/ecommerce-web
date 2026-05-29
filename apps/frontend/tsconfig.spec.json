@@ -9,7 +9,7 @@
       "node",
       "vitest"
     ],
-    "composite": true
+    "composite": false
   },
   "include": [
     ".nuxt/nuxt.d.ts",
@@ -26,5 +26,10 @@
     "src/**/*.test.jsx",
     "src/**/*.spec.jsx",
     "src/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "../../apps/backend/**/*",
+    "../../libs/database/**/*"
   ]
 }

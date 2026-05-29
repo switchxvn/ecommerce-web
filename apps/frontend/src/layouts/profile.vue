@@ -13,11 +13,11 @@ const route = useRoute();
 
 const navigationItems = [
   { name: 'Thông tin cá nhân', href: '/dashboard', icon: UserCircle },
-  { name: 'Đơn hàng của tôi', href: '/dashboard/orders', icon: ShoppingBag },
-  { name: 'Sản phẩm yêu thích', href: '/dashboard/wishlist', icon: Heart },
-  { name: 'Thông báo', href: '/dashboard/notifications', icon: Bell },
-  { name: 'Phương thức thanh toán', href: '/dashboard/payment', icon: CreditCard },
-  { name: 'Cài đặt', href: '/dashboard/settings', icon: Settings },
+  { name: 'Đơn hàng của tôi', href: '/dashboard', icon: ShoppingBag },
+  { name: 'Sản phẩm yêu thích', href: '/dashboard', icon: Heart },
+  { name: 'Thông báo', href: '/dashboard', icon: Bell },
+  { name: 'Phương thức thanh toán', href: '/dashboard', icon: CreditCard },
+  { name: 'Cài đặt', href: '/dashboard', icon: Settings },
 ];
 
 const isActiveRoute = (path: string) => {

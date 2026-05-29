@@ -26,6 +26,8 @@ export interface Category {
   isFeatured: boolean;
   type: CategoryType;
   icon?: string | null;
+  priceRangeMin?: number | null;
+  priceRangeMax?: number | null;
   parentId: number | null;
   parent: Category | null;
   children: Category[];

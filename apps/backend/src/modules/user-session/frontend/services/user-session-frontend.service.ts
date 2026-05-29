@@ -137,8 +137,8 @@ export class UserSessionFrontendService implements IUserSessionFrontendService {
         session.expireAt = data.expireAt;
       }
 
-      // Cập nhật IP address nếu được cung cấp
-      if (data.ipAddress) {
+      // Cập nhật IP address nếu được cung cấp và thực sự thay đổi
+      if (data.ipAddress && data.ipAddress !== session.ipAddress) {
         this.logger.debug(`Updating IP address from ${session.ipAddress} to ${data.ipAddress}`);
         session.ipAddress = data.ipAddress;
       }

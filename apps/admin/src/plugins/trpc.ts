@@ -1,4 +1,4 @@
-import { useRuntimeConfig } from '#imports';
+import { navigateTo, useRuntimeConfig } from '#imports';
 import { createTRPCProxyClient, httpBatchLink, TRPCClientError } from '@trpc/client';
 import type { AppRouter } from '../types/trpc';
 
@@ -22,8 +22,8 @@ export default defineNuxtPlugin(() => {
       if (isExpiredToken) {
         console.error('Token expired or invalid:', errorMessage);
         localStorage.removeItem('accessToken');
-        if (window.location.pathname !== '/auth/login') {
-          window.location.href = '/auth/login';
+        if (!window.location.pathname.endsWith('/auth/login')) {
+          navigateTo('/auth/login', { replace: true });
         }
       }
     }

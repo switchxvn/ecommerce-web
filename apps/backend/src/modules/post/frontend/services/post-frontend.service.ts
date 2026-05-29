@@ -6,6 +6,8 @@ import { Tag } from '../../../settings/entities/tag.entity';
 import { PostTag } from '../../entities/post-tag.entity';
 import { PostTranslation } from '../../entities/post-translation.entity';
 import { Post } from '../../entities/post.entity';
+import { serializeVietnamTimestamp } from '../utils/post-timestamp.util';
+import { applyTagSlugFilterToPostQuery } from './post-query-filter.util';
 
 interface PostWhereConditions {
   published: boolean;
@@ -125,8 +127,8 @@ export class PostFrontendService {
       thumbnail: post.thumbnail,
       published: post.published,
       authorId: String(post.authorId),
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
+      createdAt: serializeVietnamTimestamp(post.createdAt),
+      updatedAt: serializeVietnamTimestamp(post.updatedAt),
       tags,
       author: post.author ? {
         id: String(post.author.id),
@@ -154,8 +156,8 @@ export class PostFrontendService {
         ogImage: t.ogImage,
         canonicalUrl: t.canonicalUrl,
         postId: t.postId,
-        createdAt: t.createdAt,
-        updatedAt: t.updatedAt
+        createdAt: serializeVietnamTimestamp(t.createdAt),
+        updatedAt: serializeVietnamTimestamp(t.updatedAt)
       })) || []
     };
   }
@@ -163,6 +165,7 @@ export class PostFrontendService {
   async findByLocale(locale: string, filters?: {
     categories?: number[];
     categorySlugs?: string[];
+    tagSlugs?: string[];
     search?: string;
     page?: number;
     limit?: number;
@@ -204,6 +207,8 @@ export class PostFrontendService {
             categorySlugs: filters.categorySlugs 
           });
       }
+
+      applyTagSlugFilterToPostQuery(qb, filters?.tagSlugs);
 
       // Thêm điều kiện tìm kiếm nếu có
       if (filters?.search?.trim()) {

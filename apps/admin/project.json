@@ -7,7 +7,7 @@
     "serve": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "npx nuxt dev --dotenv .env --no-typecheck",
+        "command": "env -u PORT npx nuxt dev --dotenv ../../.env --no-typecheck",
         "cwd": "apps/admin"
       }
     },

@@ -152,9 +152,9 @@ const navbarStyles = computed(() => {
 
         <!-- Slogan -->
         <div class="flex flex-col items-center justify-center text-center">
-          <h1 v-if="props.settings?.slogan" class="text-xl font-bold text-red-600">
+          <p v-if="props.settings?.slogan" class="text-xl font-bold text-red-600">
             {{ translatedSloganText }}
-          </h1>
+          </p>
           <p v-if="props.settings?.slogan" class="text-lg font-bold text-red-600">
             {{ translatedSloganSubText }}
           </p>

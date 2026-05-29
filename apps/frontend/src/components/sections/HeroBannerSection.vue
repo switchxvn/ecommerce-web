@@ -101,7 +101,7 @@ onMounted(() => {
 
         <!-- Content -->
         <div class="relative z-10 h-full container mx-auto px-4 flex flex-col items-center justify-center text-center py-12 md:py-16">
-          <h1 
+          <h2 
             class="max-w-4xl mx-auto mb-6 leading-tight animate-fade-in-up drop-shadow-lg"
             :style="{
               color: config.titleStyle.color,
@@ -112,7 +112,7 @@ onMounted(() => {
             }"
           >
             {{ config.title }}
-          </h1>
+          </h2>
 
           <UButton
             v-if="config.button"

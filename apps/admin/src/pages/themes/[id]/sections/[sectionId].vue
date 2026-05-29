@@ -19,6 +19,7 @@ import {
 } from 'lucide-vue-next'
 import { PageType, ThemeSection } from '@ew/shared'
 import PageHeader from '../../../../components/common/header/PageHeader.vue'
+import MediaUploader from '../../../../components/common/media/MediaUploader.vue'
 
 // Route
 const route = useRoute()
@@ -218,6 +219,7 @@ const fetchSection = async () => {
     
     // Initialize nested settings objects
     initializeNestedSettings()
+    normalizeServiceSectionSettings()
     
     // Initialize JSON string
     stringifyJsonSettings()
@@ -350,6 +352,7 @@ const pageTypeOptions = [
 const sectionTypeOptions = [
   { value: 'hero', label: 'Hero Banner' },
   { value: 'featured_products', label: 'Sản phẩm nổi bật' },
+  { value: 'feature_services', label: 'Dịch vụ xe nâng hàng' },
   { value: 'category_grid', label: 'Lưới danh mục' },
   { value: 'testimonials', label: 'Đánh giá khách hàng' },
   { value: 'about', label: 'Giới thiệu' },
@@ -446,10 +449,30 @@ const setNestedValue = (obj: any, path: string, value: any) => {
   target[lastKey] = value
 }
 
+const normalizeServiceSectionSettings = () => {
+  const isServiceType = sectionForm.type === 'services' || sectionForm.type === 'feature_services'
+  if (!isServiceType) return
+
+  if (!Array.isArray(sectionForm.settings.services)) {
+    sectionForm.settings.services = []
+  }
+
+  sectionForm.settings.services = sectionForm.settings.services.map((service: Record<string, any>) => ({
+    ...service,
+    title: service?.title || '',
+    icon: service?.icon || '',
+    link: service?.link || '/',
+  }))
+}
+
 // Load data on mount
 onMounted(() => {
   fetchSection()
 })
+
+watch(() => sectionForm.type, () => {
+  normalizeServiceSectionSettings()
+}, { immediate: true })
 
 // Navigate back to sections list
 const navigateToSections = () => {
@@ -1118,7 +1141,7 @@ const navigateToTheme = () => {
                   </div>
                   
                   <!-- Services Section Settings -->
-                  <div v-else-if="sectionForm.type === 'services'" class="space-y-4">
+                  <div v-else-if="sectionForm.type === 'services' || sectionForm.type === 'feature_services'" class="space-y-4">
                     <h3 class="text-lg font-medium">Cài đặt Dịch vụ</h3>
                     
                     <!-- Layout -->
@@ -1200,6 +1223,18 @@ const navigateToTheme = () => {
                         
                         <UFormGroup label="Icon URL">
                           <UInput v-model="service.icon" placeholder="Nhập đường dẫn icon" />
+                        </UFormGroup>
+
+                        <UFormGroup label="Thumbnail">
+                          <div class="h-40">
+                            <MediaUploader
+                              v-model="service.icon"
+                              :preview="service.icon"
+                              accept="image/*"
+                              :max-size="5 * 1024 * 1024"
+                              :alt="service.title || `Service ${index + 1}`"
+                            />
+                          </div>
                         </UFormGroup>
                         
                         <UFormGroup label="Đường dẫn">

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
+import { Repository } from 'typeorm';
 import { PriceRequest, PriceRequestStatus } from '../../entities/price-request.entity';
 
 @Injectable()
@@ -19,24 +19,24 @@ export class PriceRequestAdminService {
     search?: string;
   }): Promise<{ items: PriceRequest[]; total: number }> {
     const { page = 1, pageSize = 10, status, search } = options;
+    const normalizedSearch = search?.trim();
 
     const queryBuilder = this.priceRequestRepository
-      .createQueryBuilder('priceRequest')
-      .leftJoinAndSelect('priceRequest.product', 'product');
+      .createQueryBuilder('priceRequest');
 
     if (status) {
       queryBuilder.andWhere('priceRequest.status = :status', { status });
     }
 
-    if (search) {
+    if (normalizedSearch) {
       queryBuilder.andWhere(
-        '(priceRequest.fullName LIKE :search OR priceRequest.email LIKE :search OR priceRequest.phone LIKE :search OR priceRequest.productName LIKE :search)',
-        { search: `%${search}%` }
+        '(priceRequest.full_name ILIKE :search OR priceRequest.email ILIKE :search OR priceRequest.phone ILIKE :search OR priceRequest.product_name ILIKE :search)',
+        { search: `%${normalizedSearch}%` }
       );
     }
 
     const [items, total] = await queryBuilder
-      .orderBy('priceRequest.createdAt', 'DESC')
+      .orderBy('priceRequest.created_at', 'DESC')
       .skip((page - 1) * pageSize)
       .take(pageSize)
       .getManyAndCount();

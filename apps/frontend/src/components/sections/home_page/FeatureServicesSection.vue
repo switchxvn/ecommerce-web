@@ -257,36 +257,30 @@ const gridStyles = computed(() => ({
           :key="index"
           class="feature-service-card"
           :style="{
-            height: mergedConfig.cardStyle.height,
-            padding: mergedConfig.cardStyle.padding,
             textAlign: mergedConfig.cardStyle.textAlign as any,
             background: mergedConfig.cardStyle.background.light,
             transition: mergedConfig.cardStyle.transition
           }"
         >
-          <!-- Icon -->
-          <NuxtLink :to="service.link">
-            <div class="icon-wrapper">
+          <NuxtLink :to="service.link" class="service-link">
+            <div class="image-wrapper">
               <img 
+                class="service-image"
                 :src="service.icon" 
-              :alt="service.title"
-              :style="{
-                height: mergedConfig.iconStyle.height,
-                margin: mergedConfig.iconStyle.margin
-              }"
+                :alt="service.title"
               />
             </div>
 
-          <!-- Title -->
-          <h3 
-            class="service-title"
-            :style="{
-              fontSize: `var(--text-${mergedConfig.titleStyle.size})`,
-              fontWeight: mergedConfig.titleStyle.fontWeight,
-              color: mergedConfig.titleStyle.color.light,
-              margin: mergedConfig.titleStyle.margin,
-              textTransform: mergedConfig.titleStyle.textTransform as any
-            }"
+            <!-- Title -->
+            <h3 
+              class="service-title"
+              :style="{
+                fontSize: `var(--text-${mergedConfig.titleStyle.size})`,
+                fontWeight: mergedConfig.titleStyle.fontWeight,
+                color: mergedConfig.titleStyle.color.light,
+                margin: mergedConfig.titleStyle.margin,
+                textTransform: mergedConfig.titleStyle.textTransform as any
+              }"
             >
               {{ service.title }}
             </h3>
@@ -381,20 +375,36 @@ const gridStyles = computed(() => ({
 
 .feature-service-card {
   text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  display: block;
   font-family: inherit;
 
   &:hover {
     transform: translateY(-4px);
   }
 
-  .icon-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .service-link {
+    display: block;
+    width: 100%;
+  }
+
+  .image-wrapper {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    background: #e5e7eb;
+  }
+
+  .service-image {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  &:hover .service-image {
+    transform: scale(1.04);
   }
 
   .service-title {

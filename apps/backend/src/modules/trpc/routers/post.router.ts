@@ -3,6 +3,39 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { protectedProcedure, publicProcedure, router } from '../procedures';
 
+function splitCsv(value?: string): string[] | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const items = value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return items.length > 0 ? items : undefined;
+}
+
+export function buildPostLocaleFilters(input: {
+  locale?: string;
+  page?: number;
+  limit?: number;
+  search?: string;
+  categories?: string;
+  sort?: string;
+  category?: string;
+  tags?: string;
+}) {
+  return {
+    categorySlugs: input.category ? [input.category] : splitCsv(input.categories),
+    search: input.search,
+    page: input.page ?? 1,
+    limit: input.limit ?? 12,
+    sortBy: input.sort ?? 'newest',
+    tagSlugs: splitCsv(input.tags),
+  };
+}
+
 // Admin router for posts
 export const adminPostRouter = router({
   getPostById: protectedProcedure
@@ -96,16 +129,8 @@ export const postRouter = router({
     }))
     .query(async ({ ctx, input }) => {
       try {
-        const { locale, page, limit, search, categories, sort, category, tags } = input;
-        
-        // Chuẩn bị filters cho service
-        const serviceFilters = {
-          categorySlugs: category ? [category] : categories ? categories.split(',') : undefined,
-          search,
-          page,
-          limit,
-          sortBy: sort
-        };
+        const { locale } = input;
+        const serviceFilters = buildPostLocaleFilters(input);
 
         // Lấy bài viết với phân trang
         const result = await ctx.services.postService.findByLocale(locale, serviceFilters);

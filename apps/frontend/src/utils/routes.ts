@@ -1,3 +1,5 @@
+import { normalizeLocaleCode } from './locale';
+
 export const ROUTE_NAMES = {
   // Products
   PRODUCTS_LIST: {
@@ -162,4 +164,30 @@ export function getLocalizedRoute(routeType: RouteType, locale: LocaleType, para
  */
 export function getLocalizedRouteName(routeType: RouteType, locale: LocaleType): string {
   return ROUTE_NAMES[routeType][locale];
-} 
+}
+
+export const AUTH_ROUTE_PATHS = {
+  login: '/auth/login',
+  register: '/auth/register',
+  dashboard: '/dashboard',
+} as const;
+
+export function getRouteLocale(locale: string | null | undefined): LocaleType {
+  return normalizeLocaleCode(locale) === 'en' ? 'en' : 'vi';
+}
+
+export function getCategoryDetailRoute(slug: string, locale: string | null | undefined): string {
+  return getLocalizedRoute('CATEGORY_DETAIL', 'vi', { slug });
+}
+
+export function getCategoryListRoute(locale: string | null | undefined): string {
+  return getLocalizedRoute('CATEGORIES_LIST', 'vi');
+}
+
+export function getContactRoute(locale: string | null | undefined): string {
+  return getLocalizedRoute('CONTACT', getRouteLocale(locale));
+}
+
+export function getBookingRoute(locale: string | null | undefined): string {
+  return getLocalizedRoute('ORDER_TICKET', getRouteLocale(locale));
+}

@@ -153,7 +153,7 @@ const fetchPriceRequests = async () => {
       page: page.value,
       pageSize: pageSize.value,
       status: statusFilter.value,
-      search: search.value || undefined
+      search: search.value?.trim() || undefined
     };
 
     const response = await trpc.admin.priceRequest.getAllPriceRequests.query(params);

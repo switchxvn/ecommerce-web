@@ -277,8 +277,11 @@ watch(locale, () => {
       </div>
 
       <!-- Loading State -->
-      <div v-if="isLoading" class="flex justify-center items-center py-12">
-        <Loader size="lg" />
+      <div v-if="isLoading" class="py-4">
+        <CardGridSkeleton
+          :item-count="config.maxItems || 8"
+          :columns="config.displayMode === 'grid' ? 4 : (config.slidesPerView?.desktop || 4)"
+        />
       </div>
 
       <!-- Error State -->

@@ -6,6 +6,7 @@ import { TRPCClientError } from '@trpc/client';
 const globalSettings = reactive<Record<string, any>>({});
 const isInitialized = ref(false);
 const isGlobalLoading = ref(false);
+let pendingPublicSettingsRequest: Promise<any> | null = null;
 
 interface Logo {
   light: string;
@@ -71,10 +72,10 @@ export function useSettings() {
     
     // Nếu đang tải, không gọi API lại
     if (isGlobalLoading.value) {
-      return { ...settings.value, ...globalSettings };
+      return pendingPublicSettingsRequest || { ...settings.value, ...globalSettings };
     }
-    
-    try {
+
+    pendingPublicSettingsRequest = (async () => {
       isLoading.value = true;
       isGlobalLoading.value = true;
       error.value = null;
@@ -93,7 +94,7 @@ export function useSettings() {
       
       isInitialized.value = true;
       return { ...settings.value, ...globalSettings };
-    } catch (err) {
+    })().catch((err) => {
       if (err instanceof TRPCClientError) {
         error.value = err.message;
       } else {
@@ -101,10 +102,13 @@ export function useSettings() {
       }
       console.error('Error fetching public settings:', err);
       return { ...settings.value, ...globalSettings };
-    } finally {
+    }).finally(() => {
       isLoading.value = false;
       isGlobalLoading.value = false;
-    }
+      pendingPublicSettingsRequest = null;
+    });
+
+    return pendingPublicSettingsRequest;
   };
   
   /**
@@ -155,6 +159,10 @@ export function useSettings() {
    */
   const getPublicSettingValueByKey = async (key: string, defaultValue: string = '') => {
     try {
+      if (!isInitialized.value) {
+        await fetchPublicSettings();
+      }
+
       // Kiểm tra xem có trong cache không
       if (globalSettings[key]) {
         return globalSettings[key].value || defaultValue;
@@ -198,7 +206,7 @@ export function useSettings() {
   };
   
   // Khởi tạo settings nếu chưa được khởi tạo
-  if (!isInitialized.value && !isGlobalLoading.value) {
+  if (process.client && !isInitialized.value && !isGlobalLoading.value) {
     fetchPublicSettings();
   }
   

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Auto-imported by Nuxt 3;
 import { useTrpc } from "../../composables/useTrpc";
-import { ref, computed, onMounted, reactive, watch } from "vue";
+import { ref, computed, reactive, watch } from "vue";
 import { useLocalization } from "../../composables/useLocalization";
 import { useRoute, useRouter } from 'vue-router';
 import PostSidebar from "../../components/sidebar/PostSidebar.vue";
@@ -11,6 +11,9 @@ import type { Post } from "@ew/shared";
 import type { CategoryTranslation } from "../../types/category-translation";
 import Breadcrumb from "../../components/common/Breadcrumb.vue";
 import { SearchX, FilterX } from 'lucide-vue-next';
+import { usePageSeo } from '~/composables/usePageSeo';
+import { getAuthorName } from '~/utils/author';
+import { buildPostListQuery, parsePostListQuery } from '~/utils/postFilters';
 
 const { t, locale } = useLocalization();
 const route = useRoute();
@@ -34,6 +37,7 @@ const totalPages = ref(0);
 const categoryData = ref<any>(null);
 const seoData = ref<any>(null);
 const shouldResetSidebar = ref(false);
+const initialQueryFilters = parsePostListQuery(route.query as Record<string, unknown>);
 
 // Filter state với tất cả các query parameters có thể có
 const filters = reactive<{
@@ -42,15 +46,14 @@ const filters = reactive<{
   sort: string;
   page: number;
   limit: number;
-  tags?: string[];
-  category?: string;
-  [key: string]: any; // Thêm index signature để cho phép truy cập động
+  tags: string[];
 }>({
-  search: route.query.search as string || '',
-  categories: route.query.categories ? (route.query.categories as string).split(',') : [],
-  sort: (route.query.sort as string) || 'newest',
-  page: Number(route.query.page || 1),
-  limit: Number(route.query.limit) || 12,
+  search: initialQueryFilters.search,
+  categories: initialQueryFilters.categories,
+  sort: initialQueryFilters.sort,
+  page: initialQueryFilters.page,
+  limit: initialQueryFilters.limit,
+  tags: initialQueryFilters.tags,
 });
 
 // Đảm bảo page được đồng bộ với URL khi SSR
@@ -135,20 +138,6 @@ const fetchPosts = async () => {
       queryParams.tags = filters.tags.join(',');
     }
 
-    // Add category if exists
-    if (filters.category) {
-      queryParams.category = filters.category;
-    }
-
-    // Add all other query params
-    Object.entries(filters).forEach(([key, value]) => {
-      if (!['search', 'categories', 'tags', 'sort', 'danh-muc', 'page', 'limit'].includes(key) && value) {
-        queryParams[key] = value;
-      }
-    });
-
-
-
     // Fetch posts
     const result = await trpc.post.byLocale.query(queryParams);
     posts.value = Array.isArray(result.items) ? result.items.map(transformPost) : [];
@@ -166,30 +155,27 @@ const fetchPosts = async () => {
   }
 };
 
-// Watch for route query changes
-watch(() => route.query, async (newQuery) => {
-  // Cập nhật tất cả các query parameters vào filters
-  Object.entries(newQuery).forEach(([key, value]) => {
-    if (key === 'categories' && value) {
-      filters.categories = (value as string).split(',');
-    } else if (key === 'page' || key === 'limit') {
-      filters[key] = Number(value) || 1;
-    } else if (key === 'danh-muc') {
-      filters.category = value as string;
-    } else if (['search', 'sort'].includes(key)) {
-      filters[key] = value as string;
-    } else {
-      // Lưu các query parameters khác
-      filters[key] = value as string;
-    }
-  });
+const syncFiltersFromQuery = (newQuery: Record<string, any>) => {
+  const parsed = parsePostListQuery(newQuery as Record<string, unknown>);
+  filters.search = parsed.search;
+  filters.categories = parsed.categories;
+  filters.sort = parsed.sort;
+  filters.page = parsed.page;
+  filters.limit = parsed.limit;
+  filters.tags = parsed.tags;
+};
 
-  // Xử lý thông tin category dựa trên filters
-  await handleCategoryData();
-  
-  // Fetch posts after category data is loaded
-  await fetchPosts();
-}, { immediate: true });
+if (import.meta.client) {
+  // Fetch posts client-side to avoid blocking SSR render on list pages
+  watch(() => route.query, (newQuery) => {
+    syncFiltersFromQuery(newQuery as Record<string, any>);
+    fetchPosts();
+  }, { immediate: true });
+
+  watch(locale, () => {
+    fetchPosts();
+  });
+}
 
 // Định nghĩa kiểu dữ liệu cho breadcrumb item
 interface BreadcrumbItem {
@@ -227,27 +213,19 @@ const handleFilterChange = (newFilters: any) => {
   filters.categories = newFilters.categories || [];
   filters.tags = newFilters.tags || [];
   filters.page = newFilters.page || 1;
-
-  // Fetch posts with new filters
-  fetchPosts();
 };
 
 // Update URL query params
 const updateQueryParams = () => {
-  const query: Record<string, string> = {};
-  
-  if (filters.search) query.search = filters.search;
-  if (filters.categories && filters.categories.length > 0) query.categories = filters.categories.join(',');
-  if (filters.sort && filters.sort !== 'newest') query.sort = filters.sort;
-  if (filters.category) query['danh-muc'] = filters.category;
-  
-  // Giữ nguyên tham số page từ URL hiện tại
-  if (route.query.page) {
-    query.page = route.query.page as string;
-  }
-  
-  if (filters.limit !== 12) query.limit = String(filters.limit);
-  
+  const query = buildPostListQuery({
+    search: filters.search,
+    categories: filters.categories,
+    sort: filters.sort,
+    page: filters.page,
+    limit: filters.limit,
+    tags: filters.tags,
+  });
+
   // Sử dụng replace thay vì push để tránh thêm vào history
   router.replace({ query });
 };
@@ -260,6 +238,7 @@ const resetAllFilters = () => {
   // Reset main filters
   filters.search = '';
   filters.categories = [];
+  filters.tags = [];
   filters.page = 1;
   filters.sort = 'newest';
   
@@ -270,34 +249,12 @@ const resetAllFilters = () => {
 
 // Handle page change
 const handlePageChange = (page: number) => {
-
-  
-  // Cập nhật URL trước
-  const query = { ...route.query, page: String(page) };
-  router.replace({ query });
-  
-  // Fetch posts sau khi URL đã được cập nhật
-  fetchPosts();
+  filters.page = page;
+  updateQueryParams();
   
   // Scroll to top
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
-
-// Watch for locale changes
-watch(locale, () => {
-  fetchPosts();
-});
-
-// Watch for page changes in URL
-watch(() => route.query.page, (newPage) => {
-  if (newPage) {
-    const pageNum = Number(newPage);
-    if (!isNaN(pageNum)) {
-    
-      fetchPosts();
-    }
-  }
-}, { immediate: true });
 
 // Sort posts
 const sortedPosts = computed(() => {
@@ -312,26 +269,7 @@ const handleSortChange = (event: Event) => {
   filters.sort = target.value;
   filters.page = 1; // Reset to page 1 when sort changes
   updateQueryParams();
-  fetchPosts();
 };
-
-onMounted(() => {
-  // Initialize filters from route query
-  filters.category = route.query['danh-muc'] as string || undefined;
-  filters.search = route.query.search as string || '';
-  filters.categories = route.query.categories ? (route.query.categories as string).split(',') : [];
-  filters.sort = (route.query.sort as string) || 'newest';
-  
-  // Đảm bảo giữ nguyên giá trị page từ URL
-  filters.page = currentPage.value;
-  
-  filters.limit = Number(route.query.limit) || 12;
-
-  // Xử lý thông tin category và fetch posts
-  handleCategoryData().then(() => {
-    fetchPosts();
-  });
-});
 
 /**
  * Tạo slug từ tiêu đề nếu không có slug
@@ -348,17 +286,6 @@ function getPostSlug(post: Post): string {
     .replace(/--+/g, '-') // Loại bỏ nhiều dấu gạch ngang liên tiếp
     .trim() || 'untitled';
 }
-
-const getAuthorName = (author: Post['author']) => {
-  if (author?.profile) {
-    const firstName = author.profile.firstName || '';
-    const lastName = author.profile.lastName || '';
-    if (firstName || lastName) {
-      return `${firstName} ${lastName}`.trim();
-    }
-  }
-  return author?.username || author?.email?.split('@')[0] || 'Không xác định';
-};
 
 // Computed property để lấy translation hiện tại của category
 const currentCategoryTranslation = computed<CategoryTranslation | null>(() => {
@@ -397,22 +324,18 @@ const pageDescription = computed(() => {
   return seoData.value?.description || '';
 });
 
-// SEO meta tags
-watch([pageTitle, pageDescription, seoData], () => {
-  useHead({
-    title: pageTitle.value,
-    meta: [
-      { name: 'description', content: pageDescription.value },
-      { name: 'robots', content: seoData.value?.robotsTxt || 'index, follow' },
-      { property: 'og:title', content: seoData.value?.ogTitle || pageTitle.value },
-      { property: 'og:description', content: seoData.value?.ogDescription || pageDescription.value },
-      { property: 'og:image', content: seoData.value?.ogImage },
-      { property: 'og:url', content: seoData.value?.canonicalUrl || route.fullPath },
-      { name: 'keywords', content: seoData.value?.keywords },
-      { name: 'canonical', content: seoData.value?.canonicalUrl || route.fullPath }
-    ]
-  });
-}, { immediate: true });
+usePageSeo({
+  title: computed(() => pageTitle.value || t('posts.title')),
+  description: computed(() => pageDescription.value || t('posts.description')),
+  keywords: computed(() => seoData.value?.keywords || ''),
+  ogTitle: computed(() => seoData.value?.ogTitle || pageTitle.value || t('posts.title')),
+  ogDescription: computed(() => seoData.value?.ogDescription || pageDescription.value || t('posts.description')),
+  image: computed(() => seoData.value?.ogImage || ''),
+  canonicalUrl: computed(() => seoData.value?.canonicalUrl || null),
+  currentPath: computed(() => route.path),
+  locale: computed(() => (locale.value === 'en' ? 'en' : 'vi')),
+  routeKey: 'posts',
+});
 </script>
 
 <template>
@@ -451,7 +374,7 @@ watch([pageTitle, pageDescription, seoData], () => {
               </svg>
               {{ t('posts.parentCategory') }}:
               <NuxtLink
-                :to="`/posts?danh-muc=${categoryData.parent.slug}`"
+                :to="`/posts?categories=${categoryData.parent.slug}`"
                 class="text-primary-600 hover:text-primary-700 ml-1 font-medium transition-colors duration-200"
               >
                 {{ categoryData.parent.translations?.find((t: CategoryTranslation) => t.locale === locale)?.name || categoryData.parent.name }}
@@ -467,9 +390,10 @@ watch([pageTitle, pageDescription, seoData], () => {
         <div class="flex-1 lg:max-w-[calc(100%-352px)]">
           <div v-if="!isLoading && posts.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <PostCard
-              v-for="post in sortedPosts"
+              v-for="(post, index) in sortedPosts"
               :key="`post-${post.id}`"
               :post="post"
+              :priority="index === 0"
               class="h-full"
             />
           </div>

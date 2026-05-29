@@ -124,7 +124,7 @@ async function bootstrap() {
   });
 
   // Start Server
-  const port = configService.get('PORT', 3000);
+  const port = configService.get('BACKEND_PORT', configService.get('PORT', 3000));
   const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
   await app.listen(port, host);
 

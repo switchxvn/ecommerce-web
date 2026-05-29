@@ -170,9 +170,6 @@ const openPhotoSwipe = async () => {
   color: #B8860B;
 }
 
-/* Import PhotoSwipe base styles */
-@import 'photoswipe/dist/photoswipe.css';
-
 /* PhotoSwipe overrides */
 :deep(.pswp) {
   --pswp-bg: rgba(0, 0, 0, 0.85);

@@ -212,6 +212,7 @@ import Masonry from 'masonry-layout';
 import PhotoSwipe from 'photoswipe';
 import 'photoswipe/dist/photoswipe.css';
 import { ChevronLeft, ChevronRight, ArrowRight, Image as ImageIcon } from 'lucide-vue-next';
+import { useToastNotification } from '~/utils/vueToast';
 
 interface GalleryTranslation {
   id: number;
@@ -542,7 +543,7 @@ const fetchGalleries = async () => {
   } catch (error) {
     console.error('Error fetching galleries:', error);
     const { t } = useI18n();
-    useToast().add({
+    useToastNotification().add({
       id: 'gallery-error',
       title: t('common.error'),
       description: t('gallery.fetchError'),
@@ -825,9 +826,6 @@ const getRowItems = (rowIndex: number) => {
     }
   }
 }
-
-// Import PhotoSwipe base styles only
-@import 'photoswipe/dist/photoswipe.css';
 
 // PhotoSwipe overrides
 :deep(.pswp) {

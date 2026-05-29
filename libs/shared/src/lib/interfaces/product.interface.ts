@@ -74,6 +74,12 @@ export interface Product {
   specifications?: ProductSpecification[];
   combos?: ProductCombo[];
   crossSellProducts?: Product[];
+  sidebarItems?: {
+    id?: number;
+    itemType: 'post' | 'service';
+    itemId: number;
+    position: number;
+  }[];
   priceRequests: PriceRequest[];
   variants?: {
     id: number;

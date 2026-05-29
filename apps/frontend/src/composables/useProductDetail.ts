@@ -5,6 +5,8 @@ import { useTrpc } from './useTrpc';
 import { useProductVariants } from './useProduct';
 import { formatFullProductContent } from '~/utils/contentFormatter';
 import { useNotification } from './useNotification';
+import { resolveSeoCanonicalUrl } from '~/utils/seo';
+import { fetchProductDetailPayload } from './productDetailPayload';
 import { formatPrice } from '@ew/shared';
 import type { Product } from '@ew/shared';
 
@@ -33,54 +35,37 @@ export function useProductDetail() {
   const isTicketRoute = computed(() => route.path.includes("/tickets/"));
 
   // Sử dụng useAsyncData với tRPC
-  const { data: productData, pending: isLoading, error, refresh } = useAsyncData<Product | null>(
+  const { data: productDetailPayload, pending: isLoading, error, refresh } = useAsyncData(
     `product-${route.params.slug}`,
     async () => {
       try {
-        // Kiểm tra xem slug có phải là số không
-        if (!isNaN(Number(slug.value))) {
-          const result = await trpc.product.getById.query({
-            id: Number(slug.value),
-            locale: currentLocale.value,
-          });
-
-          // Nếu sản phẩm có translations và đang ở client side, chuyển hướng đến URL có slug
-          const translation = result?.translations?.find(t => t.locale === currentLocale.value) || result?.translations?.[0];
-          if (translation?.slug && process.client) {
-            const productSlug = isTicketRoute.value
-              ? `/tickets/${translation.slug}`
-              : currentLocale.value === "vi"
-                ? `/san-pham/${translation.slug}`
-                : `/products/${translation.slug}`;
-            router.replace({ path: productSlug, query: route.query });
-          }
-
-          return result as unknown as Product;
-        } else {
-          const result = await trpc.product.getBySlug.query({
-            slug: slug.value,
-            locale: currentLocale.value,
-          });
-
-          // Nếu sản phẩm có translations và đang ở client side, chuyển hướng đến URL có slug
-          const translation = result?.translations?.find(t => t.locale === currentLocale.value) || result?.translations?.[0];
-          if (translation?.slug && process.client) {
-            const productSlug = isTicketRoute.value
-              ? `/tickets/${slug.value}`
-              : currentLocale.value === "vi"
-                ? `/san-pham/${slug.value}`
-                : `/products/${slug.value}`;
-            router.replace({ path: productSlug, query: route.query });
-          }
-
-          return result as unknown as Product;
-        }
+        return await fetchProductDetailPayload({
+          slug: slug.value,
+          locale: currentLocale.value,
+          isTicketRoute: isTicketRoute.value,
+          trpc: {
+            product: trpc.product,
+            review: trpc.review,
+          },
+        });
       } catch (err: any) {
         console.error("Error fetching product:", err);
         throw new Error(err.message || "Có lỗi xảy ra khi tải chi tiết sản phẩm");
       }
-    }
+    },
+    {
+      default: () => ({
+        product: null,
+        productReviewAggregate: null,
+        productReviews: [],
+      }),
+    },
   );
+  const productData = computed<Product | null>(() => productDetailPayload.value?.product ?? null);
+  const productReviewAggregate = computed(
+    () => productDetailPayload.value?.productReviewAggregate ?? null,
+  );
+  const productReviews = computed(() => productDetailPayload.value?.productReviews ?? []);
 
   // Đảm bảo dữ liệu được tải ở phía client nếu cần
   onMounted(() => {
@@ -94,6 +79,26 @@ export function useProductDetail() {
     refresh();
   });
 
+  watch(
+    () => productData.value?.id,
+    () => {
+      const translation = productData.value?.translations?.find(t => t.locale === currentLocale.value) || productData.value?.translations?.[0];
+      if (!translation?.slug || !process.client) {
+        return;
+      }
+
+      const resolvedPath = isTicketRoute.value
+        ? `/tickets/${translation.slug}`
+        : currentLocale.value === "vi"
+          ? `/san-pham/${translation.slug}`
+          : `/products/${translation.slug}`;
+
+      if (route.path !== resolvedPath) {
+        router.replace({ path: resolvedPath, query: route.query });
+      }
+    },
+  );
+
   // Tạo các computed properties để truy cập dữ liệu sản phẩm an toàn
   const productTitle = computed(() => productData.value?.title || "");
   const productContent = computed(() => productData.value?.content || "");
@@ -104,15 +109,22 @@ export function useProductDetail() {
   if (process.server) {
     try {
       const config = useRuntimeConfig();
+      const reqURL = useRequestURL();
+      const requestOrigin = `${reqURL.protocol}//${reqURL.host}`;
+      const configuredSiteUrl =
+        config.public && typeof config.public.siteUrl === "string"
+          ? config.public.siteUrl.trim()
+          : "";
+
+      // Prefer configured public site URL only when it is a real public domain.
       if (
-        config.public &&
-        config.public.siteUrl &&
-        typeof config.public.siteUrl === "string"
+        configuredSiteUrl &&
+        !configuredSiteUrl.includes("localhost") &&
+        !configuredSiteUrl.includes("127.0.0.1")
       ) {
-        serverUrl = config.public.siteUrl;
+        serverUrl = configuredSiteUrl;
       } else {
-        const reqURL = useRequestURL();
-        serverUrl = `${reqURL.protocol}//${reqURL.host}`;
+        serverUrl = requestOrigin;
       }
     } catch (e) {
       console.error("Error in server URL setup:", e);
@@ -129,31 +141,76 @@ export function useProductDetail() {
     }
   });
 
+  const runtimeConfig = useRuntimeConfig();
+
   // Sử dụng giá trị đã lưu trong ref
   const currentURL = computed(() => {
     return baseUrl.value || "";
   });
 
-  // Tạo canonical URL (không chứa UTM parameters)
-  const canonicalUrl = computed(() => {
-    if (!productData.value) return "";
-    const translation = productData.value.translations?.find(t => t.locale === currentLocale.value) || productData.value.translations?.[0];
-    return `${currentURL.value}/san-pham/${translation?.slug || productData.value.slug}`;
+  const normalizedSiteUrl = computed(() => {
+    const configured =
+      runtimeConfig.public && typeof runtimeConfig.public.siteUrl === "string"
+        ? runtimeConfig.public.siteUrl.trim()
+        : "";
+    return configured.replace(/\/+$/, "");
   });
+
+  const currentProductPath = computed(() => route.path.split("?")[0] || "");
+  const currentProductUrl = computed(() => {
+    const base =
+      currentURL.value ||
+      (process.client ? window.location.origin : "") ||
+      normalizedSiteUrl.value;
+
+    if (!base) {
+      return currentProductPath.value;
+    }
+
+    return new URL(currentProductPath.value || "/", `${base.replace(/\/+$/, "")}/`).toString();
+  });
+  const canonicalProductSlugByLocale = computed(() => ({
+    vi: productData.value?.translations?.find((translation) => translation.locale === "vi")?.slug,
+    en: productData.value?.translations?.find((translation) => translation.locale === "en")?.slug,
+  }));
+  const canonicalProductUrl = computed(() =>
+    resolveSeoCanonicalUrl({
+      siteUrl: normalizedSiteUrl.value || currentURL.value || (process.client ? window.location.origin : ""),
+      currentPath: currentProductPath.value || route.path,
+      locale: currentLocale.value === "en" ? "en" : "vi",
+      routeKey: isTicketRoute.value ? "ticket-detail" : "product-detail",
+      slugByLocale: canonicalProductSlugByLocale.value,
+      candidate: null,
+    }),
+  );
+  const canonicalUrl = computed(() => canonicalProductUrl.value);
+
+  const translateWithFallback = (key: string, fallback: string) => {
+    const translated = t(key);
+    return translated && translated.trim() && translated.trim() !== key ? translated : fallback;
+  };
 
   // Tạo URL chia sẻ với UTM parameters
   const createShareUrl = (medium: string, campaign: string) => {
-    const translation = productData.value?.translations?.find(t => t.locale === currentLocale.value) || productData.value?.translations?.[0];
+    const translation =
+      productData.value?.translations?.find((t) => t.locale === "vi") ||
+      productData.value?.translations?.find((t) => t.locale === currentLocale.value) ||
+      productData.value?.translations?.[0];
     const utmParams = new URLSearchParams({
       utm_source: "share",
       utm_medium: medium,
       utm_campaign: campaign,
       utm_content: translation?.slug || "",
     });
-    return `${canonicalUrl.value}?${utmParams.toString()}`;
+    const base =
+      canonicalProductUrl.value ||
+      (process.client ? window.location.origin : "") ||
+      normalizedSiteUrl.value;
+    if (!base) return `${currentProductPath.value}?${utmParams.toString()}`;
+    return new URL(`?${utmParams.toString()}`, base).toString();
   };
 
-  const shareUrl = computed(() => canonicalUrl.value);
+  const shareUrl = computed(() => canonicalProductUrl.value || currentProductUrl.value);
   const shareTitle = computed(
     () => {
       const translation = productData.value?.translations?.find(t => t.locale === currentLocale.value) || productData.value?.translations?.[0];
@@ -172,70 +229,6 @@ export function useProductDetail() {
       return translation?.ogImage || productData.value?.thumbnail || "";
     }
   );
-
-  // Thiết lập meta tags
-  useHead({
-    title: computed(() => productData.value?.metaTitle || productTitle.value || "Chi tiết sản phẩm"),
-    meta: [
-      {
-        name: "description",
-        content: computed(() => productData.value?.metaDescription || productShortDescription.value || ""),
-      },
-      { 
-        name: "keywords", 
-        content: computed(() => productData.value?.metaKeywords || ""),
-      },
-      // Open Graph
-      {
-        property: "og:title",
-        content: computed(() => productData.value?.ogTitle || productTitle.value || ""),
-      },
-      {
-        property: "og:description",
-        content: computed(() => 
-          productData.value?.ogDescription ||
-          productData.value?.metaDescription ||
-          productShortDescription.value ||
-          ""
-        ),
-      },
-      {
-        property: "og:image",
-        content: computed(() => productData.value?.ogImage || productData.value?.thumbnail || ""),
-      },
-      { 
-        property: "og:url", 
-        content: computed(() => canonicalUrl.value),
-      },
-      { 
-        property: "og:type", 
-        content: "product",
-      },
-      // Twitter Card
-      { 
-        name: "twitter:card", 
-        content: "summary_large_image",
-      },  
-      {
-        name: "twitter:title",
-        content: computed(() => productData.value?.ogTitle || productTitle.value || ""),
-      },
-      {
-        name: "twitter:description",
-        content: computed(() => productData.value?.ogDescription || productShortDescription.value || ""),
-      },
-      {
-        name: "twitter:image",
-        content: computed(() => productData.value?.ogImage || productData.value?.thumbnail || ""),
-      },
-    ],
-    link: [
-      { 
-        rel: "canonical", 
-        href: computed(() => canonicalUrl.value),
-      },
-    ],
-  });
 
   // Thêm hàm để xử lý chia sẻ mạng xã hội
   const shareToFacebook = () => {
@@ -367,17 +360,17 @@ export function useProductDetail() {
   const tabs = computed(() => [
     {
       id: "description",
-      label: t("products.description") || "MÔ TẢ SẢN PHẨM",
+      label: translateWithFallback("products.description", "MÔ TẢ SẢN PHẨM"),
     },
     {
       id: "specifications",
-      label: t("products.specifications") || "THÔNG SỐ KỸ THUẬT",
+      label: translateWithFallback("products.specifications", "THÔNG SỐ KỸ THUẬT"),
     },
     {
       id: "video",
-      label: t("products.videoReview") || "VIDEO REVIEW",
+      label: translateWithFallback("products.videoReview", "VIDEO REVIEW"),
       badge: hasVideoReview.value
-        ? { label: t("products.new") || "Mới", color: "blue" }
+        ? { label: translateWithFallback("products.new", "Mới"), color: "blue" }
         : undefined,
     },
   ]);
@@ -593,6 +586,8 @@ export function useProductDetail() {
     shareDescription,
     shareImage,
     canonicalUrl,
+    productReviewAggregate,
+    productReviews,
     
     // Refs
     activeTab,

@@ -1,4 +1,5 @@
 /// <reference types='vitest' />
+import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
@@ -8,6 +9,12 @@ export default defineConfig({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/apps/ew',
   plugins: [vue(), nxViteTsPaths(), nxCopyAssetsPlugin(['*.md'])],
+  resolve: {
+    alias: {
+      '~': resolve(__dirname, 'src'),
+      '@': resolve(__dirname, 'src'),
+    },
+  },
   // Uncomment this if you are using workers.
   // worker: {
   //  plugins: [ nxViteTsPaths() ],

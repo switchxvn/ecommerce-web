@@ -10,13 +10,13 @@ import { useNavMenu } from "~/composables/useNavMenu";
 import { useNavbarSettings } from "~/composables/useNavbarSettings";
 import { useNavbarFeatures } from "~/composables/useNavbarFeatures";
 import { useDarkMode } from "~/composables/useDarkMode";
+import { useSkeletonGate } from '~/composables/useSkeletonGate';
 import Icon from "./Icon.vue";
 import ThemeToggle from "~/components/common/ThemeToggle.vue";
 import LanguageSwitcher from "~/components/common/LanguageSwitcher.vue";
 import CartIcon from "~/components/cart/CartIcon.vue";
 import MegaMenu from "~/components/menu/MegaMenu.vue";
 import MobileMegaMenu from "~/components/menu/MobileMegaMenu.vue";
-import { useI18n } from 'vue-i18n';
 import { processColorValue } from '~/utils/color';
 
 // Props cho component
@@ -126,10 +126,11 @@ const isCartEnabled = ref<boolean | null>(null);
 const isLoadingFeatureFlag = ref(true);
 
 // Localization
-const { locale, $t } = useLocalization();
+const { locale, t: translate } = useLocalization();
 
 // Logo
 const { currentLogoUrl, logo, isLoading: isLoadingLogo } = useLogo();
+const { shouldShowSkeleton } = useSkeletonGate();
 
 // Navbar
 const {
@@ -195,6 +196,8 @@ const lightModeMenuBackground = computed(
 );
 
 const primaryHoverColor = computed(() => processColorValue("var(--primary-400)"));
+const showLogoSkeleton = computed(() => shouldShowSkeleton.value || isLoadingLogo.value);
+const showMenuSkeleton = computed(() => shouldShowSkeleton.value || isLoading.value);
 
 const getNavLinkColor = (isActive: boolean) => ({
   color: isActive ? navigationActiveTextColor : navigationTextColor,
@@ -211,23 +214,10 @@ const { checkCartFeatureFlag } = useNavbarFeatures();
 // Thêm ref để kiểm soát mounted state
 const isMounted = ref(true);
 
-// Watch for logo changes to update navbar height
-watch([logo, isLoadingLogo], () => {
-  nextTick(() => {
-    const nav = document.querySelector(".navigation-section") as HTMLElement;
-    if (nav) {
-      const navHeight = nav.offsetHeight;
-      document.documentElement.style.setProperty("--nav-height", `${navHeight}px`);
-    }
-  });
-});
-
 onMounted(() => {
   const init = async () => {
-    console.log("CombinedNavbar mounted with settings:", props.settings);
     try {
       await fetchMenuItems();
-      console.log("Menu items fetched:", menuItems.value);
     } catch (err) {
       console.error("Error fetching menu items:", err);
     }
@@ -248,7 +238,19 @@ onBeforeUnmount(() => {
   // Cleanup other resources if needed
 });
 
-const { t } = useI18n();
+const translateMenuLabel = (label: string, isTranslated = false) => {
+  const normalizedLabel = label.trim().toLowerCase();
+  const looksLikeTranslationKey = /^[a-z0-9_.-]+$/.test(normalizedLabel) && normalizedLabel.includes(".");
+
+  if (!isTranslated || !looksLikeTranslationKey) {
+    return label;
+  }
+
+  const translated = translate(normalizedLabel);
+  return translated && translated.trim() && translated.trim() !== normalizedLabel
+    ? translated
+    : label;
+};
 </script>
 
 <template>
@@ -267,7 +269,7 @@ const { t } = useI18n();
           </div>
 
           <!-- Right Actions -->
-          <div class="hidden md:flex items-center gap-3">
+          <div class="hidden md:flex items-center gap-2">
             <template v-if="props.settings?.topMenu?.links">
               <template
                 v-for="(link, index) in props.settings.topMenu.links"
@@ -281,7 +283,7 @@ const { t } = useI18n();
                     '--hover-color': link.hoverColor,
                   }"
                 >
-                  {{ t(link.label.toLowerCase()) }}
+                  {{ translateMenuLabel(link.label, link.isTranslated) }}
                 </NuxtLink>
                 <span
                   v-if="index < props.settings.topMenu.links.length - 1"
@@ -290,10 +292,10 @@ const { t } = useI18n();
                 >
               </template>
             </template>
-            <div class="min-w-[140px]">
+            <div class="flex-shrink-0">
               <LanguageSwitcher v-if="props.settings?.showLanguageSwitcher" />
             </div>
-            <div class="min-w-[140px]">
+            <div class="flex-shrink-0">
               <ThemeToggle v-if="props.settings?.showThemeToggle" />
             </div>
           </div>
@@ -312,35 +314,44 @@ const { t } = useI18n();
                 class="flex items-center justify-center"
                 :style="logo ? `width: ${logo.width}px; height: ${logo.height}px` : ''"
               >
-                <img
-                  v-if="currentLogoUrl"
+                <span
+                  v-if="showLogoSkeleton"
+                  class="h-8 w-24 animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded"
+                ></span>
+                <AppImage
+                  v-else-if="currentLogoUrl"
+                  class="w-full h-full"
                   :src="currentLogoUrl"
                   :alt="logo?.altText || 'Logo'"
-                  :width="logo?.width"
-                  :height="logo?.height"
-                  class="transition-transform duration-300 hover:scale-110 object-contain w-full h-full"
+                  :width="logo?.width || 240"
+                  :height="logo?.height || 80"
+                  sizes="240px"
+                  loading="eager"
+                  fetchpriority="high"
+                  customClass="transition-transform duration-300 hover:scale-110 object-contain w-full h-full"
                 />
-                <span
-                  v-else-if="isLoadingLogo"
-                  class="h-8 w-8 animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded"
-                ></span>
               </div>
             </NuxtLink>
           </div>
 
           <!-- Slogan -->
           <div class="flex flex-col items-center justify-center text-center">
-            <h1 v-if="props.settings?.slogan" class="text-xl font-bold text-red-600">
+            <template v-if="shouldShowSkeleton">
+              <div class="h-6 w-80 animate-pulse rounded bg-neutral-200 dark:bg-neutral-700"></div>
+              <div class="mt-2 h-5 w-72 animate-pulse rounded bg-neutral-200 dark:bg-neutral-700"></div>
+              <div class="mt-2 h-7 w-64 animate-pulse rounded bg-neutral-200 dark:bg-neutral-700"></div>
+            </template>
+            <p v-else-if="props.settings?.slogan" class="text-xl font-bold text-red-600">
               {{ props.settings.slogan.text }}
-            </h1>
+            </p>
             <h4
-              v-if="props.settings?.slogan"
+              v-if="!shouldShowSkeleton && props.settings?.slogan"
               class="text-md font-semibold text-black-600"
             >
               {{ props.settings.slogan.subText }}
             </h4>
             <p
-              v-if="props.settings?.slogan?.additionalText"
+              v-if="!shouldShowSkeleton && props.settings?.slogan?.additionalText"
               class="text-2xl font-bold text-red-600"
             >
               {{ props.settings.slogan.additionalText }}
@@ -349,9 +360,14 @@ const { t } = useI18n();
 
           <!-- Hotlines -->
           <div class="flex items-center gap-3">
+            <template v-if="shouldShowSkeleton">
+              <div class="h-16 w-48 animate-pulse rounded-full bg-neutral-200 dark:bg-neutral-700"></div>
+              <div class="h-16 w-48 animate-pulse rounded-full bg-neutral-200 dark:bg-neutral-700"></div>
+            </template>
+
             <!-- Mua hàng -->
             <NuxtLink
-              v-if="props.settings?.hotlines?.sales"
+              v-else-if="props.settings?.hotlines?.sales"
               :to="`tel:${props.settings.hotlines.sales.number}`"
               class="hotline-button group flex items-center gap-3 px-4 py-2.5 rounded-full border border-neutral-200 hover:border-primary-500 transition-all duration-300 shadow-sm hover:shadow-md"
               :style="{
@@ -382,7 +398,7 @@ const { t } = useI18n();
 
             <!-- Hỗ trợ kỹ thuật -->
             <NuxtLink
-              v-if="props.settings?.hotlines?.support"
+              v-if="!shouldShowSkeleton && props.settings?.hotlines?.support"
               :to="`tel:${props.settings.hotlines.support.number}`"
               class="hotline-button group flex items-center gap-3 px-4 py-2.5 rounded-full border border-neutral-200 hover:border-primary-500 transition-all duration-300 shadow-sm hover:shadow-md"
               :style="{
@@ -444,35 +460,34 @@ const { t } = useI18n();
             <div class="flex-shrink-0 md:hidden">
               <NuxtLink to="/" class="block py-3">
                 <div
-                  class="mobile-logo flex items-center justify-center"
-                  :style="
-                    logo
-                      ? `width: ${logo.width * 0.5}px; height: ${logo.height * 0.5}px`
-                      : ''
-                  "
+                  class="mobile-logo flex h-10 w-[140px] items-center justify-start"
                 >
-                  <img
-                    v-if="currentLogoUrl"
+                  <span
+                    v-if="showLogoSkeleton"
+                    class="h-8 w-16 animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded"
+                  ></span>
+                  <AppImage
+                    v-else-if="currentLogoUrl"
+                    class="w-full h-full"
                     :src="currentLogoUrl"
                     :alt="logo?.altText || 'Logo'"
-                    class="transition-transform duration-300 hover:scale-110 object-contain w-full h-full"
+                    width="140"
+                    height="40"
+                    sizes="140px"
+                    loading="eager"
+                    fetchpriority="high"
+                    customClass="transition-transform duration-300 hover:scale-110 object-contain w-full h-full"
                   />
-                  <span
-                    v-else-if="isLoadingLogo"
-                    class="h-8 w-8 animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded"
-                  ></span>
                 </div>
               </NuxtLink>
             </div>
 
             <!-- Desktop Navigation -->
             <nav class="hidden md:flex items-center space-x-5 flex-grow justify-between">
-              <div
-                v-if="isLoading"
-                class="text-sm text-neutral-500 dark:text-neutral-400"
-              >
-                Đang tải menu...
-              </div>
+              <InlineMenuSkeleton
+                v-if="showMenuSkeleton"
+                :item-count="5"
+              />
               <div v-else-if="error" class="text-sm text-red-500">{{ error }}</div>
               <template v-else>
                 <div
@@ -567,23 +582,24 @@ const { t } = useI18n();
           >
             <NuxtLink to="/" class="block" @click="isMobileMenuOpen = false">
               <div
-                class="flex items-center justify-center"
-                :style="
-                  logo
-                    ? `width: ${logo.width * 0.6}px; height: ${logo.height * 0.6}px`
-                    : ''
-                "
+                class="flex h-10 w-[160px] items-center justify-start"
               >
-                <img
-                  v-if="currentLogoUrl"
+                <span
+                  v-if="showLogoSkeleton"
+                  class="h-6 w-16 animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded"
+                ></span>
+                <AppImage
+                  v-else-if="currentLogoUrl"
+                  class="w-full h-full"
                   :src="currentLogoUrl"
                   :alt="logo?.altText || 'Logo'"
-                  class="transition-transform duration-300 hover:scale-110 object-contain w-full h-full max-h-[40px]"
+                  width="160"
+                  height="40"
+                  sizes="160px"
+                  loading="eager"
+                  fetchpriority="high"
+                  customClass="transition-transform duration-300 hover:scale-110 object-contain w-full h-full max-h-[40px]"
                 />
-                <span
-                  v-else-if="isLoadingLogo"
-                  class="h-6 w-6 animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded"
-                ></span>
               </div>
             </NuxtLink>
 

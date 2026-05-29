@@ -26,6 +26,10 @@ export const isCssVariable = (color: string): boolean => {
  * @returns RGB color value
  */
 export const getRgbFromCssVariable = (cssVar: string): string => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return cssVar;
+  }
+
   // Get the CSS variable name
   const varName = cssVar.match(/var\((.*?)\)/)?.[1];
   if (!varName) return cssVar;

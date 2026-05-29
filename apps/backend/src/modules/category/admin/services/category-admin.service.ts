@@ -21,12 +21,21 @@ export interface CategoryTranslationData {
   name: string;
   slug: string;
   description?: string | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  metaKeywords?: string | null;
+  ogTitle?: string | null;
+  ogDescription?: string | null;
+  ogImage?: string | null;
+  canonicalUrl?: string | null;
 }
 
 export interface CreateCategoryData {
   type: CategoryType;
   active: boolean;
   icon?: string | null;
+  priceRangeMin?: number | null;
+  priceRangeMax?: number | null;
   translations: CategoryTranslationData[];
 }
 
@@ -34,6 +43,8 @@ export interface UpdateCategoryData {
   type?: CategoryType;
   active?: boolean;
   icon?: string | null;
+  priceRangeMin?: number | null;
+  priceRangeMax?: number | null;
   translations?: CategoryTranslationData[];
 }
 
@@ -145,12 +156,21 @@ export class CategoryAdminService {
       type: data.type,
       active: data.active,
       icon: data.icon,
+      priceRangeMin: data.priceRangeMin == null ? null : String(data.priceRangeMin),
+      priceRangeMax: data.priceRangeMax == null ? null : String(data.priceRangeMax),
       translations: data.translations.map(translation => {
         const newTranslation = new CategoryTranslation();
         newTranslation.locale = translation.locale;
         newTranslation.name = translation.name;
         newTranslation.slug = translation.slug;
         newTranslation.description = translation.description;
+        newTranslation.metaTitle = translation.metaTitle;
+        newTranslation.metaDescription = translation.metaDescription;
+        newTranslation.metaKeywords = translation.metaKeywords;
+        newTranslation.ogTitle = translation.ogTitle;
+        newTranslation.ogDescription = translation.ogDescription;
+        newTranslation.ogImage = translation.ogImage;
+        newTranslation.canonicalUrl = translation.canonicalUrl;
         return newTranslation;
       })
     });
@@ -269,6 +289,8 @@ export class CategoryAdminService {
     if (data.type !== undefined) category.type = data.type;
     if (data.active !== undefined) category.active = data.active;
     if (data.icon !== undefined) category.icon = data.icon;
+    if (data.priceRangeMin !== undefined) category.priceRangeMin = data.priceRangeMin === null ? null : String(data.priceRangeMin);
+    if (data.priceRangeMax !== undefined) category.priceRangeMax = data.priceRangeMax === null ? null : String(data.priceRangeMax);
 
     // Update translations if provided
     if (data.translations) {
@@ -290,6 +312,13 @@ export class CategoryAdminService {
         newTranslation.name = translation.name;
         newTranslation.slug = translation.slug;
         newTranslation.description = translation.description;
+        newTranslation.metaTitle = translation.metaTitle;
+        newTranslation.metaDescription = translation.metaDescription;
+        newTranslation.metaKeywords = translation.metaKeywords;
+        newTranslation.ogTitle = translation.ogTitle;
+        newTranslation.ogDescription = translation.ogDescription;
+        newTranslation.ogImage = translation.ogImage;
+        newTranslation.canonicalUrl = translation.canonicalUrl;
         newTranslation.category = category;
         return newTranslation;
       });

@@ -153,6 +153,13 @@
               />
             </div>
 
+            <div v-show="currentTab === 'sidebar'">
+              <ProductSidebarItems
+                v-model="form.sidebarItems"
+                :locale="selectedLanguage"
+              />
+            </div>
+
             <!-- SEO Tab -->
             <div v-show="currentTab === 'seo'">
               <ProductSEO
@@ -218,6 +225,7 @@ import ProductInventory from '../../../components/products/ProductInventory.vue'
 import ProductSpecifications from '../../../components/products/ProductSpecifications.vue'
 import LanguageSwitcher from '../../../components/common/LanguageSwitcher.vue'
 import ProductTierDiscounts from '../../../components/products/ProductTierDiscounts.vue'
+import ProductSidebarItems from '../../../components/products/ProductSidebarItems.vue'
 
 const trpc = useTrpc()
 const route = useRoute()
@@ -333,6 +341,11 @@ const tabs = computed(() => [
     name: t('products.tabs.tierPricing'),
     icon: PercentIcon
   },
+  {
+    id: 'sidebar',
+    name: 'Sidebar',
+    icon: InfoIcon
+  },
   { 
     id: 'seo', 
     name: t('products.tabs.seo'), 
@@ -397,6 +410,11 @@ interface ProductForm {
   stockStatus: string
   allowBackorders: boolean
   stockMovements: any[]
+  sidebarItems: Array<{
+    itemType: 'post' | 'service'
+    itemId: number
+    position: number
+  }>
   updatedAt: string
   translations: Record<string, {
     name: string
@@ -435,6 +453,7 @@ const initialForm: ProductForm = {
   stockStatus: 'in_stock',
   allowBackorders: false,
   stockMovements: [],
+  sidebarItems: [],
   updatedAt: new Date().toISOString(),
   translations: {},
   isContactPrice: false
@@ -705,6 +724,16 @@ const fetchProduct = async () => {
         stockStatus: (product as any).stockStatus || 'in_stock',
         allowBackorders: (product as any).allowBackorders === undefined ? false : Boolean((product as any).allowBackorders),
         stockMovements: (product as any).stockMovements || [],
+        sidebarItems: Array.isArray((product as any).sidebarItems)
+          ? (product as any).sidebarItems
+              .slice()
+              .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
+              .map((item: any, index: number) => ({
+                itemType: item.itemType,
+                itemId: item.itemId,
+                position: item.position ?? index,
+              }))
+          : [],
         updatedAt: product.updatedAt,
         translations,
         isContactPrice: isContactPrice
@@ -785,6 +814,14 @@ const updateProduct = debounce(async (continueEditing = false) => {
 
     if (Array.isArray(form.value.categoryIds)) {
       updateData.categoryIds = form.value.categoryIds
+    }
+
+    if (Array.isArray(form.value.sidebarItems)) {
+      updateData.sidebarItems = form.value.sidebarItems.map((item, index) => ({
+        itemType: item.itemType,
+        itemId: item.itemId,
+        position: index,
+      }))
     }
 
     if (typeof form.value.hasVariants === 'boolean') {

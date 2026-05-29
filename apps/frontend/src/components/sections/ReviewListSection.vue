@@ -2,7 +2,7 @@
 import { useLocalization } from '../../composables/useLocalization';
 import { useReviews } from '../../composables/useReviews';
 import { useRoute } from 'vue-router';
-import { ref, computed, onMounted } from '../../composables/useVueComposables';
+import { ref, computed, onMounted } from 'vue';
 import { useTrpc } from '../../composables/useTrpc';
 import Pagination from '../common/Pagination.vue';
 import Loader from '../ui/Loader.vue';
@@ -191,8 +191,8 @@ const gridClass = computed(() => {
         </div>
         
         <!-- Loading state -->
-        <div v-if="isLoading" class="flex justify-center py-20">
-          <Loader size="lg" />
+        <div v-if="isLoading" class="py-6">
+          <ListSkeleton :item-count="6" />
         </div>
         
         <!-- Empty state -->

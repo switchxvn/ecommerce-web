@@ -91,11 +91,8 @@ onMounted(() => {
     <div class="container mx-auto px-4">
       <div class="max-w-2xl mx-auto text-center">
         <!-- Loading State -->
-        <div v-if="isLoading" class="flex flex-col items-center">
-          <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
-          <p class="mt-4 text-gray-600 dark:text-gray-400">
-            {{ t('checkout.loadingOrder') }}
-          </p>
+        <div v-if="isLoading" class="text-left">
+          <DetailPageSkeleton :show-gallery="false" :show-sidebar="false" />
         </div>
 
         <!-- Error State -->

@@ -6,8 +6,12 @@
     v-if="isMounted"
   >
     <div class="container mx-auto px-4">
-      <div v-if="isLoading" class="flex justify-center items-center py-12">
-        <Loader size="lg" />
+      <div v-if="isLoading" class="py-4">
+        <CardGridSkeleton
+          :item-count="props.config?.sliderSettings?.slidesPerView || 3"
+          :columns="3"
+          media-height-class="h-[280px]"
+        />
       </div>
 
       <div v-else-if="error" class="text-center py-12 text-red-500">
@@ -23,19 +27,37 @@
             class="video-card group relative h-[480px] bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300"
           >
             <div class="relative h-[280px] overflow-hidden">
-              <!-- YouTube iframe -->
-              <iframe
-                v-if="getVideoId(video.videoUrl)"
-                :src="getEmbedUrl(video.videoUrl)"
-                class="w-full h-full object-cover"
-                :title="video.title"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen
-              ></iframe>
+              <template v-if="getVideoId(video.videoUrl)">
+                <img
+                  v-if="!isVideoActivated(video.id)"
+                  :src="getVideoThumbnail(video.videoUrl, video.thumbnailUrl)"
+                  :alt="video.title"
+                  class="w-full h-full object-cover"
+                  loading="lazy"
+                  @error="handleImageError"
+                />
+                <iframe
+                  v-else
+                  :src="getEmbedUrl(video.videoUrl)"
+                  class="w-full h-full object-cover"
+                  :title="video.title"
+                  loading="lazy"
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+                <button
+                  v-if="!isVideoActivated(video.id)"
+                  class="absolute inset-0 flex items-center justify-center bg-black/25 hover:bg-black/35 transition-colors"
+                  :aria-label="`Play ${video.title}`"
+                  @click="activateVideo(video.id)"
+                >
+                  <PlayCircle class="w-16 h-16 text-white drop-shadow-lg" />
+                </button>
+              </template>
               <!-- Fallback for non-YouTube videos or invalid URLs -->
               <img
-                v-else
+                v-else-if="!getVideoId(video.videoUrl)"
                 :src="video.thumbnailUrl"
                 :alt="video.title"
                 class="w-full h-full object-cover"
@@ -128,19 +150,37 @@
               <SwiperSlide v-for="video in videoData" :key="video.id" class="group h-[480px]">
                 <div class="video-card group relative h-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
                   <div class="relative h-[280px] overflow-hidden">
-                    <!-- YouTube iframe -->
-                    <iframe
-                      v-if="getVideoId(video.videoUrl)"
-                      :src="getEmbedUrl(video.videoUrl)"
-                      class="w-full h-full object-cover"
-                      :title="video.title"
-                      frameborder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowfullscreen
-                    ></iframe>
+                    <template v-if="getVideoId(video.videoUrl)">
+                      <img
+                        v-if="!isVideoActivated(video.id)"
+                        :src="getVideoThumbnail(video.videoUrl, video.thumbnailUrl)"
+                        :alt="video.title"
+                        class="w-full h-full object-cover"
+                        loading="lazy"
+                        @error="handleImageError"
+                      />
+                      <iframe
+                        v-else
+                        :src="getEmbedUrl(video.videoUrl)"
+                        class="w-full h-full object-cover"
+                        :title="video.title"
+                        loading="lazy"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen
+                      ></iframe>
+                      <button
+                        v-if="!isVideoActivated(video.id)"
+                        class="absolute inset-0 flex items-center justify-center bg-black/25 hover:bg-black/35 transition-colors"
+                        :aria-label="`Play ${video.title}`"
+                        @click="activateVideo(video.id)"
+                      >
+                        <PlayCircle class="w-16 h-16 text-white drop-shadow-lg" />
+                      </button>
+                    </template>
                     <!-- Fallback for non-YouTube videos -->
                     <img
-                      v-else
+                      v-else-if="!getVideoId(video.videoUrl)"
                       :src="video.thumbnailUrl"
                       :alt="video.title"
                       class="w-full h-full object-cover"
@@ -270,6 +310,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const videoData = ref<VideoIntro[]>([]);
+const activatedVideos = ref<Set<number>>(new Set());
 const isLoading = ref(true);
 const error = ref<Error | null>(null);
 const trpc = useTrpc();
@@ -337,7 +378,6 @@ const currentLayout = computed(() => {
 
 // Trong script setup
 const isMounted = ref(true);
-let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
 
 // Fetch videos using tRPC
 const videoQuery = trpc.hero.getHeroVideos.query({
@@ -346,19 +386,11 @@ const videoQuery = trpc.hero.getHeroVideos.query({
 
 onMounted(async () => {
   if (!isMounted.value) return;
-  
-  cleanupTimer = setTimeout(() => {
-    if (!isMounted.value) return;
-    console.log("Component mounted");
-    console.log("Initial config:", props.config);
-    console.log("Initial layout:", props.config?.layout);
-  }, 0);
 
   try {
     const result = await videoQuery;
     if (isMounted.value) {
       videoData.value = result as VideoIntro[];
-      console.log("Fetched videos:", videoData.value);
     }
   } catch (err) {
     if (isMounted.value) {
@@ -408,13 +440,30 @@ const getEmbedUrl = (url: string): string => {
   
   // Add parameters for better performance and user experience
   const params = new URLSearchParams({
-    autoplay: '0',
+    autoplay: '1',
     rel: '0', // Don't show related videos
     modestbranding: '1', // Minimal YouTube branding
-    enablejsapi: '1'
+    playsinline: '1'
   });
   
   return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+};
+
+const getVideoThumbnail = (url: string, fallback?: string): string => {
+  const videoId = getVideoId(url);
+  if (videoId) {
+    return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+  }
+
+  return fallback || "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=400&auto=format&fit=crop";
+};
+
+const activateVideo = (videoId: number) => {
+  activatedVideos.value.add(videoId);
+};
+
+const isVideoActivated = (videoId: number) => {
+  return activatedVideos.value.has(videoId);
 };
 
 // Remove unused modal-related code and variables
@@ -430,11 +479,7 @@ const onSwiper = (swiper: SwiperInstance) => {
 // Cải thiện cleanup
 onBeforeUnmount(() => {
   isMounted.value = false;
-  
-  if (cleanupTimer) {
-    clearTimeout(cleanupTimer);
-  }
-  
+
   if (swiperInstance.value) {
     try {
       swiperInstance.value.destroy(true, true);
@@ -445,9 +490,6 @@ onBeforeUnmount(() => {
   }
 });
 
-const onSlideChange = () => {
-  console.log('slide change');
-};
 </script>
 
 <style scoped>
@@ -461,32 +503,17 @@ const onSlideChange = () => {
 
 .swiper-outer-container {
   position: relative;
-  width: 100vw;
-  left: 50%;
-  right: 50%;
-  margin-left: -50vw;
-  margin-right: -50vw;
+  margin: 0 auto;
   padding: 0;
-  overflow-x: hidden; /* Thêm overflow-x: hidden để ngăn scroll ngang */
-
-  @media (min-width: 641px) {
-    width: auto;
-    left: auto;
-    right: auto;
-    margin: 0 -40px;
-    padding: 0 40px;
-  }
+  width: 100%;
 }
 
 .swiper-container {
   overflow: hidden;
+  overflow-y: hidden; /* chỉ chặn vertical scrollbar trong khung video */
   position: relative;
   width: 100%;
-  padding: 0 16px;
-
-  @media (min-width: 641px) {
-    padding: 0;
-  }
+  padding: 0;
 }
 
 .video-intro-section :deep(.swiper) {

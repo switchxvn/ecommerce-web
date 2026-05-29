@@ -17,6 +17,7 @@ export interface UploadResult {
 
 export function useUpload() {
   const trpc = useTrpc()
+  const runtimeConfig = useRuntimeConfig()
   const isUploading = ref(false)
   const { showError } = useNotification()
 
@@ -71,7 +72,11 @@ export function useUpload() {
         onProgress(50)
         
         // Sử dụng axios thay vì $fetch
-        const response = await axios.post('/admin-upload/upload-image', formData, {
+        const baseURL = runtimeConfig.app.baseURL || '/'
+        const normalizedBaseURL = baseURL.endsWith('/') ? baseURL : `${baseURL}/`
+        const uploadEndpoint = `${normalizedBaseURL}admin-upload/upload-image`
+
+        const response = await axios.post(uploadEndpoint, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           },

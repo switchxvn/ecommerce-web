@@ -1,4 +1,4 @@
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import { useTrpc } from './useTrpc';
 import { useLocalization } from './useLocalization';
 import { useTheme } from './useTheme';
@@ -6,6 +6,7 @@ import { PageType, Theme, ThemeSection } from '@ew/shared';
 import type { Component } from 'vue';
 import { defineAsyncComponent, markRaw } from 'vue';
 import { useAsyncData } from 'nuxt/app';
+import { normalizeLocaleCode } from '../utils/locale';
 import ReviewsSection from '../components/ReviewsSection.vue';
 import { Autoplay, Navigation, Pagination } from 'swiper/modules';
 
@@ -19,7 +20,7 @@ export function useHomePage() {
   const latestPosts = ref<any[]>([]);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
-  const defaultLocale = ref('en');
+  const defaultLocale = ref('vi');
   const pageIsMounted = ref(true);
   
   // Định nghĩa type cho components
@@ -102,22 +103,21 @@ export function useHomePage() {
   // Lấy ngôn ngữ mặc định từ server
   async function getDefaultLanguage(): Promise<string> {
     try {
-      // Lấy ngôn ngữ mặc định từ server
-      const languages = await trpc.language.getAll.query();
-      const defaultLang = languages.find((lang: { code: string; isDefault: boolean }) => lang.isDefault);
-      return defaultLang?.code || 'en';
+      const defaultLang = await trpc.language.getDefaultLanguage.query();
+      return defaultLang?.code || 'vi';
     } catch (error) {
       console.error("Error fetching default language:", error);
-      return 'en';
+      return 'vi';
     }
   }
   
   // Lấy theme sections với locale phù hợp
-  async function fetchThemeSections(themeId: number, currentLocale: string): Promise<ThemeSection[]> {
+  async function fetchThemeSections(themeId: number, currentLocale: string = 'vi'): Promise<ThemeSection[]> {
     try {
       isLoading.value = true;
+      const safeLocale = normalizeLocaleCode(currentLocale, 'vi');
       // Lấy sections theo pageType và locale và chuyển đổi kiểu
-      const sections = await getPageSections(themeId, PageType.HOME_PAGE, currentLocale);
+      const sections = await getPageSections(themeId, PageType.HOME_PAGE, safeLocale);
       return sections as unknown as ThemeSection[];
     } catch (err) {
       console.error("Error fetching theme sections:", err);
@@ -126,7 +126,7 @@ export function useHomePage() {
       isLoading.value = false;
     }
   }
-  
+
   // Cleanup function
   function cleanup() {
     pageIsMounted.value = false;
@@ -155,52 +155,49 @@ export function useHomePage() {
         const currentLocale = process.client ? locale.value : defaultLocale.value;
         
         // Lấy sections với locale phù hợp
-        themeSections.value = await fetchThemeSections(activeTheme.id, currentLocale);
-        
-        // Apply theme colors
-        if (theme.value?.colors && process.client) {
-          const colors = theme.value.colors;
-          document.documentElement.style.setProperty("--primary", colors.light.primary['500']);
-          document.documentElement.style.setProperty("--secondary", colors.light.secondary['500']);
-          
-          // Kiểm tra và áp dụng các màu sắc bổ sung nếu có
-          try {
-            // Sử dụng cách tiếp cận an toàn hơn để truy cập các thuộc tính tùy chọn
-            const themeColors = colors.light as any;
-            
-            if (themeColors.success && themeColors.success['500']) {
-              document.documentElement.style.setProperty("--success", themeColors.success['500']);
-            }
-            
-            if (themeColors.error && themeColors.error['500']) {
-              document.documentElement.style.setProperty("--error", themeColors.error['500']);
-            }
-            
-            if (themeColors.warning && themeColors.warning['500']) {
-              document.documentElement.style.setProperty("--warning", themeColors.warning['500']);
-            }
-            
-            if (themeColors.info && themeColors.info['500']) {
-              document.documentElement.style.setProperty("--info", themeColors.info['500']);
-            }
-          } catch (err) {
-            console.warn('Error setting optional theme colors:', err);
-          }
+        let fetchedSections = await fetchThemeSections(activeTheme.id, currentLocale);
+        if (fetchedSections.length === 0 && currentLocale) {
+          fetchedSections = await fetchThemeSections(activeTheme.id);
         }
+        themeSections.value = fetchedSections;
+        
       }
       
-      return { theme: activeTheme };
+      if (!activeTheme) {
+        error.value = "Không tìm thấy theme đang hoạt động cho trang chủ.";
+      }
+      return { themeId: activeTheme?.id ?? null };
     } catch (err) {
       console.error("Error in page initialization:", err);
       error.value = "Không thể tải dữ liệu trang. Vui lòng thử lại sau.";
-      return { theme: null };
+      return { themeId: null };
     }
   });
   
   // Watch for locale changes to update theme sections
   watch(locale, async () => {
     if (theme.value?.id) {
-      themeSections.value = await fetchThemeSections(theme.value.id, locale.value);
+      const fetchedSections = await fetchThemeSections(theme.value.id, locale.value);
+      themeSections.value = fetchedSections;
+    }
+  });
+
+  // Fix trường hợp SSR trả payload rỗng: refetch lại phía client sau hydration.
+  onMounted(async () => {
+    if (themeSections.value.length > 0) return;
+
+    try {
+      const activeTheme = await getActiveTheme({ pageType: PageType.HOME_PAGE });
+      if (!activeTheme) return;
+
+      theme.value = activeTheme as unknown as Theme;
+      let fetchedSections = await fetchThemeSections(activeTheme.id, locale.value);
+      if (fetchedSections.length === 0) {
+        fetchedSections = await fetchThemeSections(activeTheme.id);
+      }
+      themeSections.value = fetchedSections;
+    } catch (err) {
+      console.error('Client hydration refetch for home sections failed:', err);
     }
   });
   

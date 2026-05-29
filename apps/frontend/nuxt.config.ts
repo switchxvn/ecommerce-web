@@ -1,21 +1,72 @@
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import { defineNuxtConfig } from 'nuxt/config';
+import i18nConfig from './i18n.config';
 import { ROUTE_NAMES, ROUTE_PATHS } from './src/utils/routes';
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   workspaceDir: '../../',
   srcDir: 'src',
-  devtools: { enabled: true },
+  dir: {
+    public: '../public',
+  },
+  devtools: { enabled: process.env.NODE_ENV !== 'production' },
+  ignore: ['**/*.js.map', '**/*.js'],
 
   devServer: {
-    host: process.env.NUXT_HOST || 'localhost',
-    port: process.env.NUXT_PORT ? parseInt(process.env.NUXT_PORT) : 4200,
+    host: process.env.FRONTEND_NUXT_HOST || process.env.NUXT_HOST || 'localhost',
+    port: process.env.FRONTEND_NUXT_PORT
+      ? parseInt(process.env.FRONTEND_NUXT_PORT)
+      : process.env.NUXT_PORT
+        ? parseInt(process.env.NUXT_PORT)
+        : 4200,
   },
 
   nitro: {
     experimental: {
       wasm: true
+    },
+    routeRules: {
+      '/_nuxt/**': {
+        headers: {
+          'cache-control': 'public, max-age=31536000, immutable'
+        }
+      },
+      '/_ipx/**': {
+        headers: {
+          'cache-control': 'public, max-age=2592000, stale-while-revalidate=604800'
+        }
+      },
+      '/fonts/**': {
+        headers: {
+          'cache-control': 'public, max-age=31536000, immutable'
+        }
+      },
+      '/images/**': {
+        headers: {
+          'cache-control': 'public, max-age=2592000, stale-while-revalidate=604800'
+        }
+      },
+      '/favicon.ico': {
+        headers: {
+          'cache-control': 'public, max-age=2592000, stale-while-revalidate=604800'
+        }
+      },
+      '/favicon.png': {
+        headers: {
+          'cache-control': 'public, max-age=2592000, stale-while-revalidate=604800'
+        }
+      },
+      '/robots.txt': {
+        headers: {
+          'cache-control': 'public, max-age=3600, stale-while-revalidate=86400'
+        }
+      },
+      '/sitemap.xml': {
+        headers: {
+          'cache-control': 'public, max-age=3600, stale-while-revalidate=86400'
+        }
+      }
     },
     esbuild: {
       options: {
@@ -26,6 +77,7 @@ export default defineNuxtConfig({
   },
 
   components: {
+    extensions: ['vue'],
     dirs: [
       {
         path: '~/components',
@@ -45,10 +97,6 @@ export default defineNuxtConfig({
       },
       {
         path: '~/components/category',
-        pathPrefix: false,
-      },
-      {
-        path: '~/components/layout',
         pathPrefix: false,
       },
       {
@@ -236,13 +284,17 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE || 'http://localhost:3333',
-      siteUrl: process.env.SITE_URL || 'http://localhost:4200',
-      siteName: process.env.SITE_NAME || 'Ecommerce Web',
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || process.env.FRONTEND_API_BASE || process.env.API_BASE || 'http://localhost:3333',
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || process.env.FRONTEND_SITE_URL || process.env.FRONTEND_URL || process.env.SITE_URL || 'https://mgavietnam.com',
+      siteName: process.env.NUXT_PUBLIC_SITE_NAME || process.env.FRONTEND_SITE_NAME || process.env.SITE_NAME || 'Ecommerce Web',
+      siteLogoUrl: process.env.NUXT_PUBLIC_SITE_LOGO_URL || process.env.FRONTEND_SITE_LOGO_URL || process.env.SITE_LOGO_URL || '',
     },
   },
 
   imports: {
+    exclude: [
+      /useVueComposables/,
+    ],
     dirs: [
       'composables',
       'composables/*/index.{ts,js,mjs,mts}',
@@ -285,13 +337,21 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
   ],
 
+  ui: {
+    colorMode: false,
+  },
+
   plugins: [
     '~/plugins/trpc',
     '~/plugins/gtm.server',
   ],
 
-  // @ts-expect-error - i18n module types
-  i18n: './i18n.config.ts',
+  i18n: {
+    ...i18nConfig,
+    bundle: {
+      optimizeTranslationDirective: false,
+    },
+  },
 
   vite: {
     plugins: [nxViteTsPaths()],
@@ -329,7 +389,7 @@ export default defineNuxtConfig({
     server: {
       proxy: {
         '/api/trpc': {
-          target: process.env.API_BASE || 'http://localhost:3333',
+          target: process.env.NUXT_PUBLIC_API_BASE || process.env.FRONTEND_API_BASE || process.env.API_BASE || 'http://localhost:3333',
           changeOrigin: true,
           rewrite: (path) => path,
         },
@@ -353,6 +413,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-03-03',
 
   app: {
+    spaLoadingTemplate: '~/app/spa-loading-template.html',
     head: {
       titleTemplate: '%s',
       title: 'Ecommerce Web - Trang thương mại điện tử',
@@ -372,9 +433,7 @@ export default defineNuxtConfig({
         { name: 'twitter:description', content: 'Khám phá các sản phẩm chất lượng cao. Mua sắm online dễ dàng, giao hàng nhanh chóng.' },
         { name: 'twitter:image', content: '/images/og-default.jpg' }
       ],
-      link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
-      ]
+      link: []
     },
     pageTransition: { name: 'page', mode: 'out-in' }
   },
@@ -382,6 +441,9 @@ export default defineNuxtConfig({
   image: {
     provider: 'ipx',
     dir: 'public',
+    quality: 75,
+    formats: ['webp', 'avif'],
+    domains: ['cdn.mgavietnam.com', 'cdn.captreonuisam.com', 'mgavietnam.com', 'www.mgavietnam.com', 'images.unsplash.com'],
     screens: {
       xs: 320,
       sm: 640,

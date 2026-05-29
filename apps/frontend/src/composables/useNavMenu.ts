@@ -52,7 +52,6 @@ export const useNavMenu = () => {
 
   const processedMenuItems = computed(() => {
     if (!menuItems.value || menuItems.value.length === 0) {
-      console.log('No menu items available');
       return [];
     }
 
@@ -107,4 +106,4 @@ export const useNavMenu = () => {
     getColumnTitleTranslation,
     getParentMenuLeftOffset
   };
-}; 
+};

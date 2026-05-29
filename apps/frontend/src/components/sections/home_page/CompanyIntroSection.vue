@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
-import { useColorMode } from '@vueuse/core';
+import { computed } from 'vue';
+import { useDarkMode } from '~/composables/useDarkMode';
 import { useCssColorValue } from '~/composables/useColorUtils';
 
 interface CompanyIntroConfig {
@@ -44,10 +44,10 @@ interface CompanyIntroConfig {
 
 const props = defineProps<{
   config?: CompanyIntroConfig;
+  titleTag?: string;
 }>();
 
-const colorMode = useColorMode();
-const isDark = computed(() => colorMode.value === 'dark');
+const { isDark } = useDarkMode();
 const { processColorValue } = useCssColorValue();
 
 const sectionClasses = computed(() => {
@@ -75,6 +75,35 @@ const processedDescription = computed(() => {
     desc = desc.replace(/#ff9800/g, processColorValue(props.config.darkMode.accentColor));
   }
   return desc;
+});
+
+const extractedHeading = computed(() => {
+  const fallback = {
+    content: props.config?.title || '',
+    style: undefined as string | undefined,
+    className: '',
+  };
+
+  const description = processedDescription.value;
+  if (!description) return fallback;
+
+  const match = description.match(/<h([1-6])([^>]*)>([\s\S]*?)<\/h\1>/i);
+  if (!match) return fallback;
+
+  const attributes = match[2] || '';
+  const styleMatch = attributes.match(/style=(['"])([\s\S]*?)\1/i);
+  const classMatch = attributes.match(/class=(['"])([\s\S]*?)\1/i);
+
+  return {
+    content: match[3].trim(),
+    style: styleMatch?.[2],
+    className: classMatch?.[2] || '',
+  };
+});
+
+const descriptionWithoutHeading = computed(() => {
+  if (!processedDescription.value) return '';
+  return processedDescription.value.replace(/<h([1-6])[^>]*>[\s\S]*?<\/h\1>/i, '').trim();
 });
 
 const currentBorderStyles = computed(() => {
@@ -139,9 +168,18 @@ const getButtonStyles = (config: CompanyIntroConfig) => {
         :style="currentBorderStyles"
         class="mx-auto"
       >
+        <component
+          :is="titleTag || 'h2'"
+          v-if="extractedHeading.content"
+          class="mb-6 text-center text-3xl font-bold md:text-4xl dark:text-white"
+          :class="extractedHeading.className"
+          :style="extractedHeading.style"
+        >
+          <span v-html="extractedHeading.content"></span>
+        </component>
         <div
           class="prose dark:prose-invert max-w-none mb-8 mx-auto"
-          v-html="processedDescription"
+          v-html="descriptionWithoutHeading"
         ></div>
 
         <!-- Stats Grid for full-text layout -->
@@ -194,12 +232,13 @@ const getButtonStyles = (config: CompanyIntroConfig) => {
           ]"
           :style="currentBorderStyles"
         >
-          <h2
+          <component
+            :is="titleTag || 'h2'"
             v-if="config.title"
             class="text-3xl md:text-4xl font-bold mb-6 dark:text-white"
           >
             {{ config.title }}
-          </h2>
+          </component>
           <div
             class="prose dark:prose-invert max-w-none mb-8"
             v-html="processedDescription"

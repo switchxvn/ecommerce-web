@@ -17,6 +17,10 @@ interface Specification {
 
 const { t, locale } = useLocalization();
 const trpc = useTrpc();
+const translateWithFallback = (key: string, fallback: string) => {
+  const translated = t(key);
+  return translated && translated.trim() && translated.trim() !== key ? translated : fallback;
+};
 
 const specifications = ref<Specification[]>([]);
 const isLoading = ref(true);
@@ -63,16 +67,16 @@ watch([() => props.productId, () => props.locale || locale.value], () => {
     <div v-else-if="error" class="py-4 text-center">
       <UIcon name="i-heroicons-exclamation-circle" class="mx-auto mb-2 h-8 w-8 text-red-500" />
       <p class="text-sm text-gray-600 dark:text-gray-400">
-        {{ t('products.specificationError') || 'Có lỗi xảy ra khi tải thông số kỹ thuật' }}
+        {{ translateWithFallback('products.specificationError', 'Có lỗi xảy ra khi tải thông số kỹ thuật') }}
       </p>
       <UButton size="sm" color="gray" class="mt-2" @click="fetchSpecifications">
-        {{ t('products.tryAgain') || 'Thử lại' }}
+        {{ translateWithFallback('products.tryAgain', 'Thử lại') }}
       </UButton>
     </div>
     
     <div v-else-if="hasSpecifications" class="specifications-table">
       <h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">
-        {{ t('products.specifications') || 'Thông số kỹ thuật' }}
+        {{ translateWithFallback('products.specifications', 'Thông số kỹ thuật') }}
       </h3>
       
       <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
@@ -99,7 +103,7 @@ watch([() => props.productId, () => props.locale || locale.value], () => {
       <div class="text-center">
         <UIcon name="i-heroicons-document-text" class="mx-auto mb-4 h-16 w-16 text-gray-400" />
         <p class="text-gray-600 dark:text-gray-400">
-          {{ t('products.noSpecifications') || 'Không có thông số kỹ thuật cho sản phẩm này' }}
+          {{ translateWithFallback('products.noSpecifications', 'Không có thông số kỹ thuật cho sản phẩm này') }}
         </p>
       </div>
     </div>

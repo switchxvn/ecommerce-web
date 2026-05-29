@@ -1,16 +1,17 @@
-# Tạo file mới cho trang chi tiết dịch vụ
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router';
 import { useTrpc } from '~/composables/useTrpc';
-import { computed, ref, watch } from 'vue';
+import { computed, watch } from 'vue';
 import Breadcrumb from '~/components/common/Breadcrumb.vue';
-import LazyImage from '~/components/ui/LazyImage.vue';
-import Icon from '~/components/ui/Icon.vue';
 import { useI18n } from 'vue-i18n';
 import type { Service } from '@ew/shared';
 import { useLocalization } from '~/composables/useLocalization';
-import { getLocalizedRoute } from '../../utils/routes';
 import * as LucideIcons from 'lucide-vue-next';
+import { usePageSeo } from '~/composables/usePageSeo';
+import { buildLocalBusinessSchema, buildServiceSchema, resolveSeoCanonicalUrl } from '~/utils/seo';
+import { normalizeLocaleCode } from '~/utils/locale';
+import ServiceReviewsSection from '~/components/service/ServiceReviewsSection.vue';
+import { fetchServiceDetailPayload } from '~/composables/serviceDetailPayload';
 
 // Định nghĩa meta cho trang
 definePageMeta({
@@ -23,6 +24,7 @@ const trpc = useTrpc();
 const { locale } = useI18n();
 const { t } = useLocalization();
 const slug = route.params.slug as string;
+const siteUrl = useRuntimeConfig().public.siteUrl;
 
 // Convert kebab-case to PascalCase for icon names
 const toPascalCase = (str: string) => {
@@ -39,13 +41,22 @@ const getIconComponent = (iconName: string) => {
 };
 
 // Fetch service data
-const { data: service, pending: loading, error, refresh } = useAsyncData(
+const { data: payload, pending: loading, error, refresh } = await useAsyncData(
   `service-${slug}`,
-  () => trpc.service.bySlug.query({ slug, locale: locale.value })
+  () => fetchServiceDetailPayload({
+    slug,
+    locale: normalizeLocaleCode(locale.value),
+    trpc: {
+      service: trpc.service,
+      review: trpc.review,
+    },
+  }),
 );
 
 // Computed properties
-const serviceData = computed(() => service.value || {} as Service);
+const serviceData = computed(() => payload.value?.service || {} as Service);
+const serviceReviewAggregate = computed(() => payload.value?.serviceReviewAggregate ?? null);
+const serviceReviews = computed(() => payload.value?.serviceReviews ?? []);
 
 const currentTranslation = computed(() => {
   if (!serviceData.value.translations) return null;
@@ -57,9 +68,6 @@ const serviceContent = computed(() => currentTranslation.value?.description || '
 const serviceShortDescription = computed(() => currentTranslation.value?.shortDescription || '');
 const serviceIcon = computed(() => serviceData.value.icon || '');
 const serviceId = computed(() => serviceData.value.id || 0);
-
-// Lấy URL hiện tại từ server
-const baseUrl = ref(process.client ? window.location.origin : '');
 
 // Watch locale changes to update content
 watch(locale, async (newLocale) => {
@@ -86,39 +94,57 @@ const breadcrumbItems = computed(() => [
   }
 ]);
 
-// Canonical URL
-const canonicalUrl = computed(() => {
-  const translation = currentTranslation.value;
-  if (!translation) return '';
-  
-  const basePath = getLocalizedPath();
-  return `${baseUrl.value}${basePath}/${slug}`;
-});
+const serviceSlugByLocale = computed(() => ({
+  vi: serviceData.value.translations?.find((translation) => translation.locale === 'vi')?.slug,
+  en: serviceData.value.translations?.find((translation) => translation.locale === 'en')?.slug,
+}));
 
-// SEO meta tags
-useHead(() => {
-  const translation = currentTranslation.value;
-  if (!translation) return {};
+const resolvedCanonicalUrl = computed(() =>
+  resolveSeoCanonicalUrl({
+    siteUrl,
+    currentPath: route.path,
+    locale: locale.value === 'en' ? 'en' : 'vi',
+    routeKey: 'service-detail',
+    slugByLocale: serviceSlugByLocale.value,
+    candidate: currentTranslation.value?.canonicalUrl || null,
+  }),
+);
 
-  return {
-    title: translation.metaTitle || serviceTitle.value || 'Dịch vụ',
-    meta: [
-      { name: 'description', content: translation.metaDescription || serviceShortDescription.value || '' },
-      { name: 'keywords', content: translation.metaKeywords || '' },
-      { property: 'og:title', content: translation.ogTitle || serviceTitle.value || '' },
-      { property: 'og:description', content: translation.ogDescription || serviceShortDescription.value || '' },
-      { property: 'og:image', content: translation.ogImage || '' },
-      { property: 'og:url', content: canonicalUrl.value },
-      { property: 'og:type', content: 'article' },
-      { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: translation.ogTitle || serviceTitle.value || '' },
-      { name: 'twitter:description', content: translation.ogDescription || serviceShortDescription.value || '' },
-      { name: 'twitter:image', content: translation.ogImage || '' }
-    ],
-    link: [
-      { rel: 'canonical', href: canonicalUrl.value }
-    ]
-  };
+usePageSeo({
+  title: computed(() => currentTranslation.value?.metaTitle || serviceTitle.value || 'Dịch vụ'),
+  description: computed(() => currentTranslation.value?.metaDescription || serviceShortDescription.value || ''),
+  keywords: computed(() => currentTranslation.value?.metaKeywords || ''),
+  ogTitle: computed(() => currentTranslation.value?.ogTitle || serviceTitle.value || ''),
+  ogDescription: computed(() => currentTranslation.value?.ogDescription || serviceShortDescription.value || ''),
+  image: computed(() => currentTranslation.value?.ogImage || ''),
+  ogType: 'article',
+  canonicalUrl: computed(() => currentTranslation.value?.canonicalUrl || null),
+  currentPath: computed(() => route.path),
+  locale: computed(() => (locale.value === 'en' ? 'en' : 'vi')),
+  routeKey: 'service-detail',
+  slugByLocale: serviceSlugByLocale,
+  breadcrumbs: computed(() => [
+    { name: locale.value === 'vi' ? 'Trang chủ' : 'Home', item: '/' },
+    { name: locale.value === 'vi' ? 'Dịch vụ' : 'Services', item: locale.value === 'vi' ? '/dich-vu' : '/services' },
+    { name: serviceTitle.value || 'Service' },
+  ]),
+  schemas: computed(() => [
+    buildServiceSchema({
+      name: serviceTitle.value || 'Service',
+      description: serviceShortDescription.value || '',
+      url: resolvedCanonicalUrl.value,
+      image: currentTranslation.value?.ogImage || '',
+      areaServed: 'TP.HCM',
+      providerName: 'MGA Vietnam',
+    }),
+    buildLocalBusinessSchema({
+      name: 'MGA Vietnam',
+      url: resolvedCanonicalUrl.value,
+      telephone: '0918865060',
+      areaServed: 'TP.HCM',
+      image: currentTranslation.value?.ogImage || '',
+    }),
+  ]),
 });
 </script>
 
@@ -134,8 +160,8 @@ useHead(() => {
       />
       
       <!-- Loading state -->
-      <div v-if="loading" class="service-detail__loading py-20 flex-grow flex items-center justify-center">
-        <div class="service-detail__loading-spinner"></div>
+      <div v-if="loading" class="service-detail__loading py-12 flex-grow">
+        <DetailPageSkeleton :show-gallery="false" />
       </div>
       
       <!-- Error state -->
@@ -150,7 +176,7 @@ useHead(() => {
       </div>
       
       <!-- Service content -->
-      <div v-else-if="service" class="service-detail__main mt-8 flex-grow">
+      <div v-else-if="payload?.service" class="service-detail__main mt-8 flex-grow gap-8">
         <!-- Service article content -->
         <article class="service-detail__article bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 h-full w-full">
           <!-- Service icon -->
@@ -176,6 +202,15 @@ useHead(() => {
             <div class="service-prose" v-html="serviceContent"></div>
           </div>
         </article>
+
+        <ServiceReviewsSection
+          v-if="serviceId"
+          :service-id="serviceId"
+          :reviews="serviceReviews"
+          :locale="locale"
+          :average-rating="serviceReviewAggregate ? Number(serviceReviewAggregate.averageRating) : null"
+          :total-reviews="serviceReviewAggregate?.totalReviews ?? null"
+        />
       </div>
       
       <!-- Not found state -->
@@ -239,10 +274,17 @@ useHead(() => {
 }
 
 /* Add new styles for images and tables */
-:deep(.service-prose img) {
-  max-width: 150px;
+:deep(.service-prose figure) {
+  @apply my-8 overflow-hidden rounded-xl;
+}
+
+:deep(.service-prose figure img),
+:deep(.service-content > img) {
+  width: 100%;
+  max-width: 100%;
   height: auto;
-  object-fit: contain;
+  object-fit: cover;
+  display: block;
 }
 
 :deep(.service-prose table) {
@@ -264,11 +306,7 @@ useHead(() => {
 }
 
 .service-detail__loading {
-  @apply flex justify-center items-center min-h-[400px];
-}
-
-.service-detail__loading-spinner {
-  @apply w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin;
+  @apply min-h-[400px];
 }
 
 .service-detail__error {

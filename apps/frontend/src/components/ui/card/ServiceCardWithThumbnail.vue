@@ -48,16 +48,16 @@ const handleImageError = (payload: string | Event) => {
     </div>
 
     <!-- Badges -->
-    <div class="absolute left-2 top-2 flex gap-1">
+    <div class="absolute left-2 top-2 z-10 flex gap-1">
       <span
         v-if="service.isNew"
-        class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20"
+        class="inline-flex items-center rounded-full bg-green-500/90 px-2 py-1 text-xs font-medium text-white shadow-sm ring-1 ring-inset ring-white/15 backdrop-blur-sm dark:bg-green-500/85"
       >
         {{ $t('common.new') }}
       </span>
       <span
         v-if="service.isFeatured"
-        class="inline-flex items-center rounded-full bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700 ring-1 ring-inset ring-yellow-600/20 dark:bg-yellow-500/10 dark:text-yellow-400 dark:ring-yellow-500/20"
+        class="inline-flex items-center rounded-full bg-amber-500/90 px-2 py-1 text-xs font-medium text-white shadow-sm ring-1 ring-inset ring-white/15 backdrop-blur-sm dark:bg-amber-400/90"
       >
         {{ $t('common.featured') }}
       </span>

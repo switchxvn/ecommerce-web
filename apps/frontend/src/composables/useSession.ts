@@ -45,24 +45,6 @@ export function useSession() {
       } catch (error) {
         console.error('Failed to start session:', error);
       }
-    } else {
-      // Update existing session
-      try {
-        await trpc.userSession.updateSession.mutate({
-          sessionId: sessionId.value,
-          lastActivity: new Date(),
-        });
-        
-        // Update country if it wasn't set before
-        if (ipData.country) {
-          await trpc.userSession.updateSession.mutate({
-            sessionId: sessionId.value,
-            country: ipData.country
-          });
-        }
-      } catch (error) {
-        console.error('Failed to update session:', error);
-      }
     }
     
     return {
@@ -89,25 +71,6 @@ export function useSession() {
   // Auto-initialize the session when the component mounts
   onMounted(async () => {
     await initSession();
-    
-    // Set up interval to refresh the session activity
-    const refreshInterval = setInterval(async () => {
-      if (sessionId.value) {
-        try {
-          await trpc.userSession.updateSession.mutate({
-            sessionId: sessionId.value,
-            lastActivity: new Date()
-          });
-        } catch (error) {
-          console.error('Failed to refresh session:', error);
-        }
-      }
-    }, 5 * 60 * 1000); // Refresh every 5 minutes
-    
-    // Clean up interval on component unmount
-    nuxtApp.hook('app:unmounted', () => {
-      clearInterval(refreshInterval);
-    });
   });
   
   return {

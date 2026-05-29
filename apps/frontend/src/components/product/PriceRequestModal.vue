@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useLocalization } from '~/composables/useLocalization';
 import { useTrpc } from '~/composables/useTrpc';
 import { X, Check, Send } from 'lucide-vue-next';
@@ -22,6 +22,11 @@ const emit = defineEmits<{
 const { t } = useLocalization();
 const trpc = useTrpc();
 const notification = useNotification();
+
+const translateWithFallback = (key: string, fallback: string) => {
+  const value = t(key);
+  return typeof value === 'string' && value.trim() ? value : fallback;
+};
 
 // Form data
 const fullName = ref('');
@@ -51,24 +56,24 @@ const submitSuccess = ref(false);
 const phoneInputRef = ref<any>(null);
 
 // Kiểm tra xem trường nào là bắt buộc
-const isPhoneRequired = true
+const isPhoneRequired = true;
 
 // Định nghĩa quy tắc xác thực
 const rules = computed(() => {
   return {
     fullName: { 
       required: helpers.withMessage(
-        t('priceRequest.fullNameRequired') || 'Vui lòng nhập họ tên',
+        translateWithFallback('priceRequest.fullNameRequired', 'Vui lòng nhập họ tên'),
         required
       ) 
     },
     emailValue: { 
       required: helpers.withMessage(
-        t('priceRequest.emailRequired') || 'Vui lòng nhập email',
+        translateWithFallback('priceRequest.emailRequired', 'Vui lòng nhập email'),
         required
       ),
       email: helpers.withMessage(
-        t('priceRequest.emailInvalid') || 'Email không hợp lệ',
+        translateWithFallback('priceRequest.emailInvalid', 'Email không hợp lệ'),
         email
       )
     }
@@ -92,20 +97,20 @@ const validatePhoneField = async () => {
   
   // Kiểm tra xem số điện thoại có được nhập không
   if (!phoneNumber.value.trim()) {
-    // Không hiển thị lỗi khi trường này trống - số điện thoại không bắt buộc
-    return true;
+    errors.value.phoneNumber = translateWithFallback('priceRequest.phoneRequired', 'Vui lòng nhập số điện thoại');
+    return false;
   }
   
   // Xác thực số điện thoại
   let isPhoneValid = true;
   if (phoneInputRef.value) {
     // Gọi phương thức validate của PhoneInput để kiểm tra số điện thoại có phù hợp với quốc gia đã chọn không
-    isPhoneValid = await phoneInputRef.value.validatePhoneNumber();
+    isPhoneValid = await phoneInputRef.value.validate();
   }
   
   // Cập nhật thông báo lỗi cho số điện thoại
   if (!isPhoneValid && phoneValidation.value && !phoneValidation.value.valid) {
-    errors.value.phoneNumber = phoneValidation.value.message || t('validation.invalidPhone');
+    errors.value.phoneNumber = phoneValidation.value.message || translateWithFallback('validation.invalidPhone', 'Số điện thoại không hợp lệ');
   }
   
   return isPhoneValid;
@@ -118,7 +123,7 @@ const validateFullNameField = async () => {
   
   // Check if name is empty
   if (!fullName.value.trim()) {
-    errors.value.fullName = t('priceRequest.fullNameRequired') as string;
+    errors.value.fullName = translateWithFallback('priceRequest.fullNameRequired', 'Vui lòng nhập họ tên');
     return false;
   }
   
@@ -141,7 +146,7 @@ const validateEmailField = async () => {
   
   // Check if email is empty
   if (!emailValue.value.trim()) {
-    errors.value.email = t('priceRequest.emailRequired') as string;
+    errors.value.email = translateWithFallback('priceRequest.emailRequired', 'Vui lòng nhập email');
     return false;
   }
   
@@ -198,8 +203,8 @@ const submitForm = async () => {
 
     // Hiển thị thông báo thành công
     notification.success({
-      title: t('priceRequest.successToast') || 'Yêu cầu báo giá đã được gửi',
-      description: t('priceRequest.successToastDescription') || 'Chúng tôi sẽ liên hệ với bạn trong thời gian sớm nhất'
+      title: translateWithFallback('priceRequest.successToast', 'Yêu cầu báo giá đã được gửi'),
+      description: translateWithFallback('priceRequest.successToastDescription', 'Chúng tôi sẽ liên hệ với bạn trong thời gian sớm nhất')
     });
     
     // Đóng modal sau khi gửi thành công
@@ -210,7 +215,7 @@ const submitForm = async () => {
     console.error('Error submitting price request:', error);
     notification.error({
       title: t('priceRequest.error') || 'Lỗi',
-      description: t('priceRequest.errorDescription') || 'Có lỗi xảy ra khi gửi yêu cầu báo giá. Vui lòng thử lại sau.'
+      description: translateWithFallback('priceRequest.errorDescription', 'Có lỗi xảy ra khi gửi yêu cầu báo giá. Vui lòng thử lại sau.')
     });
   } finally {
     isSubmitting.value = false;
@@ -247,8 +252,8 @@ const closeModal = () => {
 // Computed properties
 const modalTitle = computed(() => {
   return submitSuccess.value
-    ? t('priceRequest.successTitle') || 'Yêu cầu đã được gửi'
-    : t('priceRequest.title') || 'Yêu cầu báo giá';
+    ? translateWithFallback('priceRequest.successTitle', 'Yêu cầu đã được gửi')
+    : translateWithFallback('priceRequest.title', 'Yêu cầu báo giá');
 });
 
 // Debug log khi props.isOpen thay đổi
@@ -256,12 +261,18 @@ watch(() => props.isOpen, (newValue) => {
 
 });
 
+watch(phoneNumber, (newValue) => {
+  if (newValue?.trim() && errors.value.phoneNumber) {
+    errors.value.phoneNumber = '';
+  }
+});
+
 </script>
 
 <template>
   <div class="price-request-modal">
     <div class="modal-header">
-      <h2 class="text-xl font-semibold">{{ t('priceRequest.title') }}</h2>
+      <h2 class="text-xl font-semibold">{{ modalTitle }}</h2>
       <button @click="$emit('close')" class="close-button">
         <X class="w-5 h-5" />
       </button>
@@ -271,55 +282,55 @@ watch(() => props.isOpen, (newValue) => {
       <form @submit.prevent="submitForm" class="space-y-4">
         <!-- Form fields -->
         <div class="form-group">
-          <label for="fullName" class="form-label">{{ t('priceRequest.fullName') }}</label>
+          <label for="fullName" class="form-label">{{ translateWithFallback('priceRequest.fullName', 'Họ tên') }}</label>
           <input
             id="fullName"
             v-model="fullName"
             type="text"
             class="form-input"
             :class="{ 'error': errors.fullName }"
-            :placeholder="t('priceRequest.fullNamePlaceholder')"
+            :placeholder="translateWithFallback('priceRequest.fullNamePlaceholder', 'Nhập họ tên của bạn')"
           />
           <span v-if="errors.fullName" class="error-message">{{ errors.fullName }}</span>
         </div>
 
         <div class="form-group">
-          <label for="email" class="form-label">{{ t('priceRequest.email') }}</label>
+          <label for="email" class="form-label">{{ translateWithFallback('priceRequest.email', 'Email') }}</label>
           <input
             id="email"
             v-model="emailValue"
             type="email"
             class="form-input"
             :class="{ 'error': errors.email }"
-            :placeholder="t('priceRequest.emailPlaceholder')"
+            :placeholder="translateWithFallback('priceRequest.emailPlaceholder', 'Nhập email của bạn')"
           />
           <span v-if="errors.email" class="error-message">{{ errors.email }}</span>
         </div>
 
         <div class="form-group">
           <label for="phone" class="form-label">
-            {{ t('priceRequest.phone') }}
-            <span v-if="!isPhoneRequired" class="optional-field">({{ t('common.optional') || 'Không bắt buộc' }})</span>
+            {{ translateWithFallback('priceRequest.phone', 'Số điện thoại') }}
+            <span v-if="isPhoneRequired" class="required-mark">*</span>
+            <span v-else class="optional-field">({{ translateWithFallback('common.optional', 'Không bắt buộc') }})</span>
           </label>
           <PhoneInput
             ref="phoneInputRef"
-            :modelValue="phoneNumber"
-            :phoneCode="selectedPhoneCode"
-            v-model:phone="phoneNumber"
-            v-model:code="selectedPhoneCode"
+            v-model="phoneNumber"
+            v-model:phoneCode="selectedPhoneCode"
             :error="!!errors.phoneNumber"
+            :placeholder="translateWithFallback('priceRequest.phonePlaceholder', 'Nhập số điện thoại của bạn')"
             @validation="handlePhoneValidation"
           />
           <span v-if="errors.phoneNumber" class="error-message">{{ errors.phoneNumber }}</span>
         </div>
 
         <div class="form-group">
-          <label for="message" class="form-label">{{ t('priceRequest.message') }}</label>
+          <label for="message" class="form-label">{{ translateWithFallback('priceRequest.message', 'Lời nhắn') }}</label>
           <textarea
             id="message"
             v-model="message"
             class="form-textarea"
-            :placeholder="t('priceRequest.messagePlaceholder')"
+            :placeholder="translateWithFallback('priceRequest.messagePlaceholder', 'Nhập lời nhắn của bạn (không bắt buộc)')"
             rows="4"
           ></textarea>
         </div>
@@ -333,7 +344,7 @@ watch(() => props.isOpen, (newValue) => {
           >
             <Send v-if="!isSubmitting" class="w-5 h-5 mr-2" />
             <span v-else class="loading-spinner"></span>
-            {{ t('priceRequest.submit') }}
+            {{ translateWithFallback('priceRequest.submit', 'Gửi yêu cầu') }}
           </button>
         </div>
       </form>
@@ -414,6 +425,11 @@ watch(() => props.isOpen, (newValue) => {
   font-size: 0.875rem;
   font-weight: normal;
   font-style: italic;
+  margin-left: 0.25rem;
+}
+
+.required-mark {
+  color: #ef4444;
   margin-left: 0.25rem;
 }
 

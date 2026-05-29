@@ -8,7 +8,7 @@
     "serve": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "cd apps/frontend && npx nuxt dev --dotenv apps/frontend/.env --no-typecheck"
+        "command": "cd apps/frontend && env -u PORT npx nuxt dev --dotenv ../../.env --no-typecheck"
       }
     },
     "build": {

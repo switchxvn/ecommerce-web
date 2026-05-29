@@ -85,8 +85,7 @@ const error = computed(() => menuError.value)
 
       <!-- Loading State -->
       <div v-if="isLoading" class="food-menu__loading">
-        <div class="food-menu__loading-spinner"></div>
-        <p class="food-menu__loading-text">{{ t('common.loading') }}</p>
+        <CardGridSkeleton :item-count="6" :columns="3" />
       </div>
 
       <!-- Error State -->
@@ -136,7 +135,7 @@ const error = computed(() => menuError.value)
 </template>
 
 <style lang="scss">
-@import '@/assets/styles/components/food-menu';
+@use '@/assets/styles/components/food-menu' as *;
 
 .contact-info-card {
   @apply flex items-center gap-4 px-8 py-4 rounded-xl;

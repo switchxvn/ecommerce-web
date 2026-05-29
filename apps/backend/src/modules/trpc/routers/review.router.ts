@@ -9,6 +9,8 @@ const reviewsFilterSchema = z.object({
   limit: z.number().optional(),
   featured: z.boolean().optional(),
   serviceTypeId: z.number().optional(),
+  productId: z.number().optional(),
+  serviceId: z.number().optional(),
   locale: z.string().optional(),
   minRating: z.number().optional(),
   sortBy: z.enum(['latest', 'highest_rating', 'lowest_rating']).optional(),
@@ -20,15 +22,39 @@ const translationSchema = z.object({
   content: z.string().min(10),
 });
 
-const submitReviewSchema = z.object({
+export const DEFAULT_PUBLIC_PRODUCT_REVIEW_SERVICE_TYPE_ID = 4;
+
+export const submitReviewSchema = z.object({
   authorName: z.string().min(2),
   authorAvatar: z.string().url().optional(),
   profession: z.string().optional(),
   rating: z.number().min(1).max(5),
-  serviceTypeId: z.number().min(1),
+  serviceTypeId: z.number().min(1).optional(),
+  productId: z.number().min(1).optional(),
+  serviceId: z.number().min(1).optional(),
   visitDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
   translations: z.array(translationSchema).min(1),
 });
+
+export function buildPublicReviewCreateInput(input: z.infer<typeof submitReviewSchema>): CreateReviewInput {
+  return {
+    authorName: input.authorName,
+    authorAvatar: input.authorAvatar,
+    profession: input.profession,
+    rating: input.rating,
+    serviceTypeId: input.serviceTypeId ?? (input.productId ? DEFAULT_PUBLIC_PRODUCT_REVIEW_SERVICE_TYPE_ID : undefined),
+    productId: input.productId,
+    serviceId: input.serviceId,
+    visitDate: input.visitDate,
+    status: ReviewStatus.PENDING,
+    featured: false,
+    translations: input.translations.map(t => ({
+      locale: t.locale,
+      title: t.title,
+      content: t.content
+    }))
+  };
+}
 
 export const reviewRouter = router({
   list: publicProcedure
@@ -79,6 +105,24 @@ export const reviewRouter = router({
       return frontendReviewService.getAverageRating(input?.serviceTypeId);
     }),
 
+  getProductAggregateRating: publicProcedure
+    .input(z.object({
+      productId: z.number().min(1),
+    }))
+    .query(async ({ ctx, input }) => {
+      const frontendReviewService = ctx.services.frontend.review;
+      return frontendReviewService.getProductAggregateRating(input.productId);
+    }),
+
+  getServiceAggregateRating: publicProcedure
+    .input(z.object({
+      serviceId: z.number().min(1),
+    }))
+    .query(async ({ ctx, input }) => {
+      const frontendReviewService = ctx.services.frontend.review;
+      return frontendReviewService.getServiceAggregateRating(input.serviceId);
+    }),
+
   getRatingDistribution: publicProcedure
     .input(z.object({
       serviceTypeId: z.number().optional(),
@@ -100,25 +144,7 @@ export const reviewRouter = router({
   submitReview: publicProcedure
     .input(submitReviewSchema)
     .mutation(async ({ ctx, input }) => {
-      // Mặc định đánh dấu là chưa kích hoạt và không nổi bật
-      // để admin xem xét trước khi hiển thị
-      const reviewData: CreateReviewInput = {
-        authorName: input.authorName,
-        authorAvatar: input.authorAvatar,
-        profession: input.profession,
-        rating: input.rating,
-        serviceTypeId: input.serviceTypeId,
-        visitDate: input.visitDate,
-        status: ReviewStatus.PENDING,
-        featured: false,
-        translations: input.translations.map(t => ({
-          locale: t.locale,
-          title: t.title,
-          content: t.content
-        }))
-      };
-      
       const adminReviewService = ctx.services.admin.review;
-      return adminReviewService.create(reviewData);
+      return adminReviewService.create(buildPublicReviewCreateInput(input));
     }),
 }); 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useHead } from '@unhead/vue';
-import { ref, onMounted } from 'vue';
+import { useHead } from '#imports';
+import { onMounted } from 'vue';
 import { useFeatureFlags } from './composables/useFeatureFlags';
 import { useComponentStyles } from './composables/useComponentStyles';
 import { useTheme } from './composables/useTheme';
@@ -8,84 +8,59 @@ import { useDarkMode } from './composables/useDarkMode';
 import { useSettings } from './composables/useSettings';
 import { useFavicon } from './composables/useFavicon';
 
-const isLoading = ref(true);
-
-// Safety timeout to prevent infinite loading
-if (process.client) {
-  setTimeout(() => {
-    if (isLoading.value) {
-      console.warn('Loading timeout reached, forcing app to show');
-      isLoading.value = false;
-    }
-  }, 5000); // 5 seconds timeout
-}
-
 // Initialize theme and component styles
 const { initializeTheme } = useTheme();
 const { initializeStyles } = useComponentStyles();
 const { initializeDarkMode } = useDarkMode();
 
-// Initialize settings and favicon
 const { getPublicSettingValueByKey } = useSettings();
 const { initializeFavicon } = useFavicon();
 
-console.log('Starting app initialization...');
-
-// Log GTM ID from settings for verification
 const logGTMSettings = async () => {
   try {
-    console.log('Loading GTM ID from settings for verification...');
-    const gtmId = await getPublicSettingValueByKey('google_tag_manager_id', '');
-    console.log('GTM ID from database:', gtmId);
-    console.log('GTM is hardcoded in nuxt.config.ts, but database value is:', gtmId);
+    await getPublicSettingValueByKey('google_tag_manager_id', '');
   } catch (error) {
-    console.error('Error loading GTM settings:', error);
+    // Non-blocking diagnostics only
   }
 };
 
-// Initialize theme, dark mode, and favicon
 const initApp = async () => {
   try {
-    console.log('Initializing theme...');
     await initializeTheme();
-    console.log('Theme initialized successfully');
-    
-    console.log('Initializing favicon...');
-    try {
-      await initializeFavicon();
-      console.log('Favicon initialized successfully');
-    } catch (faviconError) {
-      console.warn('Favicon initialization failed, using default:', faviconError);
-    }
-    
+
     if (process.client) {
-      console.log('Initializing dark mode...');
-      initializeDarkMode();
-      console.log('Dark mode initialized successfully');
+      try {
+        await initializeFavicon();
+      } catch {
+        // Keep default favicon on failure
+      }
     }
-  } catch (error) {
-    console.error('Error during initialization:', error);
-    // Continue loading the app even if theme initialization fails
-    isLoading.value = false;
+
+    if (process.client) {
+      initializeDarkMode();
+    }
+  } catch {
+    // Keep app usable even when some critical init step fails.
   }
 };
-
-// Start initialization
-initApp();
 
 // Add font awesome and meta tags
 useHead({
   link: [
+    { rel: 'preconnect', href: 'https://cdn.mgavietnam.com', crossorigin: '' },
+    { rel: 'dns-prefetch', href: '//cdn.mgavietnam.com' }
+  ],
+  style: [
     {
-      rel: 'stylesheet',
-      href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-      integrity: 'sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==',
-      crossorigin: 'anonymous',
-      referrerpolicy: 'no-referrer'
-    },
+      key: 'base-paint-mode',
+      innerHTML: 'html{background:#ffffff;color-scheme:light;}html.dark{color-scheme:dark;}body{background:#ffffff;}#__nuxt{min-height:100vh;background:#ffffff;}html.dark body,html.dark #__nuxt{background:rgb(var(--background,17 24 39));}',
+    }
+  ],
+  script: [
     {
-      rel: 'stylesheet',
-      href: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&display=swap'
+      key: 'theme-mode-init',
+      innerHTML: `(function(){try{var stored=localStorage.getItem('color-theme');var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var isDark=stored==='dark'||(stored==='auto'&&prefersDark);document.documentElement.classList.toggle('dark',isDark);localStorage.removeItem('vueuse-color-scheme');}catch(e){document.documentElement.classList.remove('dark');}})();`,
+      tagPosition: 'head',
     }
   ],
   meta: [
@@ -101,37 +76,33 @@ useHead({
   ]
 });
 
-onMounted(async () => {
-  console.log('Component mounted, starting additional initialization...');
-  try {
-    // Initialize component styles after mounting
-    console.log('Initializing component styles...');
-    await initializeStyles();
-    console.log('Component styles initialized successfully');
-    
-    // Initialize feature flags
-    console.log('Fetching feature flags...');
-    const { fetchFeatureFlags } = useFeatureFlags();
-    await fetchFeatureFlags();
-    console.log('Feature flags initialized successfully');
-    
-    // Log GTM settings for verification
-    console.log('Checking GTM settings...');
-    await logGTMSettings();
-    console.log('GTM settings check completed');
-  } catch (error) {
-    console.error('Error during mounted initialization:', error);
-  } finally {
-    // Hide loading screen after everything is initialized
-    console.log('Initialization complete, hiding loading screen');
-    isLoading.value = false;
+void initApp();
+
+onMounted(() => {
+  const runSecondaryInit = async () => {
+    try {
+      await initializeStyles();
+      const { fetchFeatureFlags } = useFeatureFlags();
+      await fetchFeatureFlags();
+      await logGTMSettings();
+    } catch {
+      // Keep UI usable even when background init APIs fail.
+    }
+  };
+
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(() => {
+      void runSecondaryInit();
+    }, { timeout: 2000 });
+  } else {
+    window.setTimeout(() => {
+      void runSecondaryInit();
+    }, 300);
   }
 });
 </script>
 
 <template>
-  <LoadingScreen :is-loading="isLoading" />
-  <!-- NuxtLayout sẽ tự động sử dụng layout default -->
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>

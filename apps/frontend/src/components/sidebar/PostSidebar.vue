@@ -117,7 +117,6 @@
 
   // Handle search input
   const handleSearchInput = () => {
-    console.log('Search input changed:', filters.search);
     isSearching.value = true;
 
     if (searchTimeout.value) {
@@ -125,7 +124,6 @@
     }
 
     searchTimeout.value = setTimeout(() => {
-      console.log('Applying filters with search:', filters.search);
       applyFilters();
       isSearching.value = false;
     }, 500);
@@ -240,8 +238,7 @@
   }, { deep: true });
 
   // Watch for search changes
-  watch(() => filters.search, (newValue) => {
-    console.log('Search value changed:', newValue);
+  watch(() => filters.search, () => {
     handleSearchInput();
   }, { immediate: true });
 

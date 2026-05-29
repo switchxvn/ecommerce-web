@@ -39,6 +39,8 @@ const rating = ref(5);
 const title = ref("");
 const content = ref("");
 const serviceTypeId = ref<number | null>(null);
+const productId = ref<number | null>(null);
+const serviceId = ref<number | null>(null);
 const visitDate = ref("");
 const featured = ref(false);
 const status = ref<ReviewStatus>(ReviewStatus.ACTIVE);
@@ -48,6 +50,14 @@ const serviceTypes = ref<
   { id: number; name: string; slug: string; translations: any[] }[]
 >([]);
 const isLoadingServiceTypes = ref(true);
+const products = ref<
+  { id: number; sku?: string | null; translations?: { title?: string }[] }[]
+>([]);
+const isLoadingProducts = ref(true);
+const services = ref<
+  { id: number; translations?: { locale: string; title?: string }[] }[]
+>([]);
+const isLoadingServices = ref(true);
 
 // Get all service types
 async function fetchServiceTypes() {
@@ -60,6 +70,38 @@ async function fetchServiceTypes() {
     console.error("Error loading service types:", err);
   } finally {
     isLoadingServiceTypes.value = false;
+  }
+}
+
+async function fetchProducts() {
+  try {
+    isLoadingProducts.value = true;
+    const response = await trpc.admin.products.getAllProducts.query({
+      page: 1,
+      limit: 1000,
+      published: null,
+      sortBy: "createdAt",
+      sortOrder: "desc",
+    });
+    products.value = response.products || [];
+  } catch (err: any) {
+    console.error("Error loading products:", err);
+  } finally {
+    isLoadingProducts.value = false;
+  }
+}
+
+async function fetchServices() {
+  try {
+    isLoadingServices.value = true;
+    const response = await trpc.service.all.query({
+      locale: locale.value,
+    });
+    services.value = response || [];
+  } catch (err: any) {
+    console.error("Error loading services:", err);
+  } finally {
+    isLoadingServices.value = false;
   }
 }
 
@@ -93,6 +135,8 @@ async function submitForm() {
       profession: profession.value || undefined,
       rating: rating.value,
       serviceTypeId: serviceTypeId.value || undefined,
+      productId: productId.value || undefined,
+      serviceId: serviceId.value || undefined,
       visitDate: visitDate.value || undefined,
       featured: featured.value,
       status: status.value,
@@ -125,7 +169,7 @@ function cancel() {
 // Load data on mounted
 onMounted(async () => {
   await checkAuth();
-  await fetchServiceTypes();
+  await Promise.all([fetchServiceTypes(), fetchProducts(), fetchServices()]);
 });
 </script>
 
@@ -308,6 +352,64 @@ onMounted(async () => {
                 class="mt-1 text-sm text-gray-500"
               >
                 {{ t('reviews.serviceType.loading') }}
+              </div>
+            </div>
+            <div>
+              <label
+                for="service"
+                class="block text-sm font-medium text-gray-700"
+              >
+                Service
+              </label>
+              <select
+                id="service"
+                v-model="serviceId"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                :disabled="isLoadingServices"
+              >
+                <option :value="null">Select a service</option>
+                <option
+                  v-for="service in services"
+                  :key="service.id"
+                  :value="service.id"
+                >
+                  {{ service.translations?.[0]?.title || `Service #${service.id}` }}
+                </option>
+              </select>
+              <div
+                v-if="isLoadingServices"
+                class="mt-1 text-sm text-gray-500"
+              >
+                Loading services...
+              </div>
+            </div>
+            <div>
+              <label
+                for="product"
+                class="block text-sm font-medium text-gray-700"
+              >
+                Product
+              </label>
+              <select
+                id="product"
+                v-model="productId"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                :disabled="isLoadingProducts"
+              >
+                <option :value="null">Select a product</option>
+                <option
+                  v-for="product in products"
+                  :key="product.id"
+                  :value="product.id"
+                >
+                  {{ product.translations?.[0]?.title || product.sku || `Product #${product.id}` }}
+                </option>
+              </select>
+              <div
+                v-if="isLoadingProducts"
+                class="mt-1 text-sm text-gray-500"
+              >
+                Loading products...
               </div>
             </div>
             <div>

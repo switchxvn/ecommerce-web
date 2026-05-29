@@ -9,6 +9,10 @@ const { t } = useLocalization();
 const { isDark, currentMode, setMode } = useDarkMode();
 const isOpen = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
+const translateWithFallback = (key: string, fallback: string) => {
+  const translated = t(key);
+  return translated && translated.trim() && translated.trim() !== key ? translated : fallback;
+};
 
 onClickOutside(menuRef, () => {
   isOpen.value = false;
@@ -34,7 +38,7 @@ const modeConfigs: { [key in ThemeMode]: { icon: IconName, labelKey: string } } 
 const modes = computed<ThemeModeOption[]>(() => 
   Object.entries(modeConfigs).map(([value, config]) => ({
     value: value as ThemeMode,
-    label: t(config.labelKey),
+    label: translateWithFallback(config.labelKey, value),
     icon: config.icon
   }))
 );
@@ -46,16 +50,16 @@ const getCurrentIcon = computed(() => {
 
 const getCurrentLabel = computed(() => {
   const mode = modes.value.find(m => m.value === currentMode.value);
-  return mode ? mode.label : t('theme.title');
+  return mode ? mode.label : translateWithFallback('theme.title', 'Giao diện');
 });
 </script>
 
 <template>
   <div ref="menuRef" class="relative">
     <button 
-      class="inline-flex items-center justify-between gap-1.5 sm:gap-1 px-3 py-2 sm:px-2 sm:py-1 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-white/20 dark:hover:bg-white/30 transition-[background] duration-150 text-gray-800 dark:text-white min-h-[40px] sm:min-h-auto w-full min-w-[120px] sm:min-w-auto"
+      class="inline-flex w-auto items-center justify-between gap-1.5 sm:gap-1 px-3 py-2 sm:px-2 sm:py-1 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-white/20 dark:hover:bg-white/30 transition-[background] duration-150 text-gray-800 dark:text-white min-h-[40px] sm:min-h-auto min-w-[120px] sm:min-w-auto"
       @click="isOpen = !isOpen"
-      :title="t('theme.title')"
+      :title="translateWithFallback('theme.title', 'Giao diện')"
     >
       <div class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex items-center justify-center flex-shrink-0">
         <Icon

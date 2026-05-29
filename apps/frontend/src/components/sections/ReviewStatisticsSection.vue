@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useLocalization } from '../../composables/useLocalization';
 import { useReviews } from '../../composables/useReviews';
-import { computed } from '../../composables/useVueComposables';
+import { computed } from 'vue';
 
 // Props cho section này
 const props = defineProps({

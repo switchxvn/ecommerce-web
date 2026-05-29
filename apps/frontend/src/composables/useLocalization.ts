@@ -2,11 +2,13 @@ import { ref, computed, watch } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import { useTrpc } from './useTrpc';
 import type { inferRouterOutputs } from '@trpc/server';
-import type { AppRouter } from '../../../backend/src/modules/trpc/trpc.router';
+import type { AppRouter } from '@backend/modules/trpc/routers';
+import { normalizeLocaleCode, resolveInitialLocaleCode } from '../utils/locale';
 
 // Import local translations
 import viLocalTranslations from '../i18n/locales/vi.json';
 import enLocalTranslations from '../i18n/locales/en.json';
+import koLocalTranslations from '../i18n/locales/ko.json';
 
 // Define types for tRPC outputs
 type RouterOutput = inferRouterOutputs<AppRouter>;
@@ -22,6 +24,26 @@ export interface Locale {
   isDefault: boolean;
 }
 
+const normalizeLocaleEntries = (locales: Locale[]): Locale[] => {
+  const seenCodes = new Set<string>();
+
+  return locales.reduce<Locale[]>((result, localeEntry) => {
+    const normalizedCode = normalizeLocaleCode(localeEntry.code, FALLBACK_LOCALE as 'en');
+
+    if (seenCodes.has(normalizedCode)) {
+      return result;
+    }
+
+    seenCodes.add(normalizedCode);
+    result.push({
+      ...localeEntry,
+      code: normalizedCode,
+    });
+
+    return result;
+  }, []);
+};
+
 // Define translations interface
 export interface Translations {
   [languageCode: string]: {
@@ -31,19 +53,147 @@ export interface Translations {
   };
 }
 
+const unwrapTranslationModule = (translations: any) => {
+  if (
+    translations &&
+    typeof translations === 'object' &&
+    'default' in translations &&
+    translations.default &&
+    typeof translations.default === 'object'
+  ) {
+    return translations.default;
+  }
+
+  return translations;
+};
+
 // Local translations mapping
 const localTranslations: { [key: string]: any } = {
-  vi: viLocalTranslations,
-  en: enLocalTranslations
+  vi: unwrapTranslationModule(viLocalTranslations),
+  en: unwrapTranslationModule(enLocalTranslations),
+  ko: unwrapTranslationModule(koLocalTranslations),
 };
 
 const FALLBACK_LOCALE = 'en';
 
+const deepMerge = (target: Record<string, any>, source: Record<string, any>) => {
+  Object.entries(source).forEach(([key, value]) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (!target[key] || typeof target[key] !== 'object') {
+        target[key] = {};
+      }
+      deepMerge(target[key], value as Record<string, any>);
+      return;
+    }
+
+    target[key] = value;
+  });
+};
+
+const mergeTranslations = (dbTranslations: Record<string, Record<string, string>>, langCode: string) => {
+  const result: { [namespace: string]: { [key: string]: string } } = {};
+  const localTranslationData = localTranslations[langCode] || {};
+
+  Object.entries(localTranslationData).forEach(([key, value]) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (!result[key]) result[key] = {};
+      deepMerge(result[key], value as Record<string, any>);
+      return;
+    }
+
+    if (!result.common) result.common = {};
+    result.common[key] = value as string;
+  });
+
+  Object.entries(dbTranslations).forEach(([namespace, translations]) => {
+    if (!result[namespace]) {
+      result[namespace] = {};
+    }
+
+    Object.entries(translations).forEach(([key, value]) => {
+      if (typeof value !== 'string') {
+        return;
+      }
+
+      const trimmedValue = value.trim();
+      const fullKey = `${namespace}.${key}`;
+
+      // Ignore placeholder values persisted in DB like "products.requestPrice"
+      // so bundled locale strings remain the effective fallback.
+      if (!trimmedValue || trimmedValue === fullKey) {
+        return;
+      }
+
+      result[namespace][key] = value;
+    });
+  });
+
+  return result;
+};
+
+const resolveNestedTranslation = (source: Record<string, any> | undefined, key: string) => {
+  if (!source) return undefined;
+
+  const normalizedSource = unwrapTranslationModule(source);
+
+  return key.split('.').reduce<any>((value, part) => {
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+
+    return unwrapTranslationModule(value[part]);
+  }, normalizedSource);
+};
+
+const coerceTranslationValue = (value: any): string | undefined => {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  if (typeof value.static === 'string') {
+    return value.static;
+  }
+
+  if (typeof value.source === 'string') {
+    return value.source;
+  }
+
+  if (value.body && typeof value.body.static === 'string') {
+    return value.body.static;
+  }
+
+  if (value.loc && typeof value.loc.source === 'string') {
+    return value.loc.source;
+  }
+
+  return undefined;
+};
+
+const getDocumentLocale = () =>
+  typeof document !== 'undefined' ? document.documentElement.lang : undefined;
+
+const localeStorage = useLocalStorage('locale', '');
+const initialLocale = resolveInitialLocaleCode(
+  localeStorage.value,
+  getDocumentLocale(),
+  'vi',
+);
+
+if (localeStorage.value !== initialLocale) {
+  localeStorage.value = initialLocale;
+}
+
 // Create singleton state
 const state = {
-  locale: useLocalStorage('locale', ''),
+  locale: localeStorage,
   locales: ref<Locale[]>([]),
-  translations: ref<Translations>({}),
+  translations: ref<Translations>({
+    [initialLocale]: mergeTranslations({}, initialLocale),
+  }),
   isLoading: ref(false),
   error: ref<string | null>(null),
   isInitialized: ref(false)
@@ -60,61 +210,12 @@ export function useLocalization() {
     return state.translations.value[state.locale.value];
   });
 
-  // Merge translations from database and local files
-  const mergeTranslations = (dbTranslations: Record<string, Record<string, string>>, langCode: string) => {
-    const result: { [namespace: string]: { [key: string]: string } } = {};
-    
-    // First, load all translations from local JSON file
-    const localTranslationData = localTranslations[langCode] || {};
-    console.log('Raw local translations:', localTranslationData);
-    
-    // Deep merge function for nested objects
-    const deepMerge = (target: any, source: any, namespace = '') => {
-      Object.entries(source).forEach(([key, value]) => {
-        const currentPath = namespace ? `${namespace}.${key}` : key;
-        
-        if (value && typeof value === 'object') {
-          // If it's an object, create namespace and recurse
-          if (!target[key]) target[key] = {};
-          deepMerge(target[key], value, currentPath);
-        } else {
-          // It's a value, assign it directly
-          target[key] = value;
-        }
-      });
-    };
-
-    // Process local translations first
-    Object.entries(localTranslationData).forEach(([key, value]) => {
-      if (value && typeof value === 'object') {
-        // Create namespace if it doesn't exist
-        if (!result[key]) result[key] = {};
-        deepMerge(result[key], value);
-      } else {
-        // Handle root level strings in common namespace
-        if (!result['common']) result['common'] = {};
-        result['common'][key] = value as string;
-      }
-    });
-
-    console.log('After processing local translations:', JSON.stringify(result, null, 2));
-
-    // Then merge database translations, overriding local ones if they exist
-    Object.entries(dbTranslations).forEach(([namespace, translations]) => {
-      if (!result[namespace]) {
-        result[namespace] = {};
-      }
-      Object.assign(result[namespace], translations);
-    });
-
-    console.log('Final merged translations:', JSON.stringify(result, null, 2));
-    return result;
-  };
-
   // Methods
-  const initializeLocalization = async () => {
+  const initializeLocalization = async (options?: { force?: boolean }) => {
+    const shouldForce = options?.force === true;
+
     // Skip if already initialized
-    if (state.isInitialized.value) return;
+    if (state.isInitialized.value && !shouldForce) return;
 
     state.isLoading.value = true;
     state.error.value = null;
@@ -125,13 +226,13 @@ export function useLocalization() {
         trpc.language.getLanguages.query(),
       ]);
 
-      state.locales.value = languages;
+      state.locales.value = normalizeLocaleEntries(languages);
 
       if (defaultLang && !state.locale.value) {
-        state.locale.value = defaultLang.code;
+        state.locale.value = normalizeLocaleCode(defaultLang.code, FALLBACK_LOCALE as 'en');
       }
 
-      const langCode = state.locale.value || defaultLang?.code || FALLBACK_LOCALE;
+      const langCode = normalizeLocaleCode(state.locale.value || defaultLang?.code || FALLBACK_LOCALE, FALLBACK_LOCALE as 'en');
       
       // First set local translations
       state.translations.value = {
@@ -151,7 +252,7 @@ export function useLocalization() {
       state.isInitialized.value = true;
     } catch (err) {
       console.error('Failed to initialize localization:', err);
-      const langCode = state.locale.value || FALLBACK_LOCALE;
+      const langCode = normalizeLocaleCode(state.locale.value || FALLBACK_LOCALE, FALLBACK_LOCALE as 'en');
       state.translations.value = {
         [langCode]: mergeTranslations({}, langCode)
       };
@@ -162,7 +263,8 @@ export function useLocalization() {
   };
 
   const fetchTranslations = async (languageCode: string) => {
-    if (state.translations.value[languageCode]) return; // Skip if already loaded
+    const normalizedLanguageCode = normalizeLocaleCode(languageCode, FALLBACK_LOCALE as 'en');
+    if (state.translations.value[normalizedLanguageCode]) return; // Skip if already loaded
     
     state.isLoading.value = true;
     state.error.value = null;
@@ -170,63 +272,56 @@ export function useLocalization() {
     // First set local translations
     state.translations.value = {
       ...state.translations.value,
-      [languageCode]: mergeTranslations({}, languageCode)
+      [normalizedLanguageCode]: mergeTranslations({}, normalizedLanguageCode)
     };
 
     try {
-      const dbTranslations = await trpc.language.getAllTranslations.query({ languageCode });
+      const dbTranslations = await trpc.language.getAllTranslations.query({ languageCode: normalizedLanguageCode });
       state.translations.value = {
         ...state.translations.value,
-        [languageCode]: mergeTranslations(dbTranslations, languageCode)
+        [normalizedLanguageCode]: mergeTranslations(dbTranslations, normalizedLanguageCode)
       };
     } catch (err) {
-      console.warn(`Failed to fetch database translations for ${languageCode}, using local translations only:`, err);
+      console.warn(`Failed to fetch database translations for ${normalizedLanguageCode}, using local translations only:`, err);
     } finally {
       state.isLoading.value = false;
     }
   };
 
   const switchLanguage = async (code: string) => {
-    if (code === state.locale.value) return;
+    const normalizedCode = normalizeLocaleCode(code, FALLBACK_LOCALE as 'en');
+    if (normalizedCode === state.locale.value) return;
     
     // If we don't have translations for this language yet, fetch them
-    if (!state.translations.value[code]) {
-      await fetchTranslations(code);
+    if (!state.translations.value[normalizedCode]) {
+      await fetchTranslations(normalizedCode);
     }
     
-    state.locale.value = code;
+    state.locale.value = normalizedCode;
     
     // Update HTML lang attribute
     if (process.client) {
-      document.documentElement.setAttribute('lang', code);
+      document.documentElement.setAttribute('lang', normalizedCode);
     }
   };
 
   // Translation function
   const t = (key: string, params?: Record<string, any>) => {
-    if (!state.locale.value || !state.translations.value[state.locale.value]) {
-      return key;
+    const activeLocale = normalizeLocaleCode(state.locale.value || initialLocale, FALLBACK_LOCALE as 'en');
+    const translations = state.translations.value[activeLocale] || mergeTranslations({}, activeLocale);
+    let value = coerceTranslationValue(resolveNestedTranslation(translations, key));
+
+    if (typeof value !== 'string' || value.trim() === key) {
+      value = coerceTranslationValue(resolveNestedTranslation(localTranslations[activeLocale], key));
     }
 
-    const translations = state.translations.value[state.locale.value];
-    
-    // Split key by dots to handle nested translations
-    const parts = key.split('.');
-    
-    // Navigate through the nested structure
-    let value: any = translations;
-    for (const part of parts) {
-      if (!value || typeof value !== 'object') {
-        console.warn(`Translation path broken at "${part}" for key "${key}"`);
-        return key;
-      }
-      value = value[part];
+    if ((typeof value !== 'string' || value.trim() === key) && activeLocale !== FALLBACK_LOCALE) {
+      value = coerceTranslationValue(resolveNestedTranslation(localTranslations[FALLBACK_LOCALE], key));
     }
 
-    // If we didn't find a string value at the end
-    if (typeof value !== 'string') {
+    if (typeof value !== 'string' || value.trim() === key) {
       console.warn(`Translation not found for key "${key}"`);
-      return key;
+      return '';
     }
 
     // Replace parameters in the translation string
@@ -240,10 +335,16 @@ export function useLocalization() {
   };
 
   // Watch for language changes to update HTML lang attribute
-  watch(state.locale, (newLocale) => {
+watch(state.locale, (newLocale) => {
     if (process.client && newLocale) {
-      localStorage.setItem('locale', newLocale);
-      document.documentElement.setAttribute('lang', newLocale);
+      const normalizedLocale = normalizeLocaleCode(newLocale, FALLBACK_LOCALE as 'en');
+      if (normalizedLocale !== newLocale) {
+        state.locale.value = normalizedLocale;
+        return;
+      }
+
+      localStorage.setItem('locale', normalizedLocale);
+      document.documentElement.setAttribute('lang', normalizedLocale);
     }
   });
 

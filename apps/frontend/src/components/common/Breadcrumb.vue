@@ -37,13 +37,13 @@ const breadcrumbClass = computed(() => {
 
 <template>
   <nav aria-label="Breadcrumb" :class="breadcrumbClass">
-    <ol class="breadcrumb__list flex items-center flex-wrap gap-2">
-      <li class="breadcrumb__item">
+    <ol class="breadcrumb__list flex flex-wrap items-center gap-x-1.5 gap-y-2 md:gap-2">
+      <li class="breadcrumb__item shrink-0">
         <NuxtLink to="/" class="breadcrumb__link breadcrumb__link--home inline-flex items-center text-gray-600 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors">
           <svg 
             v-if="showHomeIcon"
             xmlns="http://www.w3.org/2000/svg" 
-            class="breadcrumb__home-icon h-6 w-6" 
+            class="breadcrumb__home-icon h-5 w-5 md:h-6 md:w-6" 
             width="16" 
             height="16" 
             viewBox="0 0 24 24" 
@@ -56,32 +56,41 @@ const breadcrumbClass = computed(() => {
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
             <polyline points="9 22 9 12 15 12 15 22"></polyline>
           </svg>
-          <span class="breadcrumb__home-text ml-1">Trang chủ</span>
+          <span class="breadcrumb__home-text ml-1 hidden md:inline">Trang chủ</span>
         </NuxtLink>
       </li>
       
       <template v-if="items && items.length">
-        <li class="breadcrumb__separator" aria-hidden="true">
-          <span class="breadcrumb__separator-icon text-gray-400 dark:text-gray-600 mx-2">{{ separator }}</span>
+        <li class="breadcrumb__separator shrink-0" aria-hidden="true">
+          <span class="breadcrumb__separator-icon text-gray-400 dark:text-gray-600 mx-1 md:mx-2">{{ separator }}</span>
         </li>
         
         <template v-for="(item, index) in items" :key="index">
           <li 
-            class="breadcrumb__item"
-            :class="{ 'breadcrumb__item--active': index === items.length - 1 }"
+            :class="[
+            'breadcrumb__item',
+            index === items.length - 1 ? 'breadcrumb__item--active' : 'shrink-0',
+          ]"
           >
             <template v-if="index === items.length - 1 || !item.to">
-              <span class="breadcrumb__text text-primary-700 dark:text-primary-300 font-semibold">{{ item.label }}</span>
+              <span class="breadcrumb__text block text-primary-700 dark:text-primary-300 font-semibold">{{ item.label }}</span>
             </template>
             <template v-else>
-              <NuxtLink :to="item.to" class="breadcrumb__link text-gray-600 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors">
+              <NuxtLink :to="item.to" class="breadcrumb__link block max-w-[9rem] truncate text-gray-600 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors md:max-w-none">
                 {{ item.label }}
               </NuxtLink>
             </template>
           </li>
           
-          <li v-if="index < items.length - 1" class="breadcrumb__separator" aria-hidden="true">
-            <span class="breadcrumb__separator-icon text-gray-400 dark:text-gray-600 mx-2">{{ separator }}</span>
+          <li
+            v-if="index < items.length - 1"
+            :class="[
+              'breadcrumb__separator shrink-0',
+              index === items.length - 2 ? 'hidden md:list-item' : '',
+            ]"
+            aria-hidden="true"
+          >
+            <span class="breadcrumb__separator-icon text-gray-400 dark:text-gray-600 mx-1 md:mx-2">{{ separator }}</span>
           </li>
         </template>
       </template>
@@ -117,7 +126,7 @@ const breadcrumbClass = computed(() => {
 }
 
 .breadcrumb__item--active {
-  @apply font-medium text-base;
+  @apply basis-full pl-0 text-sm leading-snug md:basis-auto md:pl-0 md:text-base;
 }
 
 .breadcrumb__link {
@@ -133,7 +142,7 @@ const breadcrumbClass = computed(() => {
 }
 
 .breadcrumb__text {
-  @apply text-primary-700 dark:text-primary-300 font-semibold text-base;
+  @apply text-primary-700 dark:text-primary-300 font-semibold text-sm leading-snug md:text-base;
 }
 
 .breadcrumb__link--home {

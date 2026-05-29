@@ -24,8 +24,8 @@
   position: relative;
   width: 100%;
   z-index: 900;
-  transition: all 0.3s ease;
-  will-change: transform, position;
+  transition: box-shadow 0.2s ease;
+  will-change: box-shadow;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
 }
@@ -123,12 +123,6 @@
 /* Remove the body padding since we\'re handling position differently now */
 :global(body) {
   padding-top: 0;
-}
-
-/* Add a placeholder when nav is sticky to prevent content jump */
-.nav-wrapper.nav-sticky + * {
-  margin-top: var(--nav-height);
-  padding-top: 1px; /* Fix gap issue in some browsers */
 }
 
 .navigation-section .main-menu-item {
@@ -357,13 +351,13 @@
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(-8px) translateX(-50%);
+  transform: translateY(-8px);
 }
 
 .fade-enter-to,
 .fade-leave-from {
   opacity: 1;
-  transform: translateY(0) translateX(-50%);
+  transform: translateY(0);
 }
 
 /* Remove old mega menu styles that might conflict */
@@ -553,7 +547,7 @@
 }
 
 /* Add padding to body when nav is sticky to prevent content jump */
-body.has-sticky-nav {
+:global(body.has-sticky-nav) {
   padding-top: var(--nav-height, 64px);
 }
 
@@ -581,8 +575,18 @@ body.has-sticky-nav {
 
 /* Add responsive styles for top menu */
 @media (max-width: 768px) {
-  .nav-wrapper.nav-sticky {
+  .nav-wrapper {
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .nav-wrapper.nav-sticky {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   }
   
@@ -592,6 +596,10 @@ body.has-sticky-nav {
   
   .top-menu {
     display: none;
+  }
+
+  :global(body.has-sticky-nav) {
+    padding-top: 0;
   }
 }
 

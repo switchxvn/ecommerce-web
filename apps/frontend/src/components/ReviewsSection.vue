@@ -3,7 +3,7 @@ import { useAsyncData } from 'nuxt/app';
 import { useRouter } from 'vue-router';
 import { useLocalization } from '../composables/useLocalization';
 import { useTrpc } from '../composables/useTrpc';
-import { computed, ref, watch } from '../composables/useVueComposables';
+import { computed, ref, watch } from 'vue';
 import type { ReviewStatus } from '@ew/shared';
 // Import Swiper components
 import { Swiper, SwiperSlide } from 'swiper/vue';
@@ -307,8 +307,8 @@ const contentNeedsExpansion = (content?: string) => {
       </div>
       
       <!-- Loading state -->
-      <div v-if="isLoading" class="flex justify-center py-10">
-        <Loader size="lg" />
+      <div v-if="isLoading" class="py-4">
+        <CardGridSkeleton :item-count="3" :columns="3" :show-card-meta="false" />
       </div>
       
       <!-- Reviews grid -->

@@ -1,18 +1,18 @@
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
-import type { AppRouter } from '@backend/modules/trpc/routers';
-import { createTRPCClient } from '~/composables/useTrpc';
+import { ensureUniversalFetch } from '~/utils/trpcFetch';
 
 // Đường dẫn mặc định đến tRPC API
 const apiUrl = process.env.NUXT_PUBLIC_TRPC_API_URL || '/api/trpc';
+const universalFetch = ensureUniversalFetch();
 
 // Tạo tRPC client
-export const client = createTRPCProxyClient<AppRouter>({
+export const client = createTRPCProxyClient<any>({
   links: [
     httpBatchLink({
       url: apiUrl,
       // Bao gồm cookie trong request (quan trọng cho authentication)
       fetch(url, options) {
-        return fetch(url, {
+        return universalFetch(url, {
           ...options,
           credentials: 'include',
         });
@@ -20,6 +20,3 @@ export const client = createTRPCProxyClient<AppRouter>({
     }),
   ],
 });
-
-// Re-export createTRPCClient để sử dụng trong composables
-export { createTRPCClient }; 

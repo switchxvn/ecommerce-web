@@ -29,6 +29,22 @@ const mdiToLucideMap: Record<string, LucideIconName> = {
   // Add more mappings as needed
 };
 
+const legacyToLucideMap: Record<string, LucideIconName> = {
+  'ph:info': 'Info',
+  'ph:shopping-cart': 'ShoppingCart',
+  'ph:gear': 'Settings',
+  'ph:newspaper': 'Newspaper',
+  'ph:envelope': 'Mail',
+  'ph:facebook-logo': 'Facebook',
+  'ph:twitter-logo': 'Twitter',
+  'ph:linkedin-logo': 'Linkedin',
+  'ph:youtube-logo': 'Youtube',
+  'i-heroicons-currency-dollar': 'BadgeDollarSign',
+  'i-heroicons-phone': 'Phone',
+  'i-heroicons-arrow-down': 'ArrowDown',
+  'i-heroicons-arrow-right': 'ArrowRight',
+};
+
 // Cache for icon name conversions
 const iconNameCache = new Map<string, LucideIconName>();
 
@@ -48,6 +64,12 @@ export const getIconName = (iconName: string | null | undefined): LucideIconName
     return cachedName;
   }
 
+  const mappedLegacyIcon = legacyToLucideMap[iconName];
+  if (mappedLegacyIcon) {
+    iconNameCache.set(iconName, mappedLegacyIcon);
+    return mappedLegacyIcon;
+  }
+
   // Check if it's an MDI icon
   if (iconName.startsWith('mdi:')) {
     const lucideIcon = mdiToLucideMap[iconName];
@@ -59,8 +81,11 @@ export const getIconName = (iconName: string | null | undefined): LucideIconName
     iconName = iconName.split(':')[1];
   }
 
-  // Loại bỏ phần mở rộng file nếu có
-  const cleanName = iconName.replace(/\.[^/.]+$/, '');
+  // Loại bỏ tiền tố provider cũ và phần mở rộng file nếu có
+  const cleanName = iconName
+    .replace(/^i-[^-]+-/, '')
+    .replace(/^[a-z]+:/, '')
+    .replace(/\.[^/.]+$/, '');
 
   // Thử khớp trực tiếp trước
   if (LucideIcons[cleanName as LucideIconName]) {

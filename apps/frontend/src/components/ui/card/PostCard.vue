@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
-import LazyImage from '~/components/ui/LazyImage.vue';
+import AppImage from '~/components/ui/AppImage.vue';
 import type { Post } from '@ew/shared';
 import { useLocalization } from '~/composables/useLocalization';
 import { usePost } from '~/composables/usePost';
@@ -15,6 +15,7 @@ const { getTranslationByLocale } = usePost();
 const props = defineProps<{
   post: Post;
   compact?: boolean;
+  priority?: boolean;
   showDate?: boolean;
   showAuthor?: boolean;
   showExcerpt?: boolean;
@@ -79,9 +80,15 @@ watch(locale, () => {
         <!-- Hình ảnh bài viết - phiên bản lớn khi không compact -->
         <div v-if="!compact" class="image-container" :style="imageAspectRatio ? { aspectRatio: imageAspectRatio } : {}">
           <div class="relative w-full h-full">
-            <LazyImage 
+            <AppImage 
               :src="post.thumbnail || '/images/default-image.jpg'" 
               :alt="postTitle" 
+              :priority="!!priority"
+              :loading="priority ? 'eager' : 'lazy'"
+              :fetchpriority="priority ? 'high' : 'low'"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              width="640"
+              height="360"
               class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
             />
             <div v-if="overlayOpacity !== undefined" 
@@ -97,9 +104,14 @@ watch(locale, () => {
         <!-- Hình ảnh bài viết - phiên bản nhỏ khi compact -->
         <div v-else-if="compact && hasImage" class="compact-image-container">
           <div class="relative w-full h-full">
-            <LazyImage 
+            <AppImage 
               :src="post.thumbnail || '/images/default-image.jpg'" 
               :alt="postTitle" 
+              :loading="'lazy'"
+              :fetchpriority="'low'"
+              sizes="80px"
+              width="80"
+              height="80"
               class="w-full h-full object-cover"
             />
             <div v-if="overlayOpacity !== undefined" 

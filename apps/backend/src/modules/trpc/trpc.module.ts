@@ -109,10 +109,8 @@ import { AuthContext } from './contexts/auth.context';
       inject: [ConfigService],
     }),
 
-    // Global configuration module
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    // Reuse global ConfigModule registered in AppModule
+    ConfigModule,
     PaymentModule,
     DashboardModule,
   ],

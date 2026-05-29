@@ -35,7 +35,6 @@ export function useUpload() {
       onProgress(30)
       
       // Upload trực tiếp qua tRPC
-      console.log(`Uploading file through tRPC: ${file.name}, type: ${file.type}, size: ${file.size} bytes, folder: ${folder}`)
       const uploadResult = await trpc.upload.uploadFile.mutate({
         file: base64,
         filename: file.name,
@@ -48,7 +47,6 @@ export function useUpload() {
         throw new Error('Server returned invalid upload result')
       }
       
-      console.log('Upload completed successfully', uploadResult)
       onProgress(100)
       
       return {

@@ -36,7 +36,7 @@ export default defineNuxtRouteMiddleware(async (to: RouteLocationNormalized) => 
       }
     }
     
-    return navigateTo('/auth/login', { replace: true, external: true })
+    return navigateTo('/auth/login', { replace: true })
   }
 
   console.log('✅ Auth middleware: Token found, proceeding to page (will verify in layout)')

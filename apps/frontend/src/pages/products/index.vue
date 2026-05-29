@@ -7,6 +7,7 @@ import ProductMobileSidebar from "../../components/sidebar/ProductMobileSidebar.
 import ProductSidebar from "../../components/sidebar/ProductSidebar.vue";
 import { useLocalization } from "../../composables/useLocalization";
 import { useProduct, type ProductFilter, type ProductSortBy } from "../../composables/useProduct";
+import { usePageSeo } from "~/composables/usePageSeo";
 import { useTrpc } from "../../composables/useTrpc";
 
 const { t, locale } = useLocalization();
@@ -18,8 +19,13 @@ definePageMeta({
   layout: "default",
 });
 
-// SEO data
-const seoData = ref({
+const { data: seoDataState } = await useAsyncData(
+  () => `seo-products-${locale.value}`,
+  () => trpc.seo.getSeoByPath.query("/products").catch(() => null),
+  { watch: [locale] },
+);
+
+const seoData = computed(() => seoDataState.value || {
   title: "",
   description: "",
   keywords: "",
@@ -29,42 +35,59 @@ const seoData = ref({
   canonicalUrl: "",
 });
 
-// Fetch SEO data
-const fetchSeoData = async () => {
-  try {
-    const seo = await trpc.seo.getSeoByPath.query("/products");
-    if (seo) {
-      seoData.value = seo;
+const seoHubHighlights = [
+  {
+    title: 'Xe nâng dầu cho kho xưởng và bãi ngoài trời',
+    description: 'Phù hợp doanh nghiệp cần tải trọng 2.5-10 tấn, làm việc nhiều ca và ưu tiên động cơ mạnh, dễ bảo trì.',
+    to: '/danh-muc-san-pham/xe-nang-dau',
+  },
+  {
+    title: 'Xe nâng điện cho kho trong nhà và xưởng sạch',
+    description: 'Tối ưu cho môi trường cần vận hành êm, sạch, tiết kiệm chi phí nhiên liệu và dễ xoay trở trong lối đi hẹp.',
+    to: '/danh-muc-san-pham/xe-nang-dien',
+  },
+  {
+    title: 'Phụ tùng xe nâng sẵn hàng cho bảo trì nhanh',
+    description: 'Tập trung các nhóm phụ tùng hao mòn và linh kiện thay thế giúp giảm thời gian dừng xe khi vận hành thực tế.',
+    to: '/danh-muc-san-pham/phu-tung-xe-nang',
+  },
+];
 
-      // Update head with SEO data
-      useHead({
-        title: seo.title || t("products.title"),
-        meta: [
-          { name: "description", content: seo.description || t("products.description") },
-          { name: "keywords", content: seo.keywords || "" },
-          {
-            property: "og:title",
-            content: seo.ogTitle || seo.title || t("products.title"),
-          },
-          {
-            property: "og:description",
-            content: seo.ogDescription || seo.description || t("products.description"),
-          },
-          { property: "og:image", content: seo.ogImage || "" },
-        ],
-        link: [{ rel: "canonical", href: seo.canonicalUrl || window.location.href }],
-      });
-    }
-  } catch (error) {
-    console.error("Error fetching SEO data:", error);
+const seoHubQuickLinks = [
+  { label: 'Xe nâng dầu 2.5 tấn', to: '/san-pham/xe-nang-dau-mga-2-5-tan' },
+  { label: 'Xe nâng dầu 3.0 tấn', to: '/san-pham/xe-nang-dau-mga-3-0-tan' },
+  { label: 'Xe nâng dầu 5.0 tấn', to: '/san-pham/xe-nang-dau-mga-5-0-tan' },
+  { label: 'Xe nâng điện 2.0 tấn', to: '/san-pham/xe-nang-dien-mga-2-0-tan' },
+  { label: 'Xe nâng điện ngồi lái', to: '/san-pham/xe-nang-dien-ngoi-lai-mga-1-5-tan' },
+];
 
-    // Fallback to default SEO
-    useHead({
-      title: t("products.title"),
-      meta: [{ name: "description", content: t("products.description") }],
-    });
-  }
-};
+const seoHubFaqs = [
+  {
+    question: 'Nên chọn xe nâng dầu hay xe nâng điện?',
+    answer: 'Nếu doanh nghiệp vận hành ngoài trời, tải nặng và làm việc nhiều ca, xe nâng dầu thường phù hợp hơn. Với kho trong nhà, xưởng sạch và yêu cầu tiếng ồn thấp, xe nâng điện là lựa chọn hợp lý hơn.',
+  },
+  {
+    question: 'Nhóm tải trọng nào được hỏi báo giá nhiều nhất?',
+    answer: 'Thực tế nhu cầu tìm kiếm tập trung nhiều ở các dải 2.5 tấn, 3.0 tấn, 3.5 tấn và 5.0 tấn vì đây là nhóm cân bằng tốt giữa ngân sách đầu tư và khả năng vận hành.',
+  },
+  {
+    question: 'MGA có hỗ trợ khách hàng tại TPHCM không?',
+    answer: 'Có. Các cụm sản phẩm, dịch vụ thuê, sửa chữa và tư vấn nhanh trong chiến dịch này đều ưu tiên nội dung, nhu cầu triển khai và hỗ trợ khách hàng tại khu vực TPHCM.',
+  },
+];
+
+usePageSeo({
+  title: computed(() => seoData.value.title || t("products.title")),
+  description: computed(() => seoData.value.description || t("products.description")),
+  keywords: computed(() => seoData.value.keywords || ""),
+  ogTitle: computed(() => seoData.value.ogTitle || seoData.value.title || t("products.title")),
+  ogDescription: computed(() => seoData.value.ogDescription || seoData.value.description || t("products.description")),
+  image: computed(() => seoData.value.ogImage || ""),
+  canonicalUrl: computed(() => seoData.value.canonicalUrl || null),
+  currentPath: computed(() => route.path),
+  locale: computed(() => (locale.value === 'en' ? 'en' : 'vi')),
+  routeKey: 'products',
+});
 
 // Add type for specifications
 interface ProductSpecification {
@@ -79,7 +102,7 @@ const initialFilters = ref<ProductFilter>({
   maxPrice: route.query.maxPrice ? Number(route.query.maxPrice) : undefined,
   includeNullPrice: route.query.includeNullPrice === "true",
   categories: route.query.categories
-    ? String(route.query.categories).split(",")
+    ? String(route.query.categories).split(",").map(Number)
     : undefined,
   isFeatured: route.query.isFeatured === "true" ? true : undefined,
   isNew: route.query.isNew === "true" ? true : undefined,
@@ -191,7 +214,6 @@ const updateQueryParams = () => {
 
 // Initial fetch
 onMounted(() => {
-  fetchSeoData();
   fetchPriceRange();
   fetchProducts();
 });
@@ -224,7 +246,6 @@ watch(locale, async () => {
   await router.replace({ query: {} });
 
   // Then refresh data
-  await fetchSeoData();
   await fetchPriceRange();
   await fetchProducts();
 });
@@ -241,6 +262,51 @@ watch(locale, async () => {
           {{ seoData.description || t("products.description") }}
         </p>
       </div>
+
+      <section class="mb-8 grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+        <div class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+          <p class="text-sm font-semibold uppercase tracking-[0.18em] text-primary-600 dark:text-primary-400">
+            Giải pháp xe nâng theo nhu cầu thực tế
+          </p>
+          <h2 class="mt-3 text-2xl font-semibold text-gray-900 dark:text-white">
+            Hub sản phẩm cho nhóm keyword bán xe nâng, giá xe nâng và xe nâng công nghiệp
+          </h2>
+          <p class="mt-3 text-gray-600 dark:text-gray-300">
+            Trang này được tối ưu như điểm bắt đầu cho khách hàng đang tìm <strong>xe nâng</strong>, <strong>bán xe nâng</strong>, <strong>xe nâng công nghiệp</strong> và các nhóm tải trọng phổ biến trước khi đi sâu vào từng dòng xe dầu, xe điện hoặc phụ tùng liên quan.
+          </p>
+          <div class="mt-6 grid gap-4 md:grid-cols-3">
+            <NuxtLink
+              v-for="item in seoHubHighlights"
+              :key="item.to"
+              :to="item.to"
+              class="rounded-2xl border border-gray-200 bg-gray-50 p-4 transition hover:border-primary-500 hover:bg-primary-50 dark:border-gray-700 dark:bg-gray-900/50 dark:hover:border-primary-400"
+            >
+              <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ item.title }}</h3>
+              <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ item.description }}</p>
+            </NuxtLink>
+          </div>
+        </div>
+
+        <div class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+          <p class="text-sm font-semibold uppercase tracking-[0.18em] text-primary-600 dark:text-primary-400">
+            Báo giá nhanh theo tải trọng
+          </p>
+          <div class="mt-4 space-y-3">
+            <NuxtLink
+              v-for="item in seoHubQuickLinks"
+              :key="item.to"
+              :to="item.to"
+              class="flex items-center justify-between rounded-2xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-800 transition hover:border-primary-500 hover:text-primary-600 dark:border-gray-700 dark:text-gray-100 dark:hover:border-primary-400 dark:hover:text-primary-300"
+            >
+              <span>{{ item.label }}</span>
+              <span aria-hidden="true">→</span>
+            </NuxtLink>
+          </div>
+          <div class="mt-5 rounded-2xl bg-primary-50 p-4 text-sm text-primary-900 dark:bg-primary-900/30 dark:text-primary-100">
+            Ưu tiên khách hàng <strong>TPHCM</strong> đang cần tư vấn nhanh theo bài toán kho xưởng, ngân sách đầu tư hoặc nhu cầu so sánh xe nâng dầu và xe nâng điện.
+          </div>
+        </div>
+      </section>
 
       <!-- Mobile Sidebar -->
       <ProductMobileSidebar
@@ -295,22 +361,8 @@ watch(locale, async () => {
           </div>
 
           <!-- Loading State -->
-          <div v-if="isLoading" class="flex items-center justify-center py-12">
-            <div class="text-center">
-              <div
-                class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-500 border-r-transparent align-[-0.125em]"
-                role="status"
-              >
-                <span
-                  class="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]"
-                >
-                  {{ t("common.loading") }}...
-                </span>
-              </div>
-              <div class="mt-4 text-sm text-gray-600 dark:text-gray-400">
-                {{ t("common.loading") }}...
-              </div>
-            </div>
+          <div v-if="isLoading" class="py-2">
+            <CardGridSkeleton :item-count="6" :columns="3" />
           </div>
 
           <template v-else>
@@ -395,6 +447,26 @@ watch(locale, async () => {
           </template>
         </div>
       </div>
+
+      <section class="mt-10 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">
+          Câu hỏi thường gặp khi tìm mua xe nâng
+        </h2>
+        <div class="mt-6 grid gap-4 lg:grid-cols-3">
+          <article
+            v-for="item in seoHubFaqs"
+            :key="item.question"
+            class="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50"
+          >
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white">
+              {{ item.question }}
+            </h3>
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              {{ item.answer }}
+            </p>
+          </article>
+        </div>
+      </section>
     </div>
   </div>
 </template>

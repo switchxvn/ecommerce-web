@@ -824,10 +824,13 @@ onMounted(() => {
         
         <!-- Review Content Column -->
         <td class="px-6 py-4 whitespace-nowrap">
-          <div class="max-w-xs">
+            <div class="max-w-xs">
             <div class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ getReviewTitle(review) }}</div>
             <div v-if="review.serviceType" class="text-xs text-gray-500 dark:text-gray-400">
               {{ review.serviceType.name || review.serviceType.slug }}
+            </div>
+            <div v-if="review.service?.translations?.[0]?.title" class="text-xs text-gray-500 dark:text-gray-400">
+              {{ review.service.translations[0].title }}
             </div>
           </div>
         </td>
@@ -896,17 +899,17 @@ onMounted(() => {
           <div class="flex justify-end gap-2">
             <button
               @click="editReview(review.id)"
-              class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+              class="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors shrink-0"
               title="Edit review"
             >
-              <PencilIcon class="h-5 w-5" />
+              <PencilIcon class="h-6 w-6 shrink-0" />
             </button>
             <button
               @click="deleteReview(review.id)"
-              class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+              class="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors shrink-0"
               title="Delete review"
             >
-              <Trash2Icon class="h-5 w-5" />
+              <Trash2Icon class="h-6 w-6 shrink-0" />
             </button>
           </div>
         </td>

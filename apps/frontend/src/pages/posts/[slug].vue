@@ -4,15 +4,21 @@ import { useRoute, useRouter } from 'vue-router';
 import { useTrpc } from '~/composables/useTrpc';
 import { computed, ref, watch, onMounted, onBeforeMount } from 'vue';
 import RelatedPosts from '~/components/common/RelatedPosts.vue';
+import TableOfContents from '~/components/common/TableOfContents.vue';
 import PostDetailSidebar from '~/components/sidebar/PostDetailSidebar.vue';
 import Breadcrumb from '~/components/common/Breadcrumb.vue';
-import LazyImage from '~/components/ui/LazyImage.vue';
+import AppImage from '~/components/ui/AppImage.vue';
 import Icon from '~/components/ui/Icon.vue';
 import PostComments from '~/components/post/PostComments.vue';
 import { useI18n } from 'vue-i18n';
 import type { Post, Profile, Author, Tag } from '@ew/shared';
 import { usePost } from '~/composables/usePost';
 import { formatDateTime } from '~/utils/date';
+import { getAuthorName as resolveAuthorName } from '~/utils/author';
+import { usePageSeo } from '~/composables/usePageSeo';
+import { buildArticleSchema, resolveSeoCanonicalUrl } from '~/utils/seo';
+import { formatFullPostContent } from '~/utils/contentFormatter';
+import { getCategoryDetailRoute } from '~/utils/routes';
 
 // Định nghĩa alias cho URL tiếng Việt và tiếng Anh
 definePageMeta({
@@ -23,17 +29,18 @@ const route = useRoute();
 const router = useRouter();
 const { locale } = useI18n();
 const slug = route.params.slug as string;
+const siteUrl = useRuntimeConfig().public.siteUrl;
+const siteName = useRuntimeConfig().public.siteName;
+const siteLogoUrl = useRuntimeConfig().public.siteLogoUrl as string | undefined;
 
 const { 
   fetchPost, 
   getCurrentTranslation, 
   handleLocaleChange,
-  getBaseUrl,
-  getCanonicalUrl 
 } = usePost();
 
 // Sử dụng useAsyncData thay vì useLazyAsyncData để hỗ trợ SSR tốt hơn
-const { data: post, pending: loading, error, refresh } = useAsyncData(
+const { data: post, pending: loading, error, refresh } = await useAsyncData(
   `post-${slug}`,
   () => fetchPost(slug)
 );
@@ -52,37 +59,50 @@ const postThumbnail = computed(() => postData.value.thumbnail || '');
 const postOgImage = computed(() => currentTranslation.value?.ogImage || '');
 const postMetaKeywords = computed(() => currentTranslation.value?.metaKeywords || '');
 const postTags = computed(() => postData.value.tags || []);
+const postCategories = computed(() => postData.value.categories || []);
+const postContentId = computed(() => `post-content-${postId.value || 'detail'}`);
+const formattedPostContent = computed(() => formatFullPostContent(postContent.value));
+const hasTableOfContents = computed(() => /<h2\b[^>]*>.*?<\/h2>/i.test(formattedPostContent.value));
 
-const getAuthorName = computed(() => {
-  if (!postData.value.author) return 'Không xác định';
-  
-  const author = postData.value.author;
-  if (author.profile) {
-    const firstName = author.profile.firstName || '';
-    const lastName = author.profile.lastName || '';
-    if (firstName || lastName) {
-      return `${firstName} ${lastName}`.trim();
-    }
+function toIsoDateTime(value: string | Date | undefined | null): string | undefined {
+  if (!value) {
+    return undefined;
   }
-  return author.username || author.email?.split('@')[0] || 'Không xác định';
+
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+
+  return date.toISOString();
+}
+
+const postPublishedIso = computed(() => toIsoDateTime(postData.value.createdAt));
+const postModifiedIso = computed(() => toIsoDateTime(postData.value.updatedAt));
+const articleImages = computed(() => {
+  const images = [currentTranslation.value?.ogImage, postThumbnail.value]
+    .filter((image): image is string => Boolean(image))
+    .map((image) => image.trim())
+    .filter(Boolean);
+
+  return [...new Set(images)];
+});
+
+const authorName = computed(() => {
+  return resolveAuthorName(postData.value.author);
 });
 
 const authorInfo = computed(() => {
-  if (!postData.value.author) return undefined;
-  
-  const author = postData.value.author;
   return {
-    name: getAuthorName.value,
-    bio: author.profile?.bio || null
+    name: authorName.value,
+    bio: postData.value.author?.profile?.bio || null
   };
 });
 
-// Lấy URL hiện tại từ server - đặt ở ngoài computed
-const baseUrl = ref(getBaseUrl());
-
-// Sử dụng giá trị đã lưu trong ref
-const currentURL = computed(() => {
-  return baseUrl.value || '';
+const authorInitial = computed(() => {
+  const firstCharacter = authorName.value.trim().charAt(0);
+  return firstCharacter ? firstCharacter.toUpperCase() : '?';
 });
 
 // Watch locale changes to update content
@@ -95,60 +115,90 @@ const getLocalizedPath = () => {
   return locale.value === 'vi' ? '/bai-viet' : '/posts';
 };
 
+const postPrimaryCategory = computed(() => {
+  const category = postCategories.value[0];
+  const translation = category?.translations?.find((item: any) => item.locale === locale.value)
+    || category?.translations?.[0];
+
+  if (!category || !translation?.name || !translation?.slug) {
+    return null;
+  }
+
+  return {
+    name: translation.name,
+    to: getCategoryDetailRoute(String(translation.slug), locale.value),
+  };
+});
+
 // Breadcrumb items with localized paths
 const breadcrumbItems = computed(() => [
   {
-    label: locale.value === 'vi' ? 'Bài viết' : 'Posts',
-    to: getLocalizedPath()
+    label: postPrimaryCategory.value?.name || (locale.value === 'vi' ? 'Bài viết' : 'Posts'),
+    to: postPrimaryCategory.value?.to || getLocalizedPath()
   },
   {
     label: postTitle.value || (locale.value === 'vi' ? 'Chi tiết bài viết' : 'Post Detail')
   }
 ]);
 
-// Cập nhật canonical URL
-const canonicalUrl = computed(() => {
-  const translation = currentTranslation.value;
-  if (!translation) return '';
-  
-  const basePath = getLocalizedPath();
-  return `${baseUrl.value}${basePath}/${slug}`;
-});
-
 function goBack() {
   router.back();
 }
 
-// Thiết lập meta tags ở phía server
-useHead(() => {
-  const translation = currentTranslation.value;
-  if (!translation) return {};
+const postSlugByLocale = computed(() => ({
+  vi: postData.value.translations?.find((translation) => translation.locale === 'vi')?.slug,
+  en: postData.value.translations?.find((translation) => translation.locale === 'en')?.slug,
+}));
 
-  return {
-    title: translation.metaTitle || postTitle.value || 'Bài viết',
-    meta: [
-      { name: 'description', content: translation.metaDescription || postShortDescription.value || (postContent.value ? postContent.value.substring(0, 160) : '') || '' },
-      { name: 'keywords', content: translation.metaKeywords || '' },
-      { property: 'og:title', content: translation.ogTitle || postTitle.value || '' },
-      { property: 'og:description', content: translation.ogDescription || postShortDescription.value || (postContent.value ? postContent.value.substring(0, 160) : '') || '' },
-      { property: 'og:image', content: translation.ogImage || '' },
-      { property: 'og:url', content: canonicalUrl.value },
-      { property: 'og:type', content: 'article' },
-      { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: translation.ogTitle || postTitle.value || '' },
-      { name: 'twitter:description', content: translation.ogDescription || (postContent.value ? postContent.value.substring(0, 160) : '') || '' },
-      { name: 'twitter:image', content: translation.ogImage || '' }
-    ],
-    link: [
-      { rel: 'canonical', href: canonicalUrl.value }
-    ]
-  };
+const resolvedCanonicalUrl = computed(() =>
+  resolveSeoCanonicalUrl({
+    siteUrl,
+    currentPath: route.path,
+    locale: locale.value === 'en' ? 'en' : 'vi',
+    routeKey: 'post-detail',
+    slugByLocale: postSlugByLocale.value,
+    candidate: currentTranslation.value?.canonicalUrl || null,
+  }),
+);
+
+usePageSeo({
+  title: computed(() => currentTranslation.value?.metaTitle || postTitle.value || 'Bài viết'),
+  description: computed(() => currentTranslation.value?.metaDescription || postShortDescription.value || (postContent.value ? postContent.value.substring(0, 160) : '') || ''),
+  keywords: computed(() => currentTranslation.value?.metaKeywords || ''),
+  ogTitle: computed(() => currentTranslation.value?.ogTitle || postTitle.value || ''),
+  ogDescription: computed(() => currentTranslation.value?.ogDescription || postShortDescription.value || (postContent.value ? postContent.value.substring(0, 160) : '') || ''),
+  image: computed(() => currentTranslation.value?.ogImage || postThumbnail.value || ''),
+  ogType: 'article',
+  canonicalUrl: computed(() => currentTranslation.value?.canonicalUrl || null),
+  currentPath: computed(() => route.path),
+  locale: computed(() => (locale.value === 'en' ? 'en' : 'vi')),
+  routeKey: 'post-detail',
+  slugByLocale: postSlugByLocale,
+  breadcrumbs: computed(() => [
+    { name: locale.value === 'vi' ? 'Trang chủ' : 'Home', item: '/' },
+    { name: postPrimaryCategory.value?.name || (locale.value === 'vi' ? 'Bài viết' : 'Posts'), item: postPrimaryCategory.value?.to || getLocalizedPath() },
+    { name: postTitle.value || 'Post' },
+  ]),
+  schemas: computed(() => [
+    buildArticleSchema({
+      headline: postTitle.value || 'Bài viết',
+      description: postShortDescription.value || '',
+      url: resolvedCanonicalUrl.value,
+      image: articleImages.value,
+      datePublished: postPublishedIso.value,
+      dateModified: postModifiedIso.value,
+      authorName: authorName.value,
+      publisherName: siteName || undefined,
+      publisherLogoUrl: siteLogoUrl || undefined,
+      inLanguage: locale.value === 'en' ? 'en' : 'vi',
+    }),
+  ]),
 });
 </script>
 
 <template>
-  <div class="post-detail bg-gray-50 dark:bg-gray-900">
-    <div class="container mx-auto px-4 py-8">
+  <div class="post-detail">
+    <div class="post-detail__container">
       <!-- Breadcrumb thay thế cho nút quay lại -->
       <Breadcrumb 
         :items="breadcrumbItems" 
@@ -203,15 +253,21 @@ useHead(() => {
       </div>
       
       <!-- Post content with sidebar -->
-      <div v-else-if="post" class="post-detail__content flex flex-col lg:flex-row gap-8">
+      <div v-else-if="post" class="post-detail__content">
         <!-- Main content -->
-        <div class="post-detail__main flex-1 lg:max-w-[calc(100%-352px)]">
+        <div class="post-detail__main">
           <article class="post-detail__article">
             <!-- Featured image -->
             <div class="post-detail__featured-image">
-              <LazyImage 
+              <AppImage 
                 :src="postThumbnail || postOgImage" 
                 :alt="postTitle"
+                sizes="(max-width: 768px) 100vw, 900px"
+                :priority="true"
+                loading="eager"
+                fetchpriority="high"
+                width="1200"
+                height="675"
                 class="w-full h-auto rounded-lg"
                 :key="postId"
               />
@@ -229,12 +285,12 @@ useHead(() => {
               <div class="post-detail__meta">
                 <div class="post-detail__author">
                   <div class="post-detail__author-avatar">
-                    {{ authorInfo?.name.charAt(0) }}
+                    {{ authorInitial }}
                   </div>
                   <div class="post-detail__author-info">
                     <div class="post-detail__author-name">
                       <Icon name="User" :size="16" class="mr-1" />
-                      <span>{{ authorInfo?.name }}</span>
+                      <span>{{ authorInfo.name }}</span>
                     </div>
                     <div class="post-detail__date">
                       <Icon name="Calendar" :size="16" class="mr-1" />
@@ -248,11 +304,21 @@ useHead(() => {
                 </div>
               </div>
             </div>
+
+            <TableOfContents
+              v-if="hasTableOfContents"
+              :contentSelector="`#${postContentId}`"
+              :offset="100"
+              :collapsible="true"
+              :defaultCollapsed="false"
+              :title="locale === 'vi' ? 'Mục lục bài viết' : 'Table of Contents'"
+              class="post-detail__toc"
+            />
             
             <!-- Post content -->
             <div class="post-detail__body">
-              <div class="post-prose first-letter-styled">
-                <div v-html="postContent"></div>
+              <div :id="postContentId" class="post-prose first-letter-styled">
+                <div v-html="formattedPostContent"></div>
               </div>
             </div>
             
@@ -285,7 +351,7 @@ useHead(() => {
         </div>
         
         <!-- Sidebar -->
-        <div class="post-detail__sidebar lg:w-[320px] flex-shrink-0">
+        <div class="post-detail__sidebar">
           <PostDetailSidebar 
             :postId="postId" 
           />
@@ -329,40 +395,186 @@ useHead(() => {
 </template>
 
 <style scoped>
+.post-detail {
+  @apply min-h-screen bg-stone-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
+}
+
+.post-detail__container {
+  @apply mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8;
+}
+
+.post-detail__content {
+  @apply mt-4 flex flex-col gap-10 lg:mt-8 lg:grid lg:gap-10;
+}
+
+.post-detail__main {
+  @apply min-w-0;
+}
+
+.post-detail__article {
+  @apply overflow-hidden bg-transparent shadow-none;
+}
+
+.post-detail__featured-image {
+  @apply mb-5 overflow-hidden rounded-3xl bg-gray-200 dark:bg-gray-800;
+}
+
+.post-detail__header {
+  @apply mx-auto max-w-3xl border-b border-black/5 px-1 pb-6 pt-1 dark:border-white/10 sm:px-2 lg:px-0;
+}
+
+.post-detail__title {
+  @apply text-3xl font-semibold text-gray-950 dark:text-white sm:text-4xl lg:text-5xl;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.post-detail__short-description {
+  @apply my-5 max-w-2xl text-base font-normal italic leading-8 text-gray-600 dark:text-gray-300 sm:text-lg;
+  font-size: 1.05rem;
+}
+
+.post-detail__meta {
+  @apply flex flex-col gap-3 border-t border-black/5 pt-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.post-detail__author {
+  @apply min-w-0;
+}
+
+.post-detail__author-avatar {
+  @apply mr-3 h-10 w-10 text-base sm:h-12 sm:w-12 sm:text-lg;
+}
+
+.post-detail__author-info {
+  @apply min-w-0;
+}
+
+.post-detail__author-name,
+.post-detail__date {
+  @apply mb-0 gap-1.5 text-sm;
+}
+
+.post-detail__author-name {
+  @apply font-medium text-gray-800 dark:text-gray-100;
+}
+
+.post-detail__date,
+.post-detail__updated {
+  @apply text-gray-500 dark:text-gray-400;
+}
+
+.post-detail__updated {
+  @apply text-sm not-italic;
+}
+
+.post-detail__body {
+  @apply mx-auto max-w-3xl px-1 py-8 sm:px-2 lg:px-0 lg:py-10;
+}
+
+.post-detail__toc {
+  @apply mx-auto mt-6 w-full max-w-3xl;
+}
+
+.post-detail__toc :deep(.table-of-contents) {
+  @apply rounded-2xl bg-white dark:bg-gray-900;
+}
+
+.post-detail__toc :deep(.table-of-contents__header) {
+  @apply items-start gap-4;
+}
+
+.post-detail__toc :deep(.table-of-contents__title) {
+  @apply mb-0;
+}
+
+.post-detail__toc :deep(.table-of-contents__list) {
+  @apply mt-4;
+}
+
+.post-detail__toc :deep(.table-of-contents__item) {
+  @apply m-0;
+}
+
+.post-detail__toc :deep(.table-of-contents__link) {
+  @apply rounded-none px-0 py-0;
+}
+
+.post-detail__toc :deep(.table-of-contents__toggle) {
+  @apply mt-0.5;
+}
+
 .prose {
-  @apply text-gray-800;
+  @apply max-w-none text-gray-800 dark:text-gray-100 sm:leading-9;
+  font-size: 1.0625rem;
+  line-height: 2rem;
+}
+
+@media (min-width: 640px) {
+  .prose {
+    font-size: 1.125rem;
+  }
 }
 
 .prose p {
-  @apply mb-4;
+  @apply mb-5;
 }
 
 .prose a {
-  @apply text-blue-600 hover:text-blue-800 underline;
+  @apply break-words font-medium text-primary-600 underline decoration-primary-300 underline-offset-4 transition-colors hover:text-primary-700 dark:text-primary-300 dark:decoration-primary-500/40 dark:hover:text-primary-200;
 }
 
 .prose strong {
-  @apply font-bold;
+  @apply font-semibold text-gray-950 dark:text-white;
+}
+
+.prose h1 {
+  @apply mt-10 text-3xl font-semibold leading-tight text-gray-950 dark:text-white;
+  letter-spacing: -0.02em;
 }
 
 .prose h2 {
-  @apply text-2xl font-bold mt-8 mb-4;
+  @apply mb-4 mt-12 font-semibold leading-tight text-gray-950 dark:text-white sm:text-3xl;
+  font-size: 1.65rem;
+  letter-spacing: -0.02em;
 }
 
 .prose h3 {
-  @apply text-xl font-bold mt-6 mb-3;
+  @apply mb-3 mt-10 font-semibold leading-snug text-gray-950 dark:text-white sm:text-2xl;
+  font-size: 1.35rem;
 }
 
-.prose ul, .prose ol {
-  @apply my-4 pl-6;
+.prose h4 {
+  @apply mb-3 mt-8 text-xl font-semibold leading-snug text-gray-950 dark:text-white;
+}
+
+.prose ul,
+.prose ol {
+  @apply my-5 pl-6;
 }
 
 .prose li {
-  @apply mb-2;
+  @apply mb-2.5 pl-1;
 }
 
 .prose blockquote {
-  @apply pl-4 border-l-4 border-gray-300 italic my-4 text-gray-600;
+  @apply my-8 rounded-r-2xl border-l-4 border-primary-300 bg-white/70 py-3 pl-5 pr-4 italic text-gray-600 shadow-sm dark:border-primary-700 dark:bg-gray-900/70 dark:text-gray-300;
+}
+
+.prose img,
+.prose figure,
+.prose table,
+.prose pre {
+  @apply my-8 overflow-hidden rounded-2xl;
+}
+
+.prose pre {
+  @apply bg-gray-950 p-4 text-sm leading-7 text-gray-100;
+}
+
+.prose hr {
+  @apply my-10 border-black/10 dark:border-white/10;
 }
 
 /* Sử dụng :deep() để CSS có thể xuyên qua v-html */
@@ -380,50 +592,59 @@ useHead(() => {
   margin-top: 0.05em;
 }
 
-.post-detail__short-description {
-  @apply text-lg text-gray-600 dark:text-gray-300 my-4 font-medium italic;
-}
-
-.post-detail__author-name,
-.post-detail__date {
-  @apply flex items-center text-sm mb-1;
-}
-
-.post-detail__author-name {
-  @apply font-medium text-gray-800 dark:text-gray-200;
-}
-
-.post-detail__date {
-  @apply text-gray-600 dark:text-gray-400;
-}
-
-.post-detail__author-info {
-  @apply flex flex-col justify-center;
-}
-
 .post-detail__tags {
-  @apply mt-6 border-t border-gray-200 dark:border-gray-700 pt-4;
+  @apply mx-auto mt-2 flex max-w-3xl flex-col gap-3 border-t border-black/5 px-1 pb-4 pt-6 dark:border-white/10 sm:px-2 lg:px-0;
 }
 
 .post-detail__tags-title {
-  @apply flex items-center text-gray-600 dark:text-gray-400 mb-3 font-medium;
+  @apply mb-0 flex items-center text-sm font-medium uppercase text-gray-500 dark:text-gray-400;
+  letter-spacing: 0.14em;
 }
 
 .post-detail__tags-list {
-  @apply flex flex-wrap gap-2;
+  @apply flex flex-wrap gap-2.5;
 }
 
 .post-detail__tags-item {
-  @apply px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 inline-flex items-center;
-  height: 28px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  @apply inline-flex items-center justify-center rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 transition-colors duration-200 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800;
+  min-height: 2rem;
 }
 
 .tag-hash {
   @apply mr-0.5 text-gray-500 dark:text-gray-400 font-medium;
+}
+
+.post-detail__sidebar {
+  @apply border-t border-black/5 pt-8 dark:border-white/10 lg:border-t-0 lg:pt-0;
+}
+
+.post-detail__sidebar :deep(.post-sidebar) {
+  @apply mx-auto max-w-3xl lg:max-w-none;
+}
+
+.post-detail__sidebar :deep(.post-sidebar__shell) {
+  @apply bg-transparent shadow-none ring-0 lg:rounded-3xl lg:border lg:border-black/5 lg:bg-white lg:shadow-sm dark:lg:border-white/10 dark:lg:bg-gray-900;
+}
+
+.post-detail__sidebar :deep(.post-sidebar__section) {
+  @apply px-0 py-5 lg:px-5;
+}
+
+.post-detail__sidebar :deep(.post-sidebar__title) {
+  @apply text-sm font-semibold uppercase text-gray-500 dark:text-gray-400 lg:text-base lg:normal-case lg:tracking-normal;
+  letter-spacing: 0.14em;
+}
+
+.post-detail__sidebar :deep(hr) {
+  @apply mx-0 lg:mx-5;
+}
+
+.post-detail__sidebar :deep(.post-sidebar__category) {
+  @apply bg-white dark:bg-gray-900;
+}
+
+.post-detail__sidebar :deep(.subscribe-section) {
+  @apply px-0 lg:px-4;
 }
 
 .post-detail__not-found {
@@ -604,6 +825,51 @@ useHead(() => {
   @apply bg-white/80 dark:bg-gray-800/80 hover:bg-gray-50 dark:hover:bg-gray-700/90
     text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700
     transform hover:-translate-y-0.5 active:translate-y-0;
+}
+
+@media (max-width: 1023px) {
+  .post-detail__content {
+    grid-template-columns: none;
+  }
+
+  .post-detail__featured-image {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    border-radius: 0;
+  }
+
+  .post-prose :deep(p:first-of-type::first-letter) {
+    font-size: 3.1em;
+  }
+}
+
+@media (max-width: 639px) {
+  .post-detail__container {
+    padding-bottom: 3rem;
+  }
+
+  .post-detail__toc {
+    margin-top: 1.25rem;
+  }
+
+  .post-detail :deep(.breadcrumb) {
+    @apply mb-3;
+  }
+
+  .post-detail :deep(.breadcrumb__home),
+  .post-detail :deep(.breadcrumb__separator:first-of-type) {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .post-detail__content {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  .post-detail__sidebar :deep(.post-sidebar__title) {
+    letter-spacing: normal;
+  }
 }
 
 @keyframes floating {

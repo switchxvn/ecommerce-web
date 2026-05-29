@@ -9,7 +9,7 @@ import {
 import { ref, computed, inject, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 // @ts-ignore
-import { useColorMode, useHead } from '#imports'
+import { navigateTo, useColorMode, useHead } from '#imports'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '@/composables/useAuth'
 import { useLocalization } from '@/composables/useLocalization'
@@ -79,21 +79,15 @@ onMounted(async () => {
     
     if (!isAuthenticated) {
       console.log('❌ Layout: Authentication failed, redirecting to login')
-      // Use window.location for force reload
-      if (typeof window !== 'undefined') {
-        window.location.href = '/auth/login'
-        return
-      }
+      navigateTo('/auth/login', { replace: true })
+      return
     } else {
       console.log('✅ Layout: Authentication successful, user loaded')
     }
   } catch (error) {
     console.error('❌ Layout: Authentication check failed:', error)
-    // Redirect on auth failure
-    if (typeof window !== 'undefined') {
-      window.location.href = '/auth/login'
-      return
-    }
+    navigateTo('/auth/login', { replace: true })
+    return
   }
   
   router.afterEach((to) => {

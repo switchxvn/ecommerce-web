@@ -1,8 +1,8 @@
-import { useToast as useVueToast } from 'vue-toast-notification';
+import { useToastNotification } from '~/utils/vueToast';
 import 'vue-toast-notification/dist/theme-sugar.css';
 
 export const useNotificationToast = () => {
-  const toast = useVueToast();
+  const toast = useToastNotification();
 
   return {
     success: (message: string) => {

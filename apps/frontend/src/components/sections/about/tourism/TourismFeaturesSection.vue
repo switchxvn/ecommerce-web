@@ -9,7 +9,7 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import PhotoSwipe from 'photoswipe';
 import 'photoswipe/dist/photoswipe.css';
-import LazyImage from '@/components/ui/LazyImage.vue';
+import AppImage from '@/components/ui/AppImage.vue';
 
 interface Feature {
   id: number;
@@ -51,10 +51,6 @@ const swiperInstance = ref<SwiperType>();
 
 const onSwiper = (swiper: SwiperType) => {
   swiperInstance.value = swiper;
-};
-
-const onSlideChange = () => {
-  console.log('slide change');
 };
 
 const swiperOptions = {
@@ -178,7 +174,6 @@ const handleImageError = (event: Event) => {
         <Swiper
           v-bind="swiperOptions"
           @swiper="onSwiper"
-          @slideChange="onSlideChange"
           class="!pb-12"
         >
           <SwiperSlide 
@@ -191,7 +186,7 @@ const handleImageError = (event: Event) => {
               @click="initPhotoSwipe(index)"
             >
               <div class="aspect-w-4">
-                <LazyImage 
+                <AppImage 
                   :src="feature.image" 
                   :alt="feature.title"
                   fallback-src="/images/default-image.jpg"
@@ -358,4 +353,4 @@ const handleImageError = (event: Event) => {
     }
   }
 }
-</style> 
+</style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useLocalization } from '../composables/useLocalization';
 import { useTrpc } from '../composables/useTrpc';
-import { computed, ref, reactive, onMounted } from '../composables/useVueComposables';
+import { computed, ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useNotificationToast } from '../composables/useNotificationToast';
 import { Star } from 'lucide-vue-next';

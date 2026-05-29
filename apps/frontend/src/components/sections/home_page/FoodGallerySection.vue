@@ -234,6 +234,7 @@ import type { PhotoSwipeOptions } from 'photoswipe';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { Pagination, Navigation, Autoplay } from 'swiper/modules';
 import { UtensilsCrossed } from 'lucide-vue-next';
+import { useToastNotification } from '~/utils/vueToast';
 // CSS is already imported globally in nuxt.config.ts
 
 interface GalleryTranslation {
@@ -454,7 +455,7 @@ const fetchGalleries = async () => {
   } catch (error) {
     console.error('Error fetching galleries:', error);
     const { t } = useI18n();
-    useToast().add({
+    useToastNotification().add({
       id: 'gallery-error',
       title: t('common.error'),
       description: t('gallery.fetchError'),

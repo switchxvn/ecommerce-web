@@ -1,7 +1,49 @@
 import { CategoryType } from '@ew/shared';
+import { NotFoundException } from '@nestjs/common';
 import { TRPCError } from '@trpc/server';
+import { EntityNotFoundError } from 'typeorm';
 import { z } from 'zod';
 import { publicProcedure, router } from '../procedures';
+
+const normalizeCategoryPriceRange = (category: any): any => {
+  if (!category) {
+    return category;
+  }
+
+  return {
+    ...category,
+    priceRangeMin: category.priceRangeMin == null ? null : Number(category.priceRangeMin),
+    priceRangeMax: category.priceRangeMax == null ? null : Number(category.priceRangeMax),
+    parent: category.parent ? normalizeCategoryPriceRange(category.parent) : category.parent,
+    children: Array.isArray(category.children)
+      ? category.children.map((child: any) => normalizeCategoryPriceRange(child))
+      : category.children,
+  };
+};
+
+export function mapCategoryLookupError(error: unknown) {
+  if (error instanceof TRPCError) {
+    return error;
+  }
+
+  if (error instanceof EntityNotFoundError) {
+    return new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Category not found',
+      cause: error,
+    });
+  }
+
+  if (error instanceof NotFoundException) {
+    return new TRPCError({
+      code: 'NOT_FOUND',
+      message: error.message,
+      cause: error,
+    });
+  }
+
+  return error;
+}
 
 export const categoryRouter = router({
   all: publicProcedure
@@ -13,7 +55,7 @@ export const categoryRouter = router({
         ctx.logger.log('Fetching all categories');
         const locale = input?.locale || 'vi';
         const categories = await ctx.services.categoryFrontendService.findAll(locale);
-        return categories;
+        return categories.map((category) => normalizeCategoryPriceRange(category));
       } catch (error) {
         ctx.logger.error(`Error fetching all categories: ${error instanceof Error ? error.message : String(error)}`);
         throw new TRPCError({
@@ -34,7 +76,7 @@ export const categoryRouter = router({
       try {
         ctx.logger.log(`Fetching categories by type: ${input.type}`);
         const categories = await ctx.services.categoryFrontendService.findByType(input.type as CategoryType, input.locale);
-        return categories;
+        return categories.map((category) => normalizeCategoryPriceRange(category));
       } catch (error) {
         ctx.logger.error(`Error fetching categories by type ${input.type}: ${error instanceof Error ? error.message : String(error)}`);
         throw new TRPCError({
@@ -57,13 +99,15 @@ export const categoryRouter = router({
         try {
           const category = await ctx.services.categoryFrontendService.findOne(input.id, input.locale);
           ctx.logger.debug(`Successfully retrieved category ID: ${input.id}`);
-          return category;
+          return normalizeCategoryPriceRange(category);
         } catch (err) {
-          ctx.logger.warn(`Category not found for ID: ${input.id}`);
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: `Category with ID ${input.id} not found`,
-          });
+          const mappedError = mapCategoryLookupError(err);
+          if (mappedError instanceof TRPCError) {
+            ctx.logger.warn(`Category not found for ID: ${input.id}`);
+            throw mappedError;
+          }
+
+          throw mappedError;
         }
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -89,13 +133,15 @@ export const categoryRouter = router({
         try {
           const category = await ctx.services.categoryFrontendService.findBySlug(input.slug, input.locale);
           ctx.logger.debug(`Successfully retrieved category with slug: ${input.slug}`);
-          return category;
+          return normalizeCategoryPriceRange(category);
         } catch (err) {
-          ctx.logger.warn(`Category not found for slug: ${input.slug}`);
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: `Category with slug "${input.slug}" not found`,
-          });
+          const mappedError = mapCategoryLookupError(err);
+          if (mappedError instanceof TRPCError) {
+            ctx.logger.warn(`Category not found for slug: ${input.slug}`);
+            throw mappedError;
+          }
+
+          throw mappedError;
         }
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -119,7 +165,7 @@ export const categoryRouter = router({
         ctx.logger.log('Fetching featured categories');
         const locale = input?.locale || 'vi';
         const featuredCategories = await ctx.services.categoryFrontendService.findFeatured(locale);
-        return featuredCategories;
+        return featuredCategories.map((category) => normalizeCategoryPriceRange(category));
       } catch (error) {
         ctx.logger.error(`Error fetching featured categories: ${error instanceof Error ? error.message : String(error)}`);
         throw new TRPCError({
@@ -149,7 +195,7 @@ export const categoryRouter = router({
           .sort((a, b) => (b.posts?.length || 0) - (a.posts?.length || 0))
           .slice(0, limit);
         
-        return popularCategories;
+        return popularCategories.map((category) => normalizeCategoryPriceRange(category));
       } catch (error) {
         ctx.logger.error(`Error fetching popular categories: ${error instanceof Error ? error.message : String(error)}`);
         throw new TRPCError({
@@ -197,7 +243,7 @@ export const categoryRouter = router({
           .slice(0, limit)
           .map(({ latestPostDate, ...category }) => category);
         
-        return hotCategories;
+        return hotCategories.map((category) => normalizeCategoryPriceRange(category));
       } catch (error) {
         ctx.logger.error(`Error fetching hot categories: ${error instanceof Error ? error.message : String(error)}`);
         throw new TRPCError({
@@ -218,7 +264,7 @@ export const categoryRouter = router({
         ctx.logger.log('Fetching category tree');
         const locale = input?.locale || 'vi';
         const categoryTree = await ctx.services.categoryFrontendService.getCategoryTree(locale);
-        return categoryTree;
+        return categoryTree.map((category) => normalizeCategoryPriceRange(category));
       } catch (error) {
         ctx.logger.error(`Error fetching category tree: ${error instanceof Error ? error.message : String(error)}`);
         throw new TRPCError({

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue';
+import { onMounted, computed, ref, nextTick, watch } from 'vue';
 import { useFooter } from '~/composables/useFooter';
-import { useColorMode } from '@vueuse/core';
-import { Link, MapPin, Phone, Mail } from 'lucide-vue-next';
+import { useDarkMode } from '~/composables/useDarkMode';
+import { MapPin, Phone, Mail } from 'lucide-vue-next';
 import type { Footer } from '~/interfaces/footer.interface';
 import PhotoSwipe from 'photoswipe';
 import 'photoswipe/style.css';
@@ -19,8 +19,7 @@ const {
   fetchActiveFooter,
 } = useFooter();
 
-const colorMode = useColorMode();
-const isDark = computed(() => colorMode.value === 'dark');
+const { isDark } = useDarkMode();
 
 // Tính toán style dựa trên theme từ API
 const footerStyle = computed(() => {
@@ -45,22 +44,35 @@ declare global {
 }
 
 // Khởi tạo Facebook SDK
-const initFacebookSDK = () => {
-  return new Promise((resolve) => {
-    if (!document.getElementById('fb-root')) {
-      const fbRoot = document.createElement('div');
-      fbRoot.id = 'fb-root';
-      document.body.appendChild(fbRoot);
-    }
+const initFacebookSDK = async () => {
+  if (!document.getElementById('fb-root')) {
+    const fbRoot = document.createElement('div');
+    fbRoot.id = 'fb-root';
+    document.body.appendChild(fbRoot);
+  }
 
+  if (window.FB) return;
+
+  const existingScript = document.getElementById('facebook-jssdk') as HTMLScriptElement | null;
+  if (existingScript) {
+    if (window.FB) return;
+    await new Promise<void>((resolve) => {
+      existingScript.addEventListener('load', () => resolve(), { once: true });
+      existingScript.addEventListener('error', () => resolve(), { once: true });
+    });
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
     const script = document.createElement('script');
+    script.id = 'facebook-jssdk';
     script.src = 'https://connect.facebook.net/vi_VN/sdk.js#xfbml=1&version=v22.0';
     script.async = true;
     script.defer = true;
     script.crossOrigin = 'anonymous';
+    script.onload = () => resolve();
+    script.onerror = () => resolve();
     document.head.appendChild(script);
-    
-    resolve(true);
   });
 };
 
@@ -104,11 +116,25 @@ const removeHoverBackground = (event: MouseEvent) => {
 onMounted(async () => {
   try {
     await fetchActiveFooter();
-    await initFacebookSDK();
+    if (activeFooter.value?.fanpageUrl) {
+      await nextTick();
+      await initFacebookSDK();
+      setTimeout(() => reloadFacebookPlugin(), 100);
+    }
   } catch (err) {
     console.error('Error in Footer component:', err);
   }
 });
+
+watch(
+  () => activeFooter.value?.fanpageUrl,
+  async (fanpageUrl) => {
+    if (!fanpageUrl) return;
+    await nextTick();
+    await initFacebookSDK();
+    setTimeout(() => reloadFacebookPlugin(), 100);
+  }
+);
 </script>
 
 <template>
@@ -124,7 +150,16 @@ onMounted(async () => {
             <!-- Company Info Section -->
             <div class="col-span-1 md:col-span-4 backdrop-blur-sm rounded-xl p-6" style="background-color: rgba(255, 255, 255, 0.05);">
               <div class="company-brand mb-6">
-                <img :src="activeFooter.logoUrl" :alt="activeFooter.logoAlt" class="h-20 mb-4 object-contain" />
+                <AppImage
+                  :src="activeFooter.logoUrl"
+                  :alt="activeFooter.logoAlt"
+                  width="240"
+                  height="80"
+                  sizes="240px"
+                  loading="lazy"
+                  fetchpriority="low"
+                  customClass="h-20 mb-4 object-contain"
+                />
                 <h3 class="text-3xl font-extrabold mb-3 bg-gradient-to-r from-white to-white/90 bg-clip-text">
                   {{ activeFooter.companyInfo.name }}
                 </h3>
@@ -137,10 +172,15 @@ onMounted(async () => {
 
               <!-- Vertical Company Image -->
               <div v-if="activeFooter.settings?.verticalImage" class="vertical-image-container mt-6">
-                <img 
-                  :src="activeFooter.settings.verticalImage.url" 
+                <AppImage
+                  :src="activeFooter.settings.verticalImage.url"
                   :alt="activeFooter.settings.verticalImage.alt"
-                  class="w-full h-auto rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer"
+                  width="600"
+                  height="900"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  loading="lazy"
+                  fetchpriority="low"
+                  customClass="w-full h-auto rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer"
                   @click="() => {
                     if (activeFooter?.settings?.verticalImage) {
                       openPhotoSwipe(
@@ -158,7 +198,16 @@ onMounted(async () => {
                 <div v-for="cert in activeFooter.companyInfo.certifications" 
                      :key="cert.image" 
                      class="certification-item hover:scale-105 transition-all duration-300">
-                  <img :src="cert.image" :alt="cert.alt || ''" class="h-12 filter brightness-110" />
+                  <AppImage
+                    :src="cert.image"
+                    :alt="cert.alt || ''"
+                    width="96"
+                    height="48"
+                    sizes="96px"
+                    loading="lazy"
+                    fetchpriority="low"
+                    customClass="h-12 object-contain filter brightness-110"
+                  />
                   <span v-if="cert.text" class="text-xs mt-1 text-white/70">{{ cert.text }}</span>
                 </div>
               </div>
@@ -176,8 +225,10 @@ onMounted(async () => {
                              style="background-color: rgba(255, 255, 255, 0.1);"
                              @mouseover="addHoverBackground"
                              @mouseout="removeHoverBackground">
-                      <UIcon :name="link.icon || 'Link'" 
-                            class="w-6 h-6 text-white group-hover:text-white transition-colors duration-300" />
+                      <Icon
+                        :name="link.icon || 'Link'"
+                        class="w-6 h-6 text-white group-hover:text-white transition-colors duration-300"
+                      />
                       <span class="text-lg font-bold text-white group-hover:text-white transition-colors duration-300">{{ link.label }}</span>
                     </NuxtLink>
                   </li>
@@ -239,23 +290,24 @@ onMounted(async () => {
               <!-- Map with enhanced container -->
               <div v-if="activeFooter.mapUrl" 
                    class="map-container rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 mb-6">
-                <iframe :src="activeFooter.mapUrl + '&zoom=15&style=feature:all|element:labels.text.fill|color:0x000000|saturation:36|lightness:40&style=feature:all|element:labels.text.stroke|visibility:off&style=feature:administrative|element:geometry.stroke|color:0xdc2626|weight:1&style=feature:landscape|element:geometry.fill|color:0xfecaca&style=feature:poi|element:geometry.fill|color:0xfee2e2&style=feature:road|element:geometry.fill|color:0xffffff&style=feature:road|element:geometry.stroke|color:0xdc2626|weight:0.5&style=feature:water|element:geometry.fill|color:0xfca5a5'" 
-                        width="100%" 
-                        height="200" 
-                        style="border:0;" 
-                        allowfullscreen 
-                        loading="lazy" 
-                        referrerpolicy="no-referrer-when-downgrade"
-                        class="transition-all duration-500">
+                <iframe
+                  :src="activeFooter.mapUrl + '&zoom=15&style=feature:all|element:labels.text.fill|color:0x000000|saturation:36|lightness:40&style=feature:all|element:labels.text.stroke|visibility:off&style=feature:administrative|element:geometry.stroke|color:0xdc2626|weight:1&style=feature:landscape|element:geometry.fill|color:0xfecaca&style=feature:poi|element:geometry.fill|color:0xfee2e2&style=feature:road|element:geometry.fill|color:0xffffff&style=feature:road|element:geometry.stroke|color:0xdc2626|weight:0.5&style=feature:water|element:geometry.fill|color:0xfca5a5'"
+                  width="100%"
+                  height="200"
+                  style="border:0;"
+                  allowfullscreen
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                  class="transition-all duration-500"
+                >
                 </iframe>
               </div>
 
               <!-- Facebook Fanpage -->
               <div v-if="activeFooter.fanpageUrl" class="facebook-container rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 mb-6">
                 <ClientOnly>
-                  <div id="fb-root"></div>
-                  <div 
-                    class="fb-page" 
+                  <div
+                    class="fb-page"
                     :data-href="activeFooter.fanpageUrl"
                     data-tabs="timeline"
                     data-width=""
@@ -283,7 +335,7 @@ onMounted(async () => {
                    style="background-color: rgba(255, 255, 255, 0.1);"
                    @mouseover="addHoverBackground"
                    @mouseout="removeHoverBackground">
-                  <UIcon :name="icon.icon" class="w-7 h-7 text-white" />
+                  <Icon :name="icon.icon" class="w-7 h-7 text-white" />
                 </a>
               </div>
             </div>

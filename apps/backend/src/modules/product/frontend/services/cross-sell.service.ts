@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { CrossSellProduct } from '../../entities/cross-sell-product.entity';
 import { Product } from '../../entities/product.entity';
 import { ProductFrontendService } from './product-frontend.service';
@@ -31,7 +31,40 @@ export class CrossSellService {
       .map(cs => cs.relatedProduct)
       .filter(product => product.published);
 
-    // Thêm thông tin dịch cho sản phẩm
+    if (products.length > 0) {
+      return this.mapProductsForFrontend(products, locale);
+    }
+
+    const sourceProduct = await this.productRepository.findOne({
+      where: { id: productId, published: true },
+      relations: ['categories'],
+    });
+
+    const categoryIds = sourceProduct?.categories?.map((category) => category.id).filter(Boolean) || [];
+    if (categoryIds.length === 0) {
+      return [];
+    }
+
+    const fallbackProducts = await this.productRepository.find({
+      where: {
+        published: true,
+        id: Not(productId),
+        categories: {
+          id: In(categoryIds),
+        },
+      },
+      relations: ['translations'],
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+
+    return this.mapProductsForFrontend(
+      fallbackProducts.filter((product) => product.published),
+      locale,
+    );
+  }
+
+  private mapProductsForFrontend(products: Product[], locale: string): Product[] {
     return products.map(product => {
       const translation = this.productFrontendService.getTranslation(product, locale);
       return {

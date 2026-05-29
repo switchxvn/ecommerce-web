@@ -7,11 +7,16 @@ import { OrderModule } from './order/order.module';
 import { ZnsModule } from './zns/zns.module';
 import { CommonModule } from './common/common.module';
 import * as entities from '../../../apps/backend/src/modules/entities';
+import * as path from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: [
+        path.resolve(__dirname, '../../../.env'),
+        '.env',
+      ],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

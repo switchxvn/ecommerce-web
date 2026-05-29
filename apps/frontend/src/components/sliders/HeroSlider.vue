@@ -2,21 +2,32 @@
   <Swiper v-if="slides.length > 0" 
           v-bind="options" 
           class="w-full h-full rounded-lg overflow-hidden shadow-md hero-slider">
-    <SwiperSlide v-for="slide in slides" :key="slide.order" class="relative">
+    <SwiperSlide v-for="(slide, index) in slides" :key="slide.order" class="relative">
       <div class="relative w-full h-full">
-        <img 
-          :src="slide.image_url" 
+        <AppImage
+          class="absolute inset-0 w-full h-full"
+          :src="slide.image_url"
           :alt="slide.title"
-          class="absolute inset-0 w-full h-full object-cover"
+          width="1600"
+          height="900"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1600px"
+          format="webp"
+          :loading="index === 0 ? 'eager' : 'lazy'"
+          :fetchpriority="index === 0 ? 'high' : 'auto'"
+          :priority="index === 0"
+          customClass="w-full h-full object-cover"
         />
         
         <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
         
         <div class="absolute inset-0 flex items-center justify-center">
           <div class="container mx-auto px-4 text-center text-white">
-            <h1 class="text-4xl md:text-6xl font-bold mb-4">
+            <component
+              :is="index === 0 ? titleTag : fallbackTitleTag"
+              class="text-4xl md:text-6xl font-bold mb-4"
+            >
               {{ slide.title }}
-            </h1>
+            </component>
             <p class="text-lg md:text-xl mb-8 max-w-2xl mx-auto">
               {{ slide.description }}
             </p>
@@ -59,6 +70,14 @@ defineProps({
   options: {
     type: Object,
     required: true
+  },
+  titleTag: {
+    type: String,
+    default: 'h2'
+  },
+  fallbackTitleTag: {
+    type: String,
+    default: 'div'
   }
 });
 

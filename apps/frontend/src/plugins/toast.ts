@@ -1,9 +1,9 @@
-import { defineNuxtPlugin } from '#app'
-import ToastPlugin from 'vue-toast-notification'
+import { defineNuxtPlugin } from 'nuxt/app'
+import { ToastPlugin } from '~/utils/vueToast'
 // Sử dụng theme sugar để tránh xung đột CSS
 import 'vue-toast-notification/dist/theme-sugar.css'
 
-export default defineNuxtPlugin((nuxtApp) => {
+export default defineNuxtPlugin((nuxtApp: any) => {
   // Đăng ký plugin với các tùy chọn
   nuxtApp.vueApp.use(ToastPlugin, {
     position: 'top-right',

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue';
+import { onMounted, computed, ref, nextTick, watch } from 'vue';
 import { useFooter } from '~/composables/useFooter';
-import { useColorMode } from '@vueuse/core';
+import { useDarkMode } from '~/composables/useDarkMode';
 import type { Footer } from '~/interfaces/footer.interface';
 import FooterStatistics from './FooterStatistics.vue';
+import { resolveFooterContactIcon } from '~/utils/footerContactIcon';
 
 // Kiểm tra môi trường phát triển
 const isDev = ref(process.env.NODE_ENV === 'development');
@@ -16,8 +17,7 @@ const {
   fetchActiveFooter,
 } = useFooter();
 
-const colorMode = useColorMode();
-const isDark = computed(() => colorMode.value === 'dark');
+const { isDark } = useDarkMode();
 
 // Tính toán style dựa trên theme từ API
 const footerStyle = computed(() => {
@@ -44,24 +44,35 @@ declare global {
 }
 
 // Khởi tạo Facebook SDK
-const initFacebookSDK = () => {
-  return new Promise((resolve) => {
-    // Add fb-root if not exists
-    if (!document.getElementById('fb-root')) {
-      const fbRoot = document.createElement('div');
-      fbRoot.id = 'fb-root';
-      document.body.appendChild(fbRoot);
-    }
+const initFacebookSDK = async () => {
+  if (!document.getElementById('fb-root')) {
+    const fbRoot = document.createElement('div');
+    fbRoot.id = 'fb-root';
+    document.body.appendChild(fbRoot);
+  }
 
-    // Load Facebook SDK
+  if (window.FB) return;
+
+  const existingScript = document.getElementById('facebook-jssdk') as HTMLScriptElement | null;
+  if (existingScript) {
+    if (window.FB) return;
+    await new Promise<void>((resolve) => {
+      existingScript.addEventListener('load', () => resolve(), { once: true });
+      existingScript.addEventListener('error', () => resolve(), { once: true });
+    });
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
     const script = document.createElement('script');
+    script.id = 'facebook-jssdk';
     script.src = 'https://connect.facebook.net/vi_VN/sdk.js#xfbml=1&version=v22.0';
     script.async = true;
     script.defer = true;
     script.crossOrigin = 'anonymous';
+    script.onload = () => resolve();
+    script.onerror = () => resolve();
     document.head.appendChild(script);
-    
-    resolve(true);
   });
 };
 
@@ -75,12 +86,25 @@ const reloadFacebookPlugin = () => {
 onMounted(async () => {
   try {
     await fetchActiveFooter();
-    await initFacebookSDK();
-    console.log('Active footer:', activeFooter.value);
+    if (activeFooter.value?.fanpageUrl) {
+      await nextTick();
+      await initFacebookSDK();
+      setTimeout(() => reloadFacebookPlugin(), 100);
+    }
   } catch (err) {
     console.error('Error in Footer component:', err);
   }
 });
+
+watch(
+  () => activeFooter.value?.fanpageUrl,
+  async (fanpageUrl) => {
+    if (!fanpageUrl) return;
+    await nextTick();
+    await initFacebookSDK();
+    setTimeout(() => reloadFacebookPlugin(), 100);
+  }
+);
 </script>
 
 <template>
@@ -95,7 +119,16 @@ onMounted(async () => {
           
           <!-- Logo and Company Info -->
           <div class="col-span-1">
-            <img :src="activeFooter.logoUrl" :alt="activeFooter.logoAlt" class="h-26 mb-4" />
+            <AppImage
+              :src="activeFooter.logoUrl"
+              :alt="activeFooter.logoAlt"
+              width="240"
+              height="104"
+              sizes="240px"
+              loading="lazy"
+              fetchpriority="low"
+              customClass="h-26 mb-4 object-contain"
+            />
             <div class="company-info mb-4">
               <h3 class="font-bold mb-2 text-lg uppercase" style="color: #FF0000">{{ activeFooter.companyInfo.name }}</h3>
               <p>{{ activeFooter.companyInfo.registration }}</p>
@@ -108,7 +141,16 @@ onMounted(async () => {
                   <div v-for="cert in activeFooter.companyInfo.certifications" 
                       :key="cert.image" 
                       class="certification">
-                    <img :src="cert.image" :alt="cert.alt || ''" class="h-12" />
+                    <AppImage
+                      :src="cert.image"
+                      :alt="cert.alt || ''"
+                      width="96"
+                      height="48"
+                      sizes="96px"
+                      loading="lazy"
+                      fetchpriority="low"
+                      customClass="h-12 object-contain"
+                    />
                     <span v-if="cert.text" class="text-xs mt-1">{{ cert.text }}</span>
                   </div>
               </div>
@@ -169,22 +211,23 @@ onMounted(async () => {
 
             <!-- Map -->
             <div v-if="activeFooter.mapUrl" class="mt-6 h-[200px]">
-              <iframe :src="activeFooter.mapUrl" 
-                width="100%" 
-                height="100%" 
-                style="border:0;" 
-                allowfullscreen 
-                loading="lazy" 
-                referrerpolicy="no-referrer-when-downgrade">
+              <iframe
+                :src="activeFooter.mapUrl"
+                width="100%"
+                height="100%"
+                style="border:0;"
+                allowfullscreen
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+              >
               </iframe>
             </div>
 
             <!-- Facebook -->
             <div v-if="activeFooter.fanpageUrl" class="mt-6 w-full">
               <ClientOnly>
-                <div id="fb-root"></div>
-                <div 
-                  class="fb-page" 
+                <div
+                  class="fb-page"
                   :data-href="activeFooter.fanpageUrl"
                   data-tabs="timeline"
                   data-width=""
@@ -215,11 +258,11 @@ onMounted(async () => {
                     <span v-if="contact.position" class="text-base font-semibold" style="color: #FF0000">({{ contact.position }})</span>
                   </div>
                   <div v-if="contact.phone" class="flex items-center space-x-2">
-                    <Icon name="ph:phone" class="w-4 h-4" />
+                    <component :is="resolveFooterContactIcon('phone')" class="w-4 h-4" />
                     <a :href="'tel:' + contact.phone" class="hover:text-primary">{{ contact.phone }}</a>
                   </div>
                   <div v-if="contact.email" class="flex items-center space-x-2">
-                    <Icon name="ph:envelope" class="w-4 h-4" />
+                    <component :is="resolveFooterContactIcon('email')" class="w-4 h-4" />
                     <a :href="'mailto:' + contact.email" class="hover:text-primary">{{ contact.email }}</a>
                   </div>
                 </div>

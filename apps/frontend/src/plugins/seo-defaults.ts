@@ -11,9 +11,6 @@ export default defineNuxtPlugin({
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { property: 'og:type', content: 'website' },
         { name: 'twitter:card', content: 'summary_large_image' }
-      ],
-      link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
       ]
     });
 

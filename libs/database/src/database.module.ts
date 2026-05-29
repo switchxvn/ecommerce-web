@@ -8,6 +8,7 @@ import { ProductAttribute } from '../../../apps/backend/src/modules/product/enti
 import { ProductAttributeTranslation } from '../../../apps/backend/src/modules/product/entities/product-attribute-translation.entity';
 import { ProductAttributeValue } from '../../../apps/backend/src/modules/product/entities/product-attribute-value.entity';
 import { ProductAttributeValueTranslation } from '../../../apps/backend/src/modules/product/entities/product-attribute-value-translation.entity';
+import { ProductSidebarItem } from '../../../apps/backend/src/modules/product/entities/product-sidebar-item.entity';
 import { dataSourceOptions } from './config/typeorm.config';
 
 @Module({
@@ -22,6 +23,7 @@ import { dataSourceOptions } from './config/typeorm.config';
       ProductAttributeTranslation,
       ProductAttributeValue,
       ProductAttributeValueTranslation,
+      ProductSidebarItem,
     ]),
   ],
   exports: [

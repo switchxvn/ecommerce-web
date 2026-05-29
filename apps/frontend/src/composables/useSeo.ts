@@ -1,5 +1,5 @@
 import type { inferRouterOutputs } from '@trpc/server';
-import type { AppRouter } from '../../../backend/src/modules/trpc/trpc.router';
+import type { AppRouter } from '@backend/modules/trpc/routers';
 import { useTrpc } from './useTrpc';
 import { useRoute } from 'vue-router';
 import { ref, readonly } from 'vue';

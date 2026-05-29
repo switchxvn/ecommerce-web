@@ -101,7 +101,7 @@ export const useLocalization = () => {
       state.isInitialized.value = true;
       state.isLoading.value = false;
     }
-  });
+  };
 
   const setLocale = (localeCode: SupportedLocale) => {
     syncLocale(localeCode);

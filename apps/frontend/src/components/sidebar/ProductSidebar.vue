@@ -22,6 +22,7 @@ import { useCategory } from '~/composables/useCategory';
 import { useLocalization } from '~/composables/useLocalization';
 import { useProduct, type ProductFilter } from '~/composables/useProduct';
 import { useComponentStyles } from '~/composables/useComponentStyles';
+import { formatCategoryItemCount } from '~/utils/productListingSummary';
 
 interface SidebarContactInfo {
   title?: string;
@@ -102,6 +103,8 @@ const contactEmailHref = computed(() => {
   if (!contactInfo.value?.email) return '';
   return `mailto:${contactInfo.value.email}`;
 });
+const formatCategoryCountLabel = (count: number) =>
+  formatCategoryItemCount(count, t('products.items') || 'sản phẩm');
 
 // UI state
 const expandedSections = ref({
@@ -340,7 +343,7 @@ onMounted(() => {
               >
                 {{ getCategoryTranslation(category)?.name || "" }}
                 <span class="text-xs text-gray-500"
-                  >({{ category.products?.length || 0 }})</span
+                  >({{ formatCategoryCountLabel(category.products?.length || 0) }})</span
                 >
               </label>
             </div>

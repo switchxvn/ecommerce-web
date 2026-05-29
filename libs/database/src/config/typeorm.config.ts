@@ -2,8 +2,8 @@ import { DataSource, DataSourceOptions } from 'typeorm';
 import { config } from 'dotenv';
 import * as path from 'path';
 
-// Load environment variables from backend's .env file
-config({ path: path.resolve(process.cwd(), 'apps/backend/.env') });
+// Load environment variables from root .env file
+config({ path: path.resolve(process.cwd(), '.env') });
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',

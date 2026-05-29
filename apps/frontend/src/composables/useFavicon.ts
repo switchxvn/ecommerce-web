@@ -1,14 +1,13 @@
 import { ref, computed, watch } from 'vue';
-import { useHead } from '@unhead/vue';
+import { useHead } from '#imports';
 import { useTrpc } from './useTrpc';
-import { useTheme } from './useTheme';
 import type { RouterOutput } from '../types/trpc';
+import { buildFaviconLinks, resolveCurrentFaviconUrl } from '../utils/favicon';
 
-type FaviconData = NonNullable<RouterOutput['logo']['getActiveLogo']>;
+type FaviconData = RouterOutput['logo']['getActiveLogo'];
 
 export const useFavicon = () => {
   const trpc = useTrpc();
-  const { isDark } = useTheme();
   const favicon = ref<FaviconData | null>(null);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
@@ -24,8 +23,6 @@ export const useFavicon = () => {
       // Try to fetch favicon from API
       const faviconData = await trpc.logo.getActiveLogo.query({ type: 'favicon' });
       favicon.value = faviconData;
-      
-      console.log('Favicon fetched:', faviconData);
     } catch (err) {
       // If no favicon found or error, use default
       error.value = err instanceof Error ? err.message : 'Error fetching favicon';
@@ -38,57 +35,13 @@ export const useFavicon = () => {
 
   // Computed favicon URL based on theme
   const currentFaviconUrl = computed(() => {
-    if (!favicon.value) return defaultFavicon;
-    
-    // For favicon, usually we only use lightModeUrl, but check both
-    const faviconUrl = favicon.value.lightModeUrl || favicon.value.darkModeUrl;
-    return faviconUrl || defaultFavicon;
+    return resolveCurrentFaviconUrl(favicon.value, defaultFavicon);
   });
 
   // Set favicon in document head
   const setFavicon = (url: string) => {
-    // Determine correct MIME type based on file extension
-    const getMimeType = (faviconUrl: string) => {
-      if (faviconUrl.endsWith('.svg')) return 'image/svg+xml';
-      if (faviconUrl.endsWith('.png')) return 'image/png';
-      if (faviconUrl.endsWith('.gif')) return 'image/gif';
-      return 'image/x-icon'; // Default for .ico files
-    };
-
-    const mimeType = getMimeType(url);
-
     useHead({
-      link: [
-        {
-          rel: 'icon',
-          type: mimeType,
-          href: url
-        },
-        {
-          rel: 'shortcut icon',
-          type: mimeType,
-          href: url
-        },
-        // Apple touch icon (for iOS devices)
-        {
-          rel: 'apple-touch-icon',
-          sizes: '180x180',
-          href: url
-        },
-        // Various favicon sizes for different devices
-        {
-          rel: 'icon',
-          type: 'image/png',
-          sizes: '32x32',
-          href: url
-        },
-        {
-          rel: 'icon',
-          type: 'image/png',
-          sizes: '16x16',
-          href: url
-        }
-      ]
+      link: buildFaviconLinks(url)
     });
   };
 
@@ -96,25 +49,23 @@ export const useFavicon = () => {
   watch(currentFaviconUrl, (newUrl) => {
     if (newUrl) {
       setFavicon(newUrl);
-      console.log('Favicon updated:', newUrl);
     }
   }, { immediate: true });
 
   // Initialize favicon on server and client
   const initializeFavicon = async () => {
     if (process.server) {
-      // On server, set default favicon immediately for SSR
+      // Keep SSR favicon static and same-origin for crawlers.
       setFavicon(defaultFavicon);
-      console.log('SSR: Default favicon set');
+      return;
     }
-    
-    // Fetch favicon from API (works on both server and client)
+
+    // Fetch favicon from API on the client only.
     await fetchFavicon();
   };
 
   // Refresh favicon (useful for admin updates)
   const refreshFavicon = async () => {
-    console.log('Refreshing favicon...');
     await fetchFavicon();
   };
 
@@ -127,7 +78,6 @@ export const useFavicon = () => {
         const linkElement = element as HTMLLinkElement;
         linkElement.href = url;
       });
-      console.log('Client-side favicon updated:', url);
     }
   };
 
@@ -142,4 +92,4 @@ export const useFavicon = () => {
     updateFaviconUrl,
     setFavicon
   };
-}; 
+};

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue';
-import { useColorMode } from '@vueuse/core';
+import { useDarkMode } from '~/composables/useDarkMode';
+import { PlayCircle } from 'lucide-vue-next';
 import { useCssColorValue } from '~/composables/useColorUtils';
 
 interface Video {
@@ -59,12 +60,12 @@ const props = defineProps<{
   config?: VideoIntroConfig;
 }>();
 
-const colorMode = useColorMode();
-const isDark = computed(() => colorMode.value === 'dark');
+const { isDark } = useDarkMode();
 const { processColorValue } = useCssColorValue();
 
 const currentSlideIndex = ref(0);
 const videos = ref<Video[]>([]);
+const activatedVideos = ref<Set<number>>(new Set());
 const isLoading = ref(false);
 const error = ref<Error | null>(null);
 const contentRef = ref<HTMLElement | null>(null);
@@ -193,13 +194,30 @@ const getEmbedUrl = (url: string): string => {
   if (!videoId) return '';
   
   const params = new URLSearchParams({
-    autoplay: '0',
+    autoplay: '1',
     rel: '0',
     modestbranding: '1',
-    enablejsapi: '1'
+    playsinline: '1'
   });
   
   return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+};
+
+const getVideoThumbnail = (url: string, fallback?: string): string => {
+  const videoId = getVideoId(url);
+  if (videoId) {
+    return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+  }
+
+  return fallback || "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=400&auto=format&fit=crop";
+};
+
+const activateVideo = (videoId: number) => {
+  activatedVideos.value.add(videoId);
+};
+
+const isVideoActivated = (videoId: number) => {
+  return activatedVideos.value.has(videoId);
 };
 
 const handleImageError = (event: Event) => {
@@ -246,8 +264,8 @@ const handleImageError = (event: Event) => {
         <!-- Video Column -->
         <div class="relative flex-shrink-0 w-full md:column-width-video"
              :style="{ '--column-width-video': config.videoColumnWidth || '40%' }">
-          <div v-if="isLoading" class="flex justify-center items-center h-[400px] rounded-2xl bg-gray-100 dark:bg-gray-800">
-            <Loader size="lg" />
+          <div v-if="isLoading" class="h-[400px] rounded-2xl">
+            <HeroSkeleton :show-actions="false" />
           </div>
 
           <div v-else-if="error" class="text-red-500 text-center p-8 h-[400px] flex items-center justify-center rounded-2xl bg-red-50 dark:bg-red-900/20">
@@ -267,18 +285,36 @@ const handleImageError = (event: Event) => {
                 v-show="currentSlideIndex === index"
                 class="h-full w-full bg-gray-900 rounded-2xl overflow-hidden shadow-xl relative"
               >
-                <!-- YouTube iframe -->
-                <iframe
-                  v-if="getVideoId(video.videoUrl)"
-                  :src="getEmbedUrl(video.videoUrl)"
-                  class="w-full h-full"
-                  :title="video.title"
-                  frameborder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowfullscreen
-                ></iframe>
+                <template v-if="getVideoId(video.videoUrl)">
+                  <img
+                    v-if="!isVideoActivated(video.id)"
+                    :src="getVideoThumbnail(video.videoUrl, video.thumbnailUrl)"
+                    :alt="video.title"
+                    class="w-full h-full object-cover"
+                    loading="lazy"
+                    @error="handleImageError"
+                  />
+                  <iframe
+                    v-else
+                    :src="getEmbedUrl(video.videoUrl)"
+                    class="w-full h-full"
+                    :title="video.title"
+                    loading="lazy"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                  ></iframe>
+                  <button
+                    v-if="!isVideoActivated(video.id)"
+                    class="absolute inset-0 flex items-center justify-center bg-black/25 hover:bg-black/35 transition-colors"
+                    :aria-label="`Play ${video.title}`"
+                    @click="activateVideo(video.id)"
+                  >
+                    <PlayCircle class="w-16 h-16 text-white drop-shadow-lg" />
+                  </button>
+                </template>
                 <!-- Regular video or fallback image -->
-                <template v-else>
+                <template v-else-if="!getVideoId(video.videoUrl)">
                   <video
                     v-if="video.videoUrl"
                     class="w-full h-full object-contain"

@@ -19,12 +19,34 @@ fi
 
 # Set default container name prefix if not defined in .env
 APP_NAME="${APP_NAME:-cable-car}"
+IMAGE_TAG="${IMAGE_TAG:-latest}"
+
+# Optional first argument to override image tag/version (e.g. a5e9ba0)
+if [ -n "$1" ]; then
+    IMAGE_TAG="$1"
+fi
+
+# Optional second argument to select services (comma-separated)
+# Examples: all | frontend | backend,api | frontend,admin,nginx
+SERVICES="${SERVICES:-all}"
+if [ -n "$2" ]; then
+    SERVICES="$2"
+fi
+SERVICES=$(echo "$SERVICES" | tr -d '[:space:]')
+
+# Per-service tags (fallback to IMAGE_TAG)
+FRONTEND_TAG="${FRONTEND_TAG:-$IMAGE_TAG}"
+ADMIN_TAG="${ADMIN_TAG:-$IMAGE_TAG}"
+BACKEND_TAG="${BACKEND_TAG:-$IMAGE_TAG}"
+API_TAG="${API_TAG:-$IMAGE_TAG}"
+NGINX_TAG="${NGINX_TAG:-$IMAGE_TAG}"
 
 # Set default ports if not defined in .env
 NGINX_HTTP_PORT="${NGINX_HTTP_PORT:-80}"
 NGINX_HTTPS_PORT="${NGINX_HTTPS_PORT:-443}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 ADMIN_PORT="${ADMIN_PORT:-3001}"
+ADMIN_BASE_PATH="${ADMIN_BASE_PATH:-/admin/}"
 BACKEND_PORT="${BACKEND_PORT:-3333}"
 API_PORT="${API_PORT:-4000}"
 
@@ -71,6 +93,18 @@ wait_for_container() {
     return 1
 }
 
+# Function to check whether a service is selected
+service_enabled() {
+    local service="$1"
+    if [ "$SERVICES" = "all" ]; then
+        return 0
+    fi
+    case ",$SERVICES," in
+        *",$service,"*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 # Setup variables
 NETWORK_NAME="${NETWORK_NAME:-app-network}"
 FRONTEND_CONTAINER="${APP_NAME}-frontend"
@@ -81,120 +115,148 @@ NGINX_CONTAINER="${APP_NAME}-nginx"
 
 # Stop and remove existing containers first
 echo "Cleaning up existing containers..."
-stop_container "$FRONTEND_CONTAINER"
-stop_container "$ADMIN_CONTAINER"
-stop_container "$BACKEND_CONTAINER"
-stop_container "$API_CONTAINER"
-stop_container "$NGINX_CONTAINER"
+if service_enabled "frontend"; then stop_container "$FRONTEND_CONTAINER"; fi
+if service_enabled "admin"; then stop_container "$ADMIN_CONTAINER"; fi
+if service_enabled "backend"; then stop_container "$BACKEND_CONTAINER"; fi
+if service_enabled "api"; then stop_container "$API_CONTAINER"; fi
+if service_enabled "nginx"; then stop_container "$NGINX_CONTAINER"; fi
 
-# Clean up network after containers are stopped
+# Ensure network exists
 echo "Setting up docker network..."
-if docker network ls | grep -q $NETWORK_NAME; then
-    echo "Removing existing network $NETWORK_NAME..."
-    docker network rm $NETWORK_NAME || {
-        echo "Failed to remove network. Forcing cleanup..."
-        # Force disconnect any remaining containers
-        for container in $(docker network inspect $NETWORK_NAME -f '{{range .Containers}}{{.Name}} {{end}}'); do
-            echo "Force disconnecting $container from network..."
-            docker network disconnect -f $NETWORK_NAME $container || true
-        done
-        docker network rm $NETWORK_NAME
-    }
+if docker network inspect "$NETWORK_NAME" >/dev/null 2>&1; then
+    echo "Using existing network $NETWORK_NAME"
+else
+    echo "Creating network $NETWORK_NAME..."
+    docker network create "$NETWORK_NAME"
 fi
 
-echo "Creating network $NETWORK_NAME..."
-docker network create $NETWORK_NAME
-
-# Pull latest images with platform specification
-echo "Pulling latest images..."
-docker pull --platform linux/amd64 $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-frontend:latest
-docker pull --platform linux/amd64 $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-admin:latest
-docker pull --platform linux/amd64 $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-backend:latest
-docker pull --platform linux/amd64 $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-api:latest
-docker pull --platform linux/amd64 $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-nginx:latest
+# Pull selected images
+echo "Pulling images with tags:"
+if service_enabled "frontend"; then
+    echo "- frontend: $FRONTEND_TAG"
+    docker pull --platform linux/amd64 $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-frontend:$FRONTEND_TAG
+fi
+if service_enabled "admin"; then
+    echo "- admin: $ADMIN_TAG"
+    docker pull --platform linux/amd64 $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-admin:$ADMIN_TAG
+fi
+if service_enabled "backend"; then
+    echo "- backend: $BACKEND_TAG"
+    docker pull --platform linux/amd64 $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-backend:$BACKEND_TAG
+fi
+if service_enabled "api"; then
+    echo "- api: $API_TAG"
+    docker pull --platform linux/amd64 $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-api:$API_TAG
+fi
+if service_enabled "nginx"; then
+    echo "- nginx: $NGINX_TAG"
+    docker pull --platform linux/amd64 $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-nginx:$NGINX_TAG
+fi
 
 # Start backend
-echo "Starting backend..."
-docker run -d \
-    --platform linux/amd64 \
-    --name $BACKEND_CONTAINER \
-    --network $NETWORK_NAME \
-    --network-alias backend \
-    -p $BACKEND_PORT:3333 \
-    --env-file apps/backend/.env.production \
-    -e NODE_ENV=production \
-    --restart unless-stopped \
-    $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-backend:latest
+if service_enabled "backend"; then
+    echo "Starting backend..."
+    docker run -d \
+        --platform linux/amd64 \
+        --name $BACKEND_CONTAINER \
+        --network $NETWORK_NAME \
+        --network-alias backend \
+        -p $BACKEND_PORT:3333 \
+        --env-file .env \
+        -e NODE_ENV=production \
+        --restart unless-stopped \
+        $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-backend:$BACKEND_TAG
 
-# Wait for backend to be ready
-wait_for_container "$BACKEND_CONTAINER"
+    # Wait for backend to be ready
+    wait_for_container "$BACKEND_CONTAINER"
+fi
 
 # Start api
-echo "Starting api..."
-docker run -d \
-    --platform linux/amd64 \
-    --name $API_CONTAINER \
-    --network $NETWORK_NAME \
-    --network-alias api \
-    -p $API_PORT:4000 \
-    --env-file apps/api/.env.production \
-    -e NODE_ENV=production \
-    --restart unless-stopped \
-    $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-api:latest
+if service_enabled "api"; then
+    echo "Starting api..."
+    docker run -d \
+        --platform linux/amd64 \
+        --name $API_CONTAINER \
+        --network $NETWORK_NAME \
+        --network-alias api \
+        -p $API_PORT:4000 \
+        --env-file apps/api/.env.production \
+        -e NODE_ENV=production \
+        --restart unless-stopped \
+        $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-api:$API_TAG
 
-# Wait for api to be ready
-wait_for_container "$API_CONTAINER"
+    # Wait for api to be ready
+    wait_for_container "$API_CONTAINER"
+fi
 
 # Start frontend
-echo "Starting frontend..."
-docker run -d \
-    --platform linux/amd64 \
-    --name $FRONTEND_CONTAINER \
-    --network $NETWORK_NAME \
-    --network-alias frontend \
-    -p $FRONTEND_PORT:4201 \
-    --env-file apps/frontend/.env.production \
-    -e NODE_ENV=production \
-    -e HOST=0.0.0.0 \
-    --restart unless-stopped \
-    $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-frontend:latest
+if service_enabled "frontend"; then
+    echo "Starting frontend..."
+    docker run -d \
+        --platform linux/amd64 \
+        --name $FRONTEND_CONTAINER \
+        --network $NETWORK_NAME \
+        --network-alias frontend \
+        -p $FRONTEND_PORT:4201 \
+        --env-file apps/frontend/.env.production \
+        -e NODE_ENV=production \
+        -e HOST=0.0.0.0 \
+        -e FRONTEND_API_BASE=${FRONTEND_API_BASE:-http://backend:3333} \
+        -e NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE:-${FRONTEND_API_BASE:-http://backend:3333}} \
+        --restart unless-stopped \
+        $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-frontend:$FRONTEND_TAG
 
-# Wait for frontend to be ready
-wait_for_container "$FRONTEND_CONTAINER"
+    # Wait for frontend to be ready
+    wait_for_container "$FRONTEND_CONTAINER"
+fi
 
 # Start admin
-echo "Starting admin..."
-docker run -d \
-    --platform linux/amd64 \
-    --name $ADMIN_CONTAINER \
-    --network $NETWORK_NAME \
-    --network-alias admin \
-    -p $ADMIN_PORT:3001 \
-    --env-file apps/admin/.env.production \
-    -e NODE_ENV=production \
-    -e HOST=0.0.0.0 \
-    --restart unless-stopped \
-    $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-admin:latest
+if service_enabled "admin"; then
+    echo "Starting admin..."
+    docker run -d \
+        --platform linux/amd64 \
+        --name $ADMIN_CONTAINER \
+        --network $NETWORK_NAME \
+        --network-alias admin \
+        -p $ADMIN_PORT:3001 \
+        --env-file apps/admin/.env.production \
+        -e NODE_ENV=production \
+        -e NUXT_APP_BASE_URL=$ADMIN_BASE_PATH \
+        -e HOST=0.0.0.0 \
+        -e ADMIN_API_BASE=${ADMIN_API_BASE:-http://backend:3333} \
+        -e NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE:-${ADMIN_API_BASE:-http://backend:3333}} \
+        --restart unless-stopped \
+        $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-admin:$ADMIN_TAG
 
-# Wait for admin to be ready
-wait_for_container "$ADMIN_CONTAINER"
+    # Wait for admin to be ready
+    wait_for_container "$ADMIN_CONTAINER"
+fi
 
 # Start nginx
-echo "Starting nginx..."
-docker run -d \
-    --platform linux/amd64 \
-    --name $NGINX_CONTAINER \
-    --network $NETWORK_NAME \
-    -p $NGINX_HTTP_PORT:80 \
-    -p $NGINX_HTTPS_PORT:443 \
-    -v /etc/nginx/ssl:/etc/nginx/ssl:ro \
-    --restart unless-stopped \
-    $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-nginx:latest
+if service_enabled "nginx"; then
+    echo "Starting nginx..."
+    docker run -d \
+        --platform linux/amd64 \
+        --name $NGINX_CONTAINER \
+        --network $NETWORK_NAME \
+        -p $NGINX_HTTP_PORT:80 \
+        -p $NGINX_HTTPS_PORT:443 \
+        -v /etc/nginx/ssl:/etc/nginx/ssl:ro \
+        --restart unless-stopped \
+        $REGISTRY/$GITHUB_USERNAME/${APP_NAME}-nginx:$NGINX_TAG
 
-# Wait for nginx to be ready
-wait_for_container "$NGINX_CONTAINER"
+    # Wait for nginx to be ready
+    wait_for_container "$NGINX_CONTAINER"
+fi
 
 echo "Deployment completed successfully!"
+echo "Selected services: $SERVICES"
+echo "Image tags:"
+echo "- frontend: $FRONTEND_TAG"
+echo "- admin: $ADMIN_TAG"
+echo "- backend: $BACKEND_TAG"
+echo "- api: $API_TAG"
+echo "- nginx: $NGINX_TAG"
 echo "Services:"
 echo "- Frontend: http://localhost:$FRONTEND_PORT"
 echo "- Admin: http://localhost:$ADMIN_PORT"

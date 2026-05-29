@@ -3,8 +3,8 @@ const path = require('path');
 const { DefinePlugin } = require('webpack');
 const dotenv = require('dotenv');
 
-// Load environment variables from .env file
-const env = dotenv.config({ path: path.resolve(__dirname, '.env') }).parsed || {};
+// Load environment variables from root .env file
+const env = dotenv.config({ path: path.resolve(__dirname, '../../.env') }).parsed || {};
 
 // Convert environment variables to JSON strings
 const envKeys = Object.keys(env).reduce((prev, next) => {

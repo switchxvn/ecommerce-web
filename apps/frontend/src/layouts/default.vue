@@ -1,12 +1,11 @@
 <script setup lang="ts">
 // Auto-imported by Nuxt 3;
-import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useTrpc } from '../composables/useTrpc';
 import { useTheme } from '../composables/useTheme';
-import { useIpInfo } from '../composables/useIpInfo';
-import { nanoid } from 'nanoid';
 import { PageType } from '@ew/shared';
+import { AUTH_ROUTE_PATHS } from '../utils/routes';
 // Import components
 import CombinedNavbar from '../components/ui/CombinedNavbar.vue';
 import Footer from '../components/ui/Footer.vue';
@@ -16,20 +15,125 @@ import FloatingPhoneSupport from '~/components/ui/FloatingPhoneSupport.vue';
 import FloatingZaloSupport from '~/components/ui/FloatingZaloSupport.vue';
 import FloatingMessengerSupport from '~/components/ui/FloatingMessengerSupport.vue';
 import SimpleNavbar from '~/components/ui/SimpleNavbar.vue';
-import MaintenancePage from '~/components/MaintenancePage.vue';
 
 const router = useRouter();
 const trpc = useTrpc();
 const { getActiveTheme } = useTheme();
-const { getIpInfo } = useIpInfo();
 
 const user = ref<any>(null);
-const isLoading = ref(true);
-const isDarkMode = ref(false);
 const theme = ref<any>({ sections: [] }); // Initialize with empty sections
 const footer = ref<any>(null);
-const isMaintenanceMode = ref(false);
-const sessionId = ref<string>('');
+const activeSections = computed(() => {
+  const sections = Array.isArray(theme.value?.sections) ? theme.value.sections : [];
+  return sections.filter((section: any) => section && section.isActive);
+});
+
+const toRgb = (hex?: string) => {
+  if (!hex) return null;
+  const normalizedHex = hex.trim();
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(normalizedHex);
+  if (!result) return null;
+
+  return `${parseInt(result[1], 16)} ${parseInt(result[2], 16)} ${parseInt(result[3], 16)}`;
+};
+
+const buildThemeCssText = (themeColors?: any) => {
+  const lightColors = themeColors?.light;
+  const darkColors = themeColors?.dark;
+
+  if (!lightColors || !darkColors) {
+    return '';
+  }
+
+  const buildModeVariables = (colors: any) => {
+    const declarations: string[] = [];
+
+    const assignGroup = (prefix: string, group?: Record<string, string>, includeDirectAlias = false) => {
+      if (!group) return;
+
+      Object.entries(group).forEach(([shade, color]) => {
+        const rgb = toRgb(color);
+        if (!rgb) return;
+        declarations.push(`--color-${prefix}-${shade}:${rgb};`);
+        declarations.push(`--${prefix}-${shade}:${rgb};`);
+      });
+
+      if (includeDirectAlias && group['500']) {
+        const baseRgb = toRgb(group['500']);
+        if (baseRgb) {
+          declarations.push(`--${prefix}:${baseRgb};`);
+        }
+      }
+    };
+
+    assignGroup('primary', colors.primary, true);
+    assignGroup('secondary', colors.secondary);
+    assignGroup('tertiary', colors.tertiary);
+    assignGroup('yellow', colors.yellow, true);
+
+    const primary500 = toRgb(colors.primary?.['500']);
+    const secondary50 = toRgb(colors.secondary?.['50']);
+    const secondary100 = toRgb(colors.secondary?.['100']);
+    const secondary200 = toRgb(colors.secondary?.['200']);
+    const secondary400 = toRgb(colors.secondary?.['400']);
+    const secondary500 = toRgb(colors.secondary?.['500']);
+    const secondary800 = toRgb(colors.secondary?.['800']);
+    const secondary900 = toRgb(colors.secondary?.['900']);
+
+    if (primary500) declarations.push(`--primary:${primary500};`);
+    if (primary500) declarations.push(`--ring:${primary500};`);
+
+    if (colors === lightColors) {
+      declarations.push('--background:255 255 255;');
+      declarations.push(`--foreground:${secondary900 || '17 24 39'};`);
+      declarations.push('--card:255 255 255;');
+      declarations.push(`--card-foreground:${secondary900 || '17 24 39'};`);
+      declarations.push('--popover:255 255 255;');
+      declarations.push(`--popover-foreground:${secondary900 || '17 24 39'};`);
+      declarations.push(`--primary-foreground:255 255 255;`);
+      declarations.push(`--secondary:${secondary100 || '243 244 246'};`);
+      declarations.push(`--secondary-foreground:${secondary900 || '17 24 39'};`);
+      declarations.push(`--muted:${secondary100 || '243 244 246'};`);
+      declarations.push(`--muted-foreground:${secondary500 || '107 114 128'};`);
+      declarations.push(`--accent:${secondary100 || '243 244 246'};`);
+      declarations.push(`--accent-foreground:${secondary900 || '17 24 39'};`);
+      declarations.push(`--border:${secondary200 || '229 231 235'};`);
+      declarations.push(`--input:${secondary200 || '229 231 235'};`);
+      declarations.push(`--footer-bg:${colors.secondary?.['50'] || '#f8fafc'};`);
+      declarations.push(`--footer-text:${colors.secondary?.['900'] || '#111827'};`);
+      declarations.push(`--footer-border:${colors.secondary?.['200'] || '#e5e7eb'};`);
+      declarations.push(`--footer-link:${colors.secondary?.['500'] || '#64748b'};`);
+      declarations.push(`--footer-link-hover:${colors.primary?.['500'] || '#1d4ed8'};`);
+    } else {
+      declarations.push(`--background:${secondary900 || '17 24 39'};`);
+      declarations.push(`--foreground:${secondary50 || '249 250 251'};`);
+      declarations.push(`--card:${secondary800 || '31 41 55'};`);
+      declarations.push(`--card-foreground:${secondary50 || '249 250 251'};`);
+      declarations.push(`--popover:${secondary800 || '31 41 55'};`);
+      declarations.push(`--popover-foreground:${secondary50 || '249 250 251'};`);
+      declarations.push(`--primary-foreground:${secondary900 || '17 24 39'};`);
+      declarations.push(`--secondary:${secondary800 || '31 41 55'};`);
+      declarations.push(`--secondary-foreground:${secondary50 || '249 250 251'};`);
+      declarations.push(`--muted:${secondary800 || '31 41 55'};`);
+      declarations.push(`--muted-foreground:${secondary400 || '156 163 175'};`);
+      declarations.push(`--accent:${secondary800 || '31 41 55'};`);
+      declarations.push(`--accent-foreground:${secondary50 || '249 250 251'};`);
+      declarations.push(`--border:${secondary800 || '55 65 81'};`);
+      declarations.push(`--input:${secondary800 || '55 65 81'};`);
+      declarations.push(`--footer-bg:${colors.secondary?.['900'] || '#111827'};`);
+      declarations.push(`--footer-text:${colors.secondary?.['50'] || '#f9fafb'};`);
+      declarations.push(`--footer-border:${colors.secondary?.['800'] || '#374151'};`);
+      declarations.push(`--footer-link:${colors.secondary?.['400'] || '#9ca3af'};`);
+      declarations.push(`--footer-link-hover:${colors.primary?.['500'] || '#60a5fa'};`);
+    }
+
+    return declarations.join('');
+  };
+
+  return `:root{${buildModeVariables(lightColors)}}html.dark{${buildModeVariables(darkColors)}}`;
+};
+
+const themeCssText = computed(() => buildThemeCssText(theme.value?.colors));
 
 // GTM Configuration
 const gtmConfig = useState('gtm-id', () => null);
@@ -38,10 +142,12 @@ const gtmConfig = useState('gtm-id', () => null);
 useHead(() => {
   const scripts = [];
   const noscripts = [];
+  const styles = [];
   
   // Add GTM script if ID is available
   if (gtmConfig.value) {
     scripts.push({
+      key: 'google-tag-manager',
       innerHTML: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
@@ -50,13 +156,22 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     });
     
     noscripts.push({
+      key: 'google-tag-manager-noscript',
       innerHTML: `<iframe src="https://www.googletagmanager.com/ns.html?id=${gtmConfig.value}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`
+    });
+  }
+
+  if (themeCssText.value) {
+    styles.push({
+      key: 'active-theme-vars',
+      innerHTML: themeCssText.value,
     });
   }
   
   return {
     script: scripts,
-    noscript: noscripts
+    noscript: noscripts,
+    style: styles,
   };
 });
 
@@ -96,103 +211,25 @@ const getDefaultComponent = (type: string) => {
   return typeToComponent[type] || components.CombinedNavbar;
 };
 
-// Khởi tạo hoặc cập nhật session
-const initSession = async () => {
-  try {
-    // Lấy thông tin IP và country trước
-    const ipData = await getIpInfo();
-    if (!ipData || !ipData.ip) {
-      console.error('Failed to get IP information');
-      return; // Không tiếp tục nếu không lấy được thông tin IP
-    }
-    
-    // Kiểm tra sessionId trong localStorage
-    let localSessionId = localStorage.getItem('sessionId');
-    const isNewSession = !localSessionId;
-    
-    // Tạo sessionId mới nếu chưa có
-    if (isNewSession) {
-      localSessionId = nanoid(21); // Tạo ID duy nhất 21 ký tự
-      localStorage.setItem('sessionId', localSessionId);
-    }
-    
-    sessionId.value = localSessionId!;
-    
-    // Start hoặc update session trên backend
-    if (isNewSession) {
-      // Khởi tạo session mới với IP và country đã lấy được
-      await trpc.userSession.startSession.mutate({
-        sessionId: sessionId.value,
-        ipAddress: ipData.ip,
-        country: ipData.country,
-        userAgent: navigator.userAgent,
-        deviceInfo: {
-          screenWidth: window.screen.width,
-          screenHeight: window.screen.height,
-          language: navigator.language,
-          platform: navigator.platform
-        }
-      });
-    } else {
-      // Cập nhật session
-      await trpc.userSession.updateSession.mutate({
-        sessionId: sessionId.value,
-        lastActivity: new Date(),
-      });
-      
-      // Cập nhật country nếu có
-      if (ipData.country) {
-        await trpc.userSession.updateSession.mutate({
-          sessionId: sessionId.value,
-          country: ipData.country
-        });
-      }
-    }
-  } catch (error) {
-    console.error('Failed to initialize/update session:', error);
-  }
-};
+try {
+  const [activeTheme, activeFooter] = await Promise.all([
+    getActiveTheme({ pageType: PageType.COMMON }),
+    trpc.footer.getActiveFooter.query(),
+  ]);
 
-// Kiểm tra dark mode với defensive programming
-const checkDarkMode = () => {
-  if (process.client) {
-    isDarkMode.value = document?.documentElement?.classList?.contains('dark') ?? false;
-    
-    // Thêm class vào body để đảm bảo dark mode được áp dụng đúng cách
-    if (isDarkMode.value) {
-      document?.body?.classList?.add('dark-mode');
-    } else {
-      document?.body?.classList?.remove('dark-mode');
-    }
+  if (activeTheme) {
+    theme.value = activeTheme;
   }
-};
+
+  if (activeFooter) {
+    footer.value = activeFooter;
+  }
+} catch {
+  // Keep fallback layout data
+}
 
 onMounted(async () => {
   try {
-    // Khởi tạo hoặc cập nhật session
-    if (process.client) {
-      await initSession();
-      
-      // Set up interval để cập nhật thời gian hoạt động
-      const sessionUpdateInterval = setInterval(async () => {
-        if (sessionId.value) {
-          try {
-            await trpc.userSession.updateSession.mutate({
-              sessionId: sessionId.value,
-              lastActivity: new Date()
-            });
-          } catch (error) {
-            console.error('Failed to update session activity:', error);
-          }
-        }
-      }, 5 * 60 * 1000); // 5 phút
-      
-      // Clear interval khi component unmounted
-      onBeforeUnmount(() => {
-        clearInterval(sessionUpdateInterval);
-      });
-    }
-    
     // Kiểm tra xem người dùng đã đăng nhập chưa
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
@@ -203,51 +240,11 @@ onMounted(async () => {
         const currentUser = await trpc.auth.me.query();
         user.value = currentUser;
       } catch (error) {
-        console.error('Failed to validate token:', error);
         handleLogout();
       }
     }
     
-    // Lấy theme và navbar section với error handling
-    try {
-      const activeTheme = await getActiveTheme({ pageType: PageType.COMMON });
-      if (activeTheme) {
-        theme.value = activeTheme;
-      }
-    } catch (error) {
-      console.error('Failed to load theme:', error);
-    }
-    
-    // Fetch footer data
-    try {
-      const activeFooter = await trpc.footer.getActiveFooter.query();
-      if (activeFooter) {
-        footer.value = activeFooter;
-      }
-    } catch (error) {
-      console.error('Failed to load footer:', error);
-    }
-    
-    // Kiểm tra dark mode
-    checkDarkMode();
-    
-  } catch (error) {
-    console.error('Error in layout setup:', error);
-  } finally {
-    isLoading.value = false;
-  }
-});
-
-// Theo dõi thay đổi của isDarkMode
-watch(isDarkMode, () => {
-  // Cập nhật style khi dark mode thay đổi
-  if (typeof document !== 'undefined') {
-    if (isDarkMode.value) {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
-    }
-  }
+  } catch {}
 });
 
 async function handleLogout() {
@@ -263,88 +260,46 @@ async function handleLogout() {
     user.value = null;
     
     // Chuyển hướng đến trang đăng nhập
-    router.push('/login');
+    router.push(AUTH_ROUTE_PATHS.login);
   } catch (error) {
-    console.error('Logout failed:', error);
+    // No-op on logout error
   }
 }
 </script>
 
 <template>
   <div class="min-h-screen flex flex-col">
-    <template v-if="isLoading">
-      <div class="flex justify-center items-center min-h-screen">
-        <Loader size="lg" />
-      </div>
-    </template>
-    <template v-else>
-      <!-- Header -->
-      <template v-if="theme?.sections">
-        <component 
-          v-for="section in theme.sections" 
-          :key="section.id"
-          v-show="section.isActive"
-          :is="resolveComponent(section)"
-          :settings="section.settings"
-          :user="user"
-          :isLoading="isLoading"
-          @logout="handleLogout"
-        />
-      </template>
-      
-      <!-- Main content -->
-      <main class="flex-grow">
-        <slot />
-      </main>
-      
-      <!-- Footer -->
-      <component
-        v-if="footer"
-        :is="resolveFooterComponent(footer.componentName)"
-        v-bind="footer"
+    <!-- Header -->
+    <template v-if="activeSections.length">
+      <component 
+        v-for="section in activeSections" 
+        :key="section.id"
+        :is="resolveComponent(section)"
+        :settings="section.settings"
+        :user="user"
+        @logout="handleLogout"
       />
+    </template>
+
+    <!-- Main content -->
+    <main class="app-main flex-grow">
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <component
+      v-if="footer"
+      :is="resolveFooterComponent(footer.componentName)"
+      v-bind="footer"
+    />
+    <ClientOnly>
       <BackToTop />
       <FloatingPhoneSupport />
       <FloatingZaloSupport />
       <FloatingMessengerSupport />
-    </template>
+    </ClientOnly>
   </div>
 </template>
-
-<style>
-/* Đảm bảo dark mode được áp dụng đúng cách */
-body.dark-mode {
-  background-color: #111827 !important;
-  color: #f9fafb !important;
-}
-
-body.dark-mode .footer {
-  background-color: #111827 !important;
-  color: #f9fafb !important;
-  border-color: #374151 !important;
-}
-
-body.dark-mode .footer__title {
-  color: #f9fafb !important;
-}
-
-body.dark-mode .footer__link {
-  color: #9ca3af !important;
-}
-
-body.dark-mode .footer__link:hover {
-  color: #60a5fa !important;
-}
-
-body.dark-mode .footer__text {
-  color: #9ca3af !important;
-}
-
-body.dark-mode .footer__copyright {
-  border-color: #374151 !important;
-  color: #9ca3af !important;
-}
-</style>
 
 <style scoped>
 .header-wrapper {
@@ -383,5 +338,15 @@ body.dark-mode .footer__copyright {
 /* Add shadow when navbar is stuck */
 .navbar-without-logo {
   box-shadow: 0 2px 15px -3px rgba(0,0,0,0.07), 0 10px 20px -2px rgba(0,0,0,0.04);
+}
+
+.app-main {
+  padding-top: 0;
+}
+
+@media (max-width: 768px) {
+  .app-main {
+    padding-top: var(--mobile-nav-offset, 0px);
+  }
 }
 </style> 

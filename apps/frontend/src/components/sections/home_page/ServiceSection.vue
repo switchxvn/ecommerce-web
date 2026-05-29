@@ -4,6 +4,7 @@ import ServiceCard from '~/components/ui/card/ServiceCard.vue';
 import { useLocalization } from '~/composables/useLocalization';
 import { useI18n } from 'vue-i18n';
 import { useTrpc } from '~/composables/useTrpc';
+import { normalizeLocaleCode } from '~/utils/locale';
 
 type ButtonVariant = 'solid' | 'outline' | 'soft' | 'ghost' | 'link';
 
@@ -164,7 +165,7 @@ const { t: localT } = useI18n();
 const trpc = useTrpc();
 
 // State management
-const isLoading = ref(false);
+const isLoading = ref(true);
 const error = ref<string | null>(null);
 const services = ref<Service[]>([]);
 
@@ -179,7 +180,7 @@ async function fetchServices() {
   isLoading.value = true;
   error.value = null;
   try {
-    const result = await trpc.service.all.query({ locale: locale.value });
+    const result = await trpc.service.all.query({ locale: normalizeLocaleCode(locale.value) });
     services.value = result
       .filter(service => service.isActive)
       .map((service: any) => {
@@ -257,8 +258,12 @@ const gridStyles = computed(() => ({
       </h2>
 
       <!-- Loading state -->
-      <div v-if="isLoading" class="flex justify-center items-center py-12">
-        <Loader size="lg" />
+      <div v-if="isLoading" class="py-4">
+        <CardGridSkeleton
+          :item-count="mergedConfig.maxItems || 3"
+          :columns="mergedConfig.columns || 3"
+          media-height-class="h-24"
+        />
       </div>
       
       <!-- Error state -->

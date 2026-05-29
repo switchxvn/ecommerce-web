@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useTrpc } from '~/composables/useTrpc'
+import { usePageSeo } from '~/composables/usePageSeo'
+import { getCategoryDetailRoute, getCategoryListRoute } from '~/utils/routes'
 
 // Sử dụng composables
 const { t, locale } = useI18n()
@@ -52,37 +54,18 @@ onMounted(() => {
   fetchCategories()
 })
 
-// SEO
-useHead({
-  title: computed(() => t('categories.pageTitle') || 'Danh mục sản phẩm'),
-  meta: [
-    {
-      name: 'description',
-      content: computed(() => t('categories.pageDescription') || 'Khám phá tất cả danh mục sản phẩm của chúng tôi')
-    },
-    {
-      name: 'keywords',
-      content: computed(() => t('categories.pageKeywords') || 'danh mục, sản phẩm, mua sắm, thương mại điện tử')
-    },
-    // Open Graph
-    {
-      property: 'og:title',
-      content: computed(() => t('categories.pageTitle') || 'Danh mục sản phẩm')
-    },
-    {
-      property: 'og:description',
-      content: computed(() => t('categories.pageDescription') || 'Khám phá tất cả danh mục sản phẩm của chúng tôi')
-    },
-    {
-      property: 'og:type',
-      content: 'website'
-    }
-  ]
+usePageSeo({
+  title: computed(() => t('categories.pageTitle') || 'Danh muc san pham'),
+  description: computed(() => t('categories.pageDescription') || 'Khám phá tất cả danh mục sản phẩm của chúng tôi'),
+  keywords: computed(() => t('categories.pageKeywords') || 'danh muc, san pham, mua sam, thuong mai dien tu'),
+  currentPath: computed(() => route.path),
+  locale: computed(() => (locale.value === 'en' ? 'en' : 'vi')),
+  routeKey: 'categories',
 })
 
 // Xử lý chuyển hướng đến trang danh mục
 const navigateToCategory = (slug: string) => {
-  router.push(`/categories/${slug}`)
+  router.push(getCategoryDetailRoute(slug, locale.value))
 }
 </script>
 
@@ -112,9 +95,7 @@ const navigateToCategory = (slug: string) => {
 
       <!-- Trạng thái tải -->
       <div v-if="isLoading" class="py-12">
-        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <USkeleton v-for="i in 8" :key="i" class="h-64 w-full rounded-lg" />
-        </div>
+        <CardGridSkeleton :item-count="8" :columns="4" :show-card-action="false" />
       </div>
 
       <!-- Thông báo lỗi -->
@@ -143,7 +124,7 @@ const navigateToCategory = (slug: string) => {
               {{ t('categories.featuredCategories') }}
             </h2>
             <UButton
-              to="/categories"
+              :to="getCategoryListRoute(locale.value)"
               variant="ghost"
               color="gray"
               trailing-icon="i-heroicons-arrow-right"
@@ -161,11 +142,17 @@ const navigateToCategory = (slug: string) => {
               @click="navigateToCategory(category.slug)"
             >
               <div class="relative aspect-video overflow-hidden bg-gray-100 dark:bg-gray-900">
-                <img
+                <AppImage
                   v-if="category.ogImage"
+                  class="h-full w-full"
                   :src="category.ogImage"
                   :alt="category.name"
-                  class="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                  width="640"
+                  height="360"
+                  sizes="(max-width: 768px) 100vw, 25vw"
+                  loading="lazy"
+                  fetchpriority="low"
+                  customClass="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
                 />
                 <div v-else class="flex h-full items-center justify-center bg-gray-200 dark:bg-gray-700">
                   <UIcon name="i-heroicons-folder" class="h-12 w-12 text-gray-400 dark:text-gray-500" />
@@ -246,11 +233,17 @@ const navigateToCategory = (slug: string) => {
               @click="navigateToCategory(category.slug)"
             >
               <div class="relative aspect-video overflow-hidden bg-gray-100 dark:bg-gray-900">
-                <img
+                <AppImage
                   v-if="category.ogImage"
+                  class="h-full w-full"
                   :src="category.ogImage"
                   :alt="category.name"
-                  class="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                  width="640"
+                  height="360"
+                  sizes="(max-width: 768px) 100vw, 25vw"
+                  loading="lazy"
+                  fetchpriority="low"
+                  customClass="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
                 />
                 <div v-else class="flex h-full items-center justify-center bg-gray-200 dark:bg-gray-700">
                   <UIcon name="i-heroicons-folder" class="h-12 w-12 text-gray-400 dark:text-gray-500" />

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ProductType } from '@ew/shared';
-import { useHead } from '@unhead/vue';
 import {
   AlertCircle,
   AlertTriangle,
+  BadgeDollarSign,
   Calendar,
   Check,
   Clock,
@@ -15,29 +15,36 @@ import {
   ListOrdered,
   Mail,
   MapPin,
+  Phone,
   Tag,
   Ticket,
   Twitter
 } from 'lucide-vue-next';
 import { DatePicker } from 'v-calendar';
 import 'v-calendar/style.css';
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import AddToCartButton from "~/components/cart/AddToCartButton.vue";
 import Breadcrumb from "~/components/common/Breadcrumb.vue";
 import TableOfContents from "~/components/common/TableOfContents.vue";
-import CrossSellProducts from "~/components/product/CrossSellProducts.vue";
-import PriceRequestModal from "~/components/product/PriceRequestModal.vue";
-import QuickPurchaseModal from "~/components/product/QuickPurchaseModal.vue";
-import ProductDetailSidebar from "~/components/product/ProductDetailSidebar.vue";
-import ProductSpecifications from "~/components/product/ProductSpecifications.vue";
-import GlobalModal from "~/components/ui/GlobalModal.vue";
-import LazyImage from "~/components/ui/LazyImage.vue";
+import AppImage from "~/components/ui/AppImage.vue";
 import { useLocalization } from "~/composables/useLocalization";
+import { usePageSeo } from '~/composables/usePageSeo';
 import { useProductDetail } from '~/composables/useProductDetail';
+import { useSelectableGalleryImage } from '~/composables/useSelectableGalleryImage';
 import { useCart } from "~/composables/useCart";
 import { useSettings } from "~/composables/useSettings";
-import TierPricingTable from "~/components/product/TierPricingTable.vue";
+const CrossSellProducts = defineAsyncComponent(() => import('~/components/product/CrossSellProducts.vue'));
+const PriceRequestModal = defineAsyncComponent(() => import('~/components/product/PriceRequestModal.vue'));
+const QuickPurchaseModal = defineAsyncComponent(() => import('~/components/product/QuickPurchaseModal.vue'));
+const ProductDetailSidebar = defineAsyncComponent(() => import('~/components/product/ProductDetailSidebar.vue'));
+const ProductReviewsSection = defineAsyncComponent(() => import('~/components/product/ProductReviewsSection.vue'));
+const ProductSpecifications = defineAsyncComponent(() => import('~/components/product/ProductSpecifications.vue'));
+const GlobalModal = defineAsyncComponent(() => import('~/components/ui/GlobalModal.vue'));
+const TierPricingTable = defineAsyncComponent(() => import('~/components/product/TierPricingTable.vue'));
+import { buildProductSchema, resolveSeoCanonicalUrl } from '~/utils/seo';
+import { getLocalizedRoute } from '~/utils/routes';
+import { resolveProductBreadcrumbCategory, resolveProductCategoryLink } from '~/utils/productBreadcrumb';
 
 // Định nghĩa interface cho PriceRequest
 interface PriceRequest {
@@ -58,6 +65,7 @@ interface PriceRequest {
 const { t, locale } = useLocalization();
 const route = useRoute();
 const router = useRouter();
+const siteUrl = useRuntimeConfig().public.siteUrl;
 
 // Sử dụng composable useProductDetail
 const {
@@ -77,7 +85,8 @@ const {
   shareTitle,
   shareDescription,
   shareImage,
-  canonicalUrl,
+  productReviewAggregate,
+  productReviews,
   activeTab,
   isPriceRequestModalOpen,
   selectedAttributes,
@@ -108,6 +117,7 @@ const {
 
 const { getPublicSettingValueByKey } = useSettings();
 const quickPurchaseEnabled = ref(false);
+const { activeImage, selectImage } = useSelectableGalleryImage(computed(() => productData.value?.thumbnail));
 
 try {
   const quickPurchaseSetting = await getPublicSettingValueByKey('enable_quick_purchase', 'false');
@@ -195,66 +205,176 @@ const closeQuickPurchaseModal = () => {
   isQuickPurchaseModalOpen.value = false;
 };
 
-// Thiết lập meta tags (reactive cho SSR/client navigation)
-useHead(() => ({
-  title: productData.value?.metaTitle || productTitle.value || "Chi tiết sản phẩm",
-  meta: [
-    {
-      name: "description",
-      content: productData.value?.metaDescription || productShortDescription.value || "",
-    },
-    {
-      name: "keywords",
-      content: productData.value?.metaKeywords || "",
-    },
-    {
-      property: "og:title",
-      content: productData.value?.ogTitle || productTitle.value || "",
-    },
-    {
-      property: "og:description",
-      content:
-        productData.value?.ogDescription ||
-        productData.value?.metaDescription ||
-        productShortDescription.value ||
-        "",
-    },
-    {
-      property: "og:image",
-      content: productData.value?.ogImage || productData.value?.thumbnail || "",
-    },
-    {
-      property: "og:url",
-      content: canonicalUrl.value,
-    },
-    {
-      property: "og:type",
-      content: "product",
-    },
-    {
-      name: "twitter:card",
-      content: "summary_large_image",
-    },
-    {
-      name: "twitter:title",
-      content: productData.value?.ogTitle || productTitle.value || "",
-    },
-    {
-      name: "twitter:description",
-      content: productData.value?.ogDescription || productShortDescription.value || "",
-    },
-    {
-      name: "twitter:image",
-      content: productData.value?.ogImage || productData.value?.thumbnail || "",
-    },
-  ],
-  link: [
-    {
-      rel: "canonical",
-      href: canonicalUrl.value,
-    },
-  ],
+const activeTranslation = computed(() =>
+  productData.value?.translations?.find((translation: any) => translation.locale === currentLocale.value) ||
+  productData.value?.translations?.[0]
+);
+
+const seoTitle = computed(
+  () =>
+    activeTranslation.value?.metaTitle ||
+    productData.value?.metaTitle ||
+    productTitle.value ||
+    "Chi tiết sản phẩm"
+);
+
+const seoDescription = computed(
+  () =>
+    activeTranslation.value?.metaDescription ||
+    productData.value?.metaDescription ||
+    productShortDescription.value ||
+    ""
+);
+
+const seoKeywords = computed(
+  () => activeTranslation.value?.metaKeywords || productData.value?.metaKeywords || ""
+);
+const translateWithFallback = (key: string, fallback: string) => {
+  const translated = t(key);
+  return translated && translated.trim() && translated.trim() !== key ? translated : fallback;
+};
+
+const seoOgTitle = computed(
+  () => activeTranslation.value?.ogTitle || productData.value?.ogTitle || seoTitle.value
+);
+
+const seoOgDescription = computed(
+  () =>
+    activeTranslation.value?.ogDescription ||
+    productData.value?.ogDescription ||
+    seoDescription.value
+);
+
+const seoImage = computed(
+  () =>
+    activeTranslation.value?.ogImage ||
+    productData.value?.ogImage ||
+    productData.value?.thumbnail ||
+    ""
+);
+
+function normalizeConditionText(value: string | null | undefined): string {
+  return (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+const schemaItemCondition = computed(() => {
+  const signals = [
+    productTitle.value,
+    activeTranslation.value?.slug,
+    productData.value?.slug,
+  ]
+    .map((value) => normalizeConditionText(value))
+    .filter(Boolean);
+
+  return signals.some((value) => value.includes('used') || value.includes('cu') || value.includes('thanh-ly'))
+    ? 'https://schema.org/UsedCondition'
+    : 'https://schema.org/NewCondition';
+});
+
+const homeLabel = computed(() => (currentLocale.value === 'en' ? 'Home' : 'Trang chủ'));
+
+const productListPath = computed(() =>
+  getLocalizedRoute('PRODUCTS_LIST', currentLocale.value === 'en' ? 'en' : 'vi'),
+);
+const breadcrumbCategory = computed(() =>
+  resolveProductBreadcrumbCategory(productData.value?.categories, currentLocale.value),
+);
+const breadcrumbItems = computed(() => [
+  breadcrumbCategory.value
+    ? { label: breadcrumbCategory.value.label, to: breadcrumbCategory.value.to }
+    : { label: translateWithFallback('products.title', currentLocale.value === 'en' ? 'Products' : 'Sản phẩm'), to: productListPath.value },
+  { label: productTitle.value || seoTitle.value },
+]);
+const categoryBadges = computed(() =>
+  (productData.value?.categories || [])
+    .map((category) => {
+      const link = resolveProductCategoryLink(category, currentLocale.value);
+      if (!link) {
+        return null;
+      }
+
+      return {
+        id: category.id,
+        ...link,
+      };
+    })
+    .filter((category): category is { id: number; label: string; to: string } => Boolean(category)),
+);
+const productSlugByLocale = computed(() => ({
+  vi: productData.value?.translations?.find((translation: any) => translation.locale === 'vi')?.slug,
+  en: productData.value?.translations?.find((translation: any) => translation.locale === 'en')?.slug,
 }));
+
+const resolvedCanonicalUrl = computed(() =>
+  resolveSeoCanonicalUrl({
+    siteUrl,
+    currentPath: route.path,
+    locale: currentLocale.value === 'en' ? 'en' : 'vi',
+    routeKey: 'product-detail',
+    slugByLocale: productSlugByLocale.value,
+    candidate: activeTranslation.value?.canonicalUrl || null,
+  }),
+);
+const seoRobots = computed(() => route.path.startsWith('/products/') ? 'noindex,follow' : 'index,follow');
+const schemaAvailability = computed(() => {
+  if (matchingVariant.value && typeof matchingVariant.value.stock === 'number') {
+    return matchingVariant.value.stock > 0
+      ? 'https://schema.org/InStock'
+      : 'https://schema.org/OutOfStock';
+  }
+
+  if (typeof productData.value?.stock === 'number') {
+    return productData.value.stock > 0
+      ? 'https://schema.org/InStock'
+      : 'https://schema.org/OutOfStock';
+  }
+
+  return undefined;
+});
+
+usePageSeo({
+  title: seoTitle,
+  description: seoDescription,
+  keywords: seoKeywords,
+  ogTitle: seoOgTitle,
+  ogDescription: seoOgDescription,
+  image: seoImage,
+  ogType: 'product',
+  robots: seoRobots,
+  canonicalUrl: computed(() => null),
+  currentPath: computed(() => route.path),
+  locale: computed(() => (currentLocale.value === 'en' ? 'en' : 'vi')),
+  routeKey: 'product-detail',
+  slugByLocale: productSlugByLocale,
+  breadcrumbs: computed(() => [
+    { name: homeLabel.value, item: '/' },
+    ...breadcrumbItems.value.map((item) => ({
+      name: item.label,
+      item: item.to,
+    })),
+  ]),
+  schemas: computed(() => [
+    buildProductSchema({
+      name: productTitle.value || seoTitle.value,
+      description: seoDescription.value,
+      url: resolvedCanonicalUrl.value,
+      image: seoImage.value,
+      sku: matchingVariant.value?.sku || productData.value?.sku || undefined,
+      brand: 'MGA Vietnam',
+      price: productData.value?.price ?? minVariantPrice.value ?? null,
+      availability: schemaAvailability.value,
+      itemCondition: schemaItemCondition.value,
+      ratingValue: productReviewAggregate.value?.averageRating
+        ? Number.parseFloat(productReviewAggregate.value.averageRating)
+        : null,
+      reviewCount: productReviewAggregate.value?.totalReviews ?? null,
+      reviews: productReviews.value,
+    }),
+  ]),
+});
 
 // Theo dõi thay đổi của activeTab để cập nhật lại TableOfContents
 watch(activeTab, (newTab, oldTab) => {
@@ -294,28 +414,14 @@ watch(activeTab, (newTab, oldTab) => {
 
 <template>
   <div class="product-detail min-h-screen bg-gray-50 dark:bg-gray-900">
-    <div class="container mx-auto px-4 py-8">
+    <div class="container mx-auto px-4 pb-8 pt-0 md:py-8">
       <!-- Breadcrumb -->
       <div class="mb-6">
-        <Breadcrumb
-          :items="[
-            { label: t('products.title'), to: '/products' },
-            { label: productTitle },
-          ]"
-        />
+        <Breadcrumb :items="breadcrumbItems" />
       </div>
 
       <div v-if="isLoading" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <USkeleton class="mb-4 h-8 w-2/3" />
-        <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
-          <USkeleton class="h-96 w-full rounded-lg" />
-          <div>
-            <USkeleton class="mb-4 h-6 w-1/3" />
-            <USkeleton class="mb-4 h-6 w-1/4" />
-            <USkeleton class="mb-6 h-24 w-full" />
-            <USkeleton class="mb-4 h-10 w-full" />
-          </div>
-        </div>
+        <DetailPageSkeleton />
       </div>
 
       <div
@@ -345,11 +451,17 @@ watch(activeTab, (newTab, oldTab) => {
           <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
             <!-- Product Images -->
             <div class="product-images bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-              <LazyImage
-                :src="productData.thumbnail || ''"
+              <AppImage
+                :src="activeImage"
                 :alt="productTitle"
                 fallbackSrc="/images/default-image.jpg"
-                customClass="h-auto w-full rounded-lg"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                :priority="true"
+                loading="eager"
+                fetchpriority="high"
+                width="1200"
+                height="900"
+                customClass="h-72 md:h-[26rem] lg:h-[32rem] w-full rounded-lg bg-white object-contain"
               />
 
               <!-- Gallery slider -->
@@ -357,13 +469,24 @@ watch(activeTab, (newTab, oldTab) => {
                 v-if="productData.gallery && productData.gallery.length > 0"
                 class="mt-4 grid grid-cols-4 gap-2"
               >
-                <LazyImage
+                <AppImage
                   v-for="(image, index) in productData.gallery"
                   :key="index"
                   :src="image"
                   :alt="`${productTitle} - ${index + 1}`"
                   fallbackSrc="/images/default-image.jpg"
-                  customClass="h-20 w-full cursor-pointer rounded-md"
+                  sizes="(max-width: 768px) 25vw, 12vw"
+                  loading="lazy"
+                  fetchpriority="low"
+                  width="320"
+                  height="240"
+                  :customClass="[
+                    'h-20 w-full cursor-pointer rounded-md border-2 transition',
+                    activeImage === image
+                      ? 'border-primary-500'
+                      : 'border-transparent hover:border-primary-300'
+                  ].join(' ')"
+                  @click="selectImage(image)"
                 />
               </div>
 
@@ -484,26 +607,23 @@ watch(activeTab, (newTab, oldTab) => {
               </div>
 
               <!-- Hiển thị danh mục sản phẩm -->
-              <div
-                v-if="productData.categories && productData.categories.length > 0"
-                class="mb-5"
-              >
+              <div v-if="categoryBadges.length > 0" class="mb-5">
                 <div class="category-title text-base font-medium text-gray-700 dark:text-gray-300 mb-2">
                   <LayoutGrid class="inline-block mr-1 h-5 w-5 text-primary-500" />
-                  {{ t("products.categories") || "Danh mục:" }}
+                  {{ translateWithFallback("products.categories", "Danh mục") }}
                 </div>
                 <div class="flex flex-wrap gap-2">
                   <UBadge
-                    v-for="category in productData.categories"
+                    v-for="category in categoryBadges"
                     :key="category.id"
                     size="lg"
                     class="category-badge cursor-pointer hover:bg-primary-100 dark:hover:bg-primary-800 transition-colors"
-                    @click="router.push(`/categories/${category.translations?.[0]?.slug || ''}`)"
+                    @click="router.push(category.to)"
                   >
                     <template #default>
                       <div class="flex items-center gap-1">
                         <Tag class="h-4 w-4" />
-                        <span class="text-sm font-medium">{{ category.translations?.[0]?.name || '' }}</span>
+                        <span class="text-sm font-medium">{{ category.label }}</span>
                       </div>
                     </template>
                   </UBadge>
@@ -513,7 +633,7 @@ watch(activeTab, (newTab, oldTab) => {
               <!-- Product Variants -->
               <div v-if="productData?.type === ProductType.TICKET" class="mb-6">
                 <div class="text-base font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {{ t("products.departureDate") }}
+                  {{ translateWithFallback("products.departureDate", "Ngày khởi hành") }}
                   <span class="text-red-500">*</span>
                 </div>
                 <div class="space-y-4">
@@ -528,14 +648,14 @@ watch(activeTab, (newTab, oldTab) => {
                       <input
                         :value="inputValue"
                         v-on="inputEvents"
-                        :placeholder="t('products.selectDepartureDate')"
+                        :placeholder="translateWithFallback('products.selectDepartureDate', 'Chọn ngày khởi hành')"
                         class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none dark:bg-gray-800"
                         readonly
                       />
                     </template>
                   </DatePicker>
                   <div v-if="selectedDate" class="text-sm text-gray-600 dark:text-gray-400">
-                    {{ t("products.selectedDate") }}: {{ selectedDate.toLocaleDateString(currentLocale) }}
+                    {{ translateWithFallback("products.selectedDate", "Ngày đã chọn") }}: {{ selectedDate.toLocaleDateString(currentLocale) }}
                   </div>
                 </div>
               </div>
@@ -571,11 +691,16 @@ watch(activeTab, (newTab, oldTab) => {
                     >
                       <div class="flex items-center gap-2 flex-1">
                         <!-- Thumbnail nếu có -->
-                        <LazyImage
+                        <AppImage
                           v-if="value.thumbnail"
                           :src="value.thumbnail"
                           :alt="value.displayValue"
-                          class="w-10 h-10 rounded-md object-cover"
+                          sizes="40px"
+                          loading="lazy"
+                          fetchpriority="low"
+                          width="40"
+                          height="40"
+                          customClass="w-10 h-10 rounded-md object-cover"
                           @error="(e) => e.target.style.display = 'none'"
                         />
                         
@@ -600,7 +725,7 @@ watch(activeTab, (newTab, oldTab) => {
                   class="text-sm text-red-600 dark:text-red-400 mt-2 flex items-center gap-2"
                 >
                   <AlertTriangle class="w-4 h-4" />
-                  {{ t("products.noMatchingVariant") || "Không có sản phẩm phù hợp với lựa chọn của bạn" }}
+                  {{ translateWithFallback("products.noMatchingVariant", "Không có sản phẩm phù hợp với lựa chọn của bạn") }}
                 </div>
               </div>
 
@@ -611,7 +736,7 @@ watch(activeTab, (newTab, oldTab) => {
                     <div class="ticket-info-item">
                       <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <Calendar class="w-4 h-4 inline-block mr-1" />
-                        {{ t("products.ticketDate") || "Ngày sử dụng" }}
+                        {{ translateWithFallback("products.ticketDate", "Ngày sử dụng") }}
                       </div>
                       <div class="font-medium">
                         {{ productData.specifications?.find(spec => spec.name === 'date')?.value || 'Liên hệ để biết thêm' }}
@@ -620,7 +745,7 @@ watch(activeTab, (newTab, oldTab) => {
                     <div class="ticket-info-item">
                       <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <Clock class="w-4 h-4 inline-block mr-1" />
-                        {{ t("products.ticketTime") || "Thời gian" }}
+                        {{ translateWithFallback("products.ticketTime", "Thời gian") }}
                       </div>
                       <div class="font-medium">
                         {{ productData.specifications?.find(spec => spec.name === 'time')?.value || 'Liên hệ để biết thêm' }}
@@ -629,7 +754,7 @@ watch(activeTab, (newTab, oldTab) => {
                     <div class="ticket-info-item">
                       <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <MapPin class="w-4 h-4 inline-block mr-1" />
-                        {{ t("products.ticketLocation") || "Địa điểm" }}
+                        {{ translateWithFallback("products.ticketLocation", "Địa điểm") }}
                       </div>
                       <div class="font-medium">
                         {{ productData.specifications?.find(spec => spec.name === 'location')?.value || 'Liên hệ để biết thêm' }}
@@ -638,7 +763,7 @@ watch(activeTab, (newTab, oldTab) => {
                     <div class="ticket-info-item">
                       <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <Info class="w-4 h-4 inline-block mr-1" />
-                        {{ t("products.ticketValidity") || "Hiệu lực" }}
+                        {{ translateWithFallback("products.ticketValidity", "Hiệu lực") }}
                       </div>
                       <div class="font-medium">
                         {{ productData.specifications?.find(spec => spec.name === 'validity')?.value || 'Liên hệ để biết thêm' }}
@@ -662,14 +787,16 @@ watch(activeTab, (newTab, oldTab) => {
               </div>
 
               <!-- Tiered Pricing Table -->
-              <TierPricingTable 
-                v-if="!hasRequiredAttributes || matchingVariant"
-                :productId="!matchingVariant ? productData?.id : null"
-                :variantId="matchingVariant?.id || null"
-                :quantity="productQuantity"
-                :originalPrice="matchingVariant?.price || productData?.price || 0"
-                class="mb-6"
-              />
+              <ClientOnly>
+                <TierPricingTable 
+                  v-if="!hasRequiredAttributes || matchingVariant"
+                  :productId="!matchingVariant ? productData?.id : null"
+                  :variantId="matchingVariant?.id || null"
+                  :quantity="productQuantity"
+                  :originalPrice="matchingVariant?.price || productData?.price || 0"
+                  class="mb-6"
+                />
+              </ClientOnly>
 
               <div
                 v-if="productShortDescription"
@@ -681,7 +808,7 @@ watch(activeTab, (newTab, oldTab) => {
               <!-- Nút chia sẻ mạng xã hội -->
               <div class="mb-6">
                 <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  {{ t("products.shareProduct") || "Chia sẻ sản phẩm:" }}
+                  {{ translateWithFallback("products.shareProduct", "Chia sẻ sản phẩm") }}
                 </div>
                 <div class="share-buttons flex flex-wrap gap-2">
                   <div class="tooltip">
@@ -695,7 +822,7 @@ watch(activeTab, (newTab, oldTab) => {
                       <Facebook class="h-5 w-5" />
                     </UButton>
                     <span class="tooltip-text">{{
-                      t("products.shareOnFacebook") || "Chia sẻ lên Facebook"
+                      translateWithFallback("products.shareOnFacebook", "Chia sẻ lên Facebook")
                     }}</span>
                   </div>
 
@@ -710,7 +837,7 @@ watch(activeTab, (newTab, oldTab) => {
                       <Twitter class="h-5 w-5" />
                     </UButton>
                     <span class="tooltip-text">{{
-                      t("products.shareOnTwitter") || "Chia sẻ lên Twitter"
+                      translateWithFallback("products.shareOnTwitter", "Chia sẻ lên Twitter")
                     }}</span>
                   </div>
 
@@ -725,7 +852,7 @@ watch(activeTab, (newTab, oldTab) => {
                       <Linkedin class="h-5 w-5" />
                     </UButton>
                     <span class="tooltip-text">{{
-                      t("products.shareOnLinkedIn") || "Chia sẻ lên LinkedIn"
+                      translateWithFallback("products.shareOnLinkedIn", "Chia sẻ lên LinkedIn")
                     }}</span>
                   </div>
 
@@ -740,7 +867,7 @@ watch(activeTab, (newTab, oldTab) => {
                       <Mail class="h-5 w-5" />
                     </UButton>
                     <span class="tooltip-text">{{
-                      t("products.shareViaEmail") || "Chia sẻ qua Email"
+                      translateWithFallback("products.shareViaEmail", "Chia sẻ qua Email")
                     }}</span>
                   </div>
 
@@ -755,7 +882,7 @@ watch(activeTab, (newTab, oldTab) => {
                       <Link class="h-5 w-5" />
                     </UButton>
                     <span class="tooltip-text">{{
-                      t("products.copyLink") || "Sao chép liên kết"
+                      translateWithFallback("products.copyLink", "Sao chép liên kết")
                     }}</span>
                   </div>
                 </div>
@@ -767,7 +894,7 @@ watch(activeTab, (newTab, oldTab) => {
                 <AddToCartButton
                   v-if="canAddToCart && getProductForCart && !quickPurchaseEnabled"
                   :product="getProductForCart"
-                  :buttonText="t('products.addToCart') || 'Thêm vào giỏ hàng'"
+                  :buttonText="translateWithFallback('products.addToCart', 'Thêm vào giỏ hàng')"
                   :showQuantity="!hasRequiredAttributes"
                   buttonClass="w-full bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium text-base transition-colors duration-200 flex items-center justify-center gap-2"
                 />
@@ -781,7 +908,7 @@ watch(activeTab, (newTab, oldTab) => {
                   class="border-primary-600 text-primary-600 hover:bg-primary-50 dark:border-primary-500 dark:text-primary-300 font-medium py-3 text-base"
                   @click="openQuickPurchaseModal"
                 >
-                  {{ t("products.quickPurchase") || "Mua hàng nhanh" }}
+                  {{ translateWithFallback("products.quickPurchase", "Mua hàng nhanh") }}
                 </UButton>
 
                 <!-- Buy Now Button -->
@@ -798,7 +925,7 @@ watch(activeTab, (newTab, oldTab) => {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                     </svg>
                   </template>
-                  {{ t("products.buyNow") || "Mua ngay" }}
+                  {{ translateWithFallback("products.buyNow", "Mua ngay") }}
                 </UButton>
 
                 <!-- Price Request Button -->
@@ -807,11 +934,13 @@ watch(activeTab, (newTab, oldTab) => {
                   color="primary"
                   size="lg"
                   block
-                  icon="i-heroicons-currency-dollar"
                   class="mb-4 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white font-medium py-3 text-base"
                   @click="openPriceRequestModal"
                 >
-                  {{ t("products.requestPrice") || "Yêu cầu báo giá" }}
+                  <template #leading>
+                    <BadgeDollarSign class="h-5 w-5" />
+                  </template>
+                  {{ translateWithFallback("products.requestPrice", "Yêu cầu báo giá") }}
                 </UButton>
 
                 <!-- Contact Button when product is not available -->
@@ -820,11 +949,13 @@ watch(activeTab, (newTab, oldTab) => {
                   color="gray"
                   size="lg"
                   block
-                  icon="i-heroicons-phone"
                   class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-3 text-base"
                   @click="$router.push('/contact')"
                 >
-                  {{ t("products.contact") || "Liên hệ" }}
+                  <template #leading>
+                    <Phone class="h-5 w-5" />
+                  </template>
+                  {{ translateWithFallback("products.contact", "Liên hệ") }}
                 </UButton>
               </div>
             </div>
@@ -836,39 +967,41 @@ watch(activeTab, (newTab, oldTab) => {
           <!-- Phần mô tả sản phẩm và tabs -->
           <div class="lg:col-span-2">
             <!-- Table of Contents -->
-            <Transition name="fade" mode="out-in">
-              <TableOfContents
-                v-if="activeTab === 'description'"
-                :contentSelector="`#${productContentId}`"
-                :offset="100"
-                :collapsible="true"
-                :defaultCollapsed="false"
-                key="table-of-contents"
-                class="mb-6"
-              />
-            </Transition>
+            <ClientOnly>
+              <Transition name="fade" mode="out-in">
+                <TableOfContents
+                  v-if="activeTab === 'description'"
+                  :contentSelector="`#${productContentId}`"
+                  :offset="100"
+                  :collapsible="true"
+                  :defaultCollapsed="false"
+                  key="table-of-contents"
+                  class="mb-6"
+                />
+              </Transition>
+            </ClientOnly>
 
             <!-- Product Description and Video Review Tabs -->
             <div
               v-if="productContent || productData.videoReview || productData.id"
               class="product-tabs bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden"
             >
-              <div class="border-b border-gray-200 dark:border-gray-700 px-6">
-                <div class="flex flex-wrap space-x-4 md:space-x-8">
+              <div class="product-tabs-header border-b border-gray-200 dark:border-gray-700 px-4 py-3 md:px-6 md:py-0">
+                <div class="product-tabs-scroll flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:gap-0 md:space-x-8 md:pb-0">
                   <button
                     v-for="tab in tabs"
                     :key="tab.id"
                     @click="activeTab = tab.id"
-                    class="inline-flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm md:text-base uppercase tracking-wide"
+                    class="product-tab-button inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-all md:rounded-none md:px-1 md:py-4 md:text-base md:font-medium md:uppercase md:tracking-wide"
                     :class="[
                       activeTab === tab.id
-                        ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300',
+                        ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-sm dark:bg-primary-500/10 dark:text-primary-300 md:bg-transparent md:text-primary-600 md:shadow-none md:dark:text-primary-400'
+                        : 'border-transparent bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 dark:bg-gray-700/70 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100 md:bg-transparent md:text-gray-500 md:hover:bg-transparent md:hover:text-gray-700 md:hover:border-gray-300 md:dark:text-gray-400 md:dark:hover:text-gray-300',
                     ]"
                   >
                     <component 
                       :is="getTabIcon(tab.id)" 
-                      class="h-5 w-5"
+                      class="h-4 w-4 md:h-5 md:w-5"
                     />
                     {{ tab.label }}
                     <UBadge v-if="tab.badge" color="blue" variant="soft" size="xs">
@@ -928,6 +1061,7 @@ watch(activeTab, (newTab, oldTab) => {
                         <iframe
                           class="h-full w-full"
                           :src="productData.videoReview"
+                          loading="lazy"
                           frameborder="0"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowfullscreen
@@ -942,8 +1076,7 @@ watch(activeTab, (newTab, oldTab) => {
                         />
                         <p class="text-gray-600 dark:text-gray-400">
                           {{
-                            t("products.noVideoAvailable") ||
-                            "Chưa có video review cho sản phẩm này"
+                            translateWithFallback("products.noVideoAvailable", "Chưa có video review cho sản phẩm này")
                           }}
                         </p>
                       </div>
@@ -962,42 +1095,54 @@ watch(activeTab, (newTab, oldTab) => {
           </div>
         </div>
 
-        <!-- Cross-Sell Products -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-            {{ t("products.relatedProducts") || "Sản phẩm bạn có thể thích" }}
-          </h2>
-          <CrossSellProducts
+        <ClientOnly>
+          <ProductReviewsSection
             v-if="productData.id"
-            :productId="productData.id"
-            :limit="4"
+            :product-id="productData.id"
+            :reviews="productReviews"
+            :locale="currentLocale"
+            :average-rating="productReviewAggregate?.averageRating ? Number.parseFloat(productReviewAggregate.averageRating) : 0"
+            :total-reviews="productReviewAggregate?.totalReviews ?? 0"
           />
-        </div>
+        </ClientOnly>
 
-        <!-- Modal -->
-        <GlobalModal :show="isPriceRequestModalOpen" @close="closePriceRequestModal">
-          <div class="modal-content">
-            <PriceRequestModal
-              v-if="productData"
-              :is-open="isPriceRequestModalOpen"
-              :product-id="productData.id"
-              :product-name="productData.translations?.[0]?.title"
-              :variant-id="matchingVariant?.id"
-              :variant-name="matchingVariant?.sku"
-              @success="handlePriceRequestSuccess"
-              @close="closePriceRequestModal"
+        <!-- Cross-Sell Products -->
+        <ClientOnly>
+          <div class="mt-10">
+            <CrossSellProducts
+              v-if="productData.id"
+              :productId="productData.id"
+              :limit="4"
             />
           </div>
-        </GlobalModal>
+        </ClientOnly>
 
-        <QuickPurchaseModal
-          v-if="productData"
-          :is-open="isQuickPurchaseModalOpen"
-          :product-id="productData.id"
-          :product-name="productTitle"
-          @close="closeQuickPurchaseModal"
-          @success="closeQuickPurchaseModal"
-        />
+        <!-- Modal -->
+        <ClientOnly>
+          <GlobalModal :show="isPriceRequestModalOpen" @close="closePriceRequestModal">
+            <div class="modal-content">
+              <PriceRequestModal
+                v-if="productData"
+                :is-open="isPriceRequestModalOpen"
+                :product-id="productData.id"
+                :product-name="productData.translations?.[0]?.title"
+                :variant-id="matchingVariant?.id"
+                :variant-name="matchingVariant?.sku"
+                @success="handlePriceRequestSuccess"
+                @close="closePriceRequestModal"
+              />
+            </div>
+          </GlobalModal>
+
+          <QuickPurchaseModal
+            v-if="productData"
+            :is-open="isQuickPurchaseModalOpen"
+            :product-id="productData.id"
+            :product-name="productTitle"
+            @close="closeQuickPurchaseModal"
+            @success="closeQuickPurchaseModal"
+          />
+        </ClientOnly>
       </div>
 
       <div v-else class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center">

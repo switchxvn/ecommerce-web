@@ -545,18 +545,18 @@ onBeforeUnmount(() => {
                   
                   <NuxtLink
                     :to="`/menu-items/edit/${item.id}`"
-                    class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors shrink-0"
                     title="Edit menu item"
                   >
-                    <PencilIcon class="h-5 w-5" />
+                    <PencilIcon class="h-6 w-6 shrink-0" />
                   </NuxtLink>
                   
                   <button
                     @click="handleDelete(item.id)"
-                    class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors shrink-0"
                     title="Delete menu item"
                   >
-                    <Trash2Icon class="h-5 w-5" />
+                    <Trash2Icon class="h-6 w-6 shrink-0" />
                   </button>
                 </div>
               </div>
@@ -614,18 +614,18 @@ onBeforeUnmount(() => {
                         
                         <NuxtLink
                           :to="`/menu-items/edit/${child.id}`"
-                          class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                          class="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors shrink-0"
                           title="Edit menu item"
                         >
-                          <PencilIcon class="h-5 w-5" />
+                          <PencilIcon class="h-6 w-6 shrink-0" />
                         </NuxtLink>
                         
                         <button
                           @click="handleDelete(child.id)"
-                          class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                          class="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors shrink-0"
                           title="Delete menu item"
                         >
-                          <Trash2Icon class="h-5 w-5" />
+                          <Trash2Icon class="h-6 w-6 shrink-0" />
                         </button>
                       </div>
                     </div>

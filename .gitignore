@@ -38,6 +38,9 @@ testem.log
 .DS_Store
 Thumbs.db
 
+# source maps
+*.map
+
 .nx/cache
 .nx/workspace-data
 
@@ -64,6 +67,7 @@ sql_mgavietnam_c_20250303_102858.sql
 /apps/frontend/.env.staging
 /apps/frontend/.env.test
 /apps/frontend/.env.local
+/apps/frontend/.env
 
 /apps/admin/.env.production
 /apps/admin/.env.development
@@ -75,3 +79,5 @@ sql_mgavietnam_c_20250303_102858.sql
 
 .cursor\rules\nx-rules.mdc
 .github\instructions\nx.instructions.md
+.playwright-mcp/*
+nginx/ssl/

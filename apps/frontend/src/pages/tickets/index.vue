@@ -6,6 +6,7 @@ import ProductMobileSidebar from "../../components/sidebar/ProductMobileSidebar.
 import TicketSidebar from "../../components/sidebar/TicketSidebar.vue";
 import { useLocalization } from "../../composables/useLocalization";
 import { useProduct, type ProductFilter, type ProductSortBy } from "../../composables/useProduct";
+import { usePageSeo } from "~/composables/usePageSeo";
 import { useTrpc } from "../../composables/useTrpc";
 
 const { t, locale } = useLocalization();
@@ -17,8 +18,13 @@ definePageMeta({
   layout: "default",
 });
 
-// SEO data
-const seoData = ref({ 
+const { data: seoDataState } = await useAsyncData(
+  () => `seo-tickets-${locale.value}`,
+  () => trpc.seo.getSeoByPath.query("/tickets").catch(() => null),
+  { watch: [locale] },
+);
+
+const seoData = computed(() => seoDataState.value || {
   title: "",
   description: "",
   keywords: "",
@@ -28,42 +34,18 @@ const seoData = ref({
   canonicalUrl: "",
 });
 
-// Fetch SEO data
-const fetchSeoData = async () => {
-  try {
-    const seo = await trpc.seo.getSeoByPath.query("/tickets");
-    if (seo) {
-      seoData.value = seo;
-
-      // Update head with SEO data
-      useHead({
-        title: seo.title || t("tickets.title"),
-        meta: [
-          { name: "description", content: seo.description || t("tickets.description") },
-          { name: "keywords", content: seo.keywords || "" },
-          {
-            property: "og:title",
-            content: seo.ogTitle || seo.title || t("tickets.title"),
-          },
-          {
-            property: "og:description",
-            content: seo.ogDescription || seo.description || t("tickets.description"),
-          },
-          { property: "og:image", content: seo.ogImage || "" },
-        ],
-        link: [{ rel: "canonical", href: seo.canonicalUrl || window.location.href }],
-      });
-    }
-  } catch (error) {
-    console.error("Error fetching SEO data:", error);
-
-    // Fallback to default SEO
-    useHead({
-      title: t("tickets.title"),
-      meta: [{ name: "description", content: t("tickets.description") }],
-    });
-  }
-};
+usePageSeo({
+  title: computed(() => seoData.value.title || t("tickets.title")),
+  description: computed(() => seoData.value.description || t("tickets.description")),
+  keywords: computed(() => seoData.value.keywords || ""),
+  ogTitle: computed(() => seoData.value.ogTitle || seoData.value.title || t("tickets.title")),
+  ogDescription: computed(() => seoData.value.ogDescription || seoData.value.description || t("tickets.description")),
+  image: computed(() => seoData.value.ogImage || ""),
+  canonicalUrl: computed(() => seoData.value.canonicalUrl || null),
+  currentPath: computed(() => route.path),
+  locale: computed(() => (locale.value === 'en' ? 'en' : 'vi')),
+  routeKey: 'tickets',
+});
 
 // Initialize filters from route query
 const initialFilters: ProductFilter = {
@@ -165,7 +147,6 @@ const updateQueryParams = () => {
 
 // Initial fetch
 onMounted(() => {
-  fetchSeoData();
   fetchPriceRange();
   fetchProducts();
 });
@@ -198,7 +179,6 @@ watch(locale, async () => {
   router.replace({ query: {} });
 
   // Then refresh data
-  await fetchSeoData();
   await fetchPriceRange();
   fetchProducts();
 });
@@ -257,17 +237,8 @@ watch(locale, async () => {
           </div>
 
           <!-- Loading State -->
-          <div v-if="isLoading" class="flex items-center justify-center py-12">
-            <div class="text-center">
-              <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-500 border-r-transparent align-[-0.125em]" role="status">
-                <span class="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">
-                  {{ t('common.loading') }}...
-                </span>
-              </div>
-              <div class="mt-4 text-sm text-gray-600 dark:text-gray-400">
-                {{ t('common.loading') }}...
-              </div>
-            </div>
+          <div v-if="isLoading" class="py-2">
+            <CardGridSkeleton :item-count="6" :columns="3" />
           </div>
 
           <template v-else>

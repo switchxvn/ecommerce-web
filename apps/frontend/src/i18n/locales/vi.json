@@ -1,6 +1,10 @@
 {
   "welcome": "Chào mừng đến với ứng dụng của chúng tôi",
-  "home": "Trang chủ",
+  "home": {
+    "label": "Trang chủ",
+    "latest_posts": "Tin tức mới nhất",
+    "no_posts": "Chưa có bài viết nào"
+  },
   "recruitment": "Tuyển dụng",
   "about": {
     "sections": {
@@ -57,6 +61,7 @@
     "learnMore": "Tìm hiểu thêm",
     "new": "Mới",
     "featured": "Nổi bật",
+    "sale": "Giảm giá",
     "addToCart": "Thêm vào giỏ hàng",
     "price": "Giá",
     "viewAll": "Xem tất cả",
@@ -65,8 +70,12 @@
     "contact": "Liên hệ",
     "services": "Dịch vụ",
     "products": "Sản phẩm",
+    "categories": "Danh mục sản phẩm",
     "blog": "Blog",
     "cableCar": "Hỗ Trợ & Khiếu Nại"
+  },
+  "errors": {
+    "failed_to_load": "Không thể tải dữ liệu"
   },
   "cart": {
     "title": "Giỏ hàng",
@@ -204,6 +213,7 @@
     "supportDescription": "Bạn cần tư vấn thêm về sản phẩm? Hãy liên hệ với chúng tôi:",
     "hotline": "Hotline: 0917 001 254",
     "contactUs": "Liên hệ tư vấn",
+    "no_featured_products": "Chưa có sản phẩm nổi bật",
     "quickPurchase": "Mua hàng nhanh",
     "quickPurchaseTitle": "Mua hàng nhanh",
     "quickPurchaseDescription": "Để lại thông tin liên hệ, chúng tôi sẽ gọi lại xác nhận đơn hàng trong thời gian sớm nhất.",
@@ -313,12 +323,33 @@
     "subcategories": "Danh mục con",
     "productsIn": "Sản phẩm trong",
     "defaultTitle": "Danh mục sản phẩm",
-    "defaultKeywords": "danh mục sản phẩm, sản phẩm"
+    "defaultKeywords": "danh mục sản phẩm, sản phẩm",
+    "invalidCategoryTitle": "Không tìm thấy danh mục",
+    "invalidCategoryDescription": "Danh mục bạn đang tìm không tồn tại hoặc đã được cập nhật đường dẫn.",
+    "invalidCategoryLabel": "Đường dẫn không hợp lệ",
+    "invalidCategoryHeading": "Có thể danh mục đã đổi tên hoặc link đang bị sai",
+    "invalidCategoryHelp": "Bạn có thể quay về trang danh mục sản phẩm, xem các nhóm xe nâng nổi bật hoặc liên hệ trực tiếp để MGA tư vấn model phù hợp tải trọng và ngân sách.",
+    "backToCategoryList": "Xem tất cả danh mục",
+    "contactForAdvice": "Liên hệ tư vấn mua hàng",
+    "quickSupport": "Hỗ trợ nhanh",
+    "salesHotline": "Hotline mua hàng",
+    "serviceHotline": "Hỗ trợ dịch vụ",
+    "suggestedCategories": "Danh mục được xem nhiều",
+    "filteredEmptyTitle": "Chưa có sản phẩm phù hợp với bộ lọc hiện tại",
+    "filteredEmptyDescription": "Hãy nới khoảng giá, bỏ bớt điều kiện lọc hoặc xem toàn bộ danh mục để tìm model phù hợp hơn.",
+    "emptyCategoryTitle": "Danh mục này đang được cập nhật sản phẩm",
+    "emptyCategoryDescription": "MGA chưa đăng sản phẩm trong nhóm này hoặc đang chuẩn hóa lại cấu hình. Bạn có thể xem các danh mục liên quan hoặc liên hệ để nhận tư vấn báo giá nhanh."
   },
   "sidebar": {
     "popularPosts": "Bài viết phổ biến",
     "featuredCategories": "Danh mục nổi bật",
     "allCategories": "Tất cả danh mục",
+    "relatedContent": "Tin tức và dịch vụ",
+    "noRelatedContent": "Chưa có dữ liệu để hiển thị trong sidebar.",
+    "defaultLabel": "Mặc định",
+    "customLabel": "Tùy chọn",
+    "postLabel": "Tin tức",
+    "serviceLabel": "Dịch vụ",
     "subscribe": "Đăng ký nhận tin",
     "subscribeDescription": "Nhận thông báo khi có bài viết mới",
     "emailPlaceholder": "Email của bạn",
@@ -344,7 +375,8 @@
     "noPostsFoundDescription": "Chúng tôi không tìm thấy bài viết nào phù hợp với tiêu chí của bạn. Vui lòng thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm."
   },
   "news": {
-    "viewAll": "Xem tất cả tin tức"
+    "viewAll": "Xem tất cả tin tức",
+    "no_posts": "Chưa có tin tức nào"
   },
   "sort": {
     "newest": "Mới nhất",
@@ -598,7 +630,7 @@
     "contactInfo": "Thông tin liên hệ",
     "address": "Địa chỉ: Núi Sam, phường Núi Sam, thành phố Châu Đốc, tỉnh An Giang",
     "phone": "Điện thoại: 0917 001 254",
-    "email": "Email: info@cablecar.com.vn",
+    "email": "Email: info{'@'}cablecar.com.vn",
     "openingHours": "Giờ mở cửa: 7:00 - 17:30 hàng ngày",
     "zoom": {
       "instructions": "Hướng dẫn",

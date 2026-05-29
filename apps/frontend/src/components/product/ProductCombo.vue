@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useTrpc } from '~/composables/useTrpc';
 import { useLocalization } from '~/composables/useLocalization';
-import LazyImage from '~/components/ui/LazyImage.vue';
+import AppImage from '~/components/ui/AppImage.vue';
 import AddToCartButton from '~/components/cart/AddToCartButton.vue';
 
 const props = defineProps({
@@ -152,7 +152,7 @@ onMounted(() => {
           />
           
           <div class="flex flex-1 items-center space-x-1">
-            <LazyImage 
+            <AppImage 
               :src="product.thumbnail" 
               :alt="product.title"
               fallbackSrc="/images/default-image.jpg"

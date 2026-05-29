@@ -634,14 +634,14 @@ onMounted(async () => {
         <!-- ACTIONS Column -->
         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
           <div class="flex items-center space-x-2">
-            <NuxtLink :to="`/orders/${order.id}`" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
-              <EyeIcon class="h-5 w-5" />
+            <NuxtLink :to="`/orders/${order.id}`" class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-indigo-600 hover:bg-gray-100 hover:text-indigo-900 dark:text-indigo-400 dark:hover:bg-gray-700 dark:hover:text-indigo-300 transition-colors shrink-0">
+              <EyeIcon class="h-6 w-6 shrink-0" />
             </NuxtLink>
-            <NuxtLink :to="`/orders/${order.id}/edit`" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
-              <PencilIcon class="h-5 w-5" />
+            <NuxtLink :to="`/orders/${order.id}/edit`" class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-blue-600 hover:bg-gray-100 hover:text-blue-900 dark:text-blue-400 dark:hover:bg-gray-700 dark:hover:text-blue-300 transition-colors shrink-0">
+              <PencilIcon class="h-6 w-6 shrink-0" />
             </NuxtLink>
-            <button @click="deleteOrder(order.id)" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
-              <TrashIcon class="h-5 w-5" />
+            <button @click="deleteOrder(order.id)" class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-red-600 hover:bg-gray-100 hover:text-red-900 dark:text-red-400 dark:hover:bg-gray-700 dark:hover:text-red-300 transition-colors shrink-0">
+              <TrashIcon class="h-6 w-6 shrink-0" />
             </button>
           </div>
         </td>

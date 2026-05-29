@@ -34,6 +34,27 @@
   margin-bottom: 2rem;
 }
 
+.product-tabs-scroll {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.product-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.product-tab-button {
+  scroll-snap-align: start;
+  border: 1px solid transparent;
+}
+
+@media (min-width: 768px) {
+  .product-tab-button {
+    border-width: 0 0 2px;
+  }
+}
+
 /* CSS cho tab buttons */
 .product-tabs button {
   transition: all 0.3s ease;
@@ -52,6 +73,25 @@
 
 .product-tabs button:focus {
   outline: none;
+}
+
+@media (max-width: 767px) {
+  .product-tabs {
+    border-radius: 1rem;
+  }
+
+  .product-tabs-header {
+    margin: 0 -0.25rem;
+  }
+
+  .tab-content {
+    min-height: auto;
+    padding: 1rem;
+  }
+
+  .empty-state {
+    min-height: 220px;
+  }
 }
 
 /* CSS cho tab content */
@@ -393,4 +433,27 @@ body.modal-open > *:not(.modal-overlay):not(.modal-container) {
 
 .dark .attribute-group {
   border-bottom-color: var(--color-gray-700);
-} 
+}
+
+.mobile-bar-enter-active,
+.mobile-bar-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.mobile-bar-enter-from,
+.mobile-bar-leave-to {
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+.mobile-bar-enter-to,
+.mobile-bar-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 1023px) {
+  .ticket-detail {
+    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+  }
+}

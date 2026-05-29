@@ -149,6 +149,26 @@
                 />
               </div>
 
+              <div v-if="showPriceRangeFields" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <UFormGroup label="Giá từ">
+                  <UInput
+                    v-model.number="form.priceRangeMin"
+                    type="number"
+                    min="0"
+                    placeholder="190000000"
+                  />
+                </UFormGroup>
+
+                <UFormGroup label="Giá đến" :error="errors.priceRangeMax">
+                  <UInput
+                    v-model.number="form.priceRangeMax"
+                    type="number"
+                    min="0"
+                    placeholder="495000000"
+                  />
+                </UFormGroup>
+              </div>
+
               <UFormGroup :label="t('categories.slug')" required :error="errors.slug">
                 <div class="flex gap-2">
                   <UInput
@@ -179,6 +199,17 @@
                 />
               </UFormGroup>
             </div>
+          </div>
+
+          <div v-show="currentTab === 'seo'" class="grid grid-cols-1 gap-6">
+            <CategorySEO
+              v-model:meta-title="currentTranslation.metaTitle"
+              v-model:meta-description="currentTranslation.metaDescription"
+              v-model:meta-keywords="currentTranslation.metaKeywords"
+              v-model:og-title="currentTranslation.ogTitle"
+              v-model:og-description="currentTranslation.ogDescription"
+              v-model:og-image="currentTranslation.ogImage"
+            />
           </div>
 
           <!-- Settings Tab -->
@@ -212,15 +243,16 @@ import {
   CheckIcon,
   SaveIcon,
   WandIcon,
-  SearchIcon,
-  HelpCircleIcon
+  SearchIcon
 } from 'lucide-vue-next'
 import { useTrpc } from '../../composables/useTrpc'
 import { useCategory } from '../../composables/useCategory'
 import PageHeader from '../../components/common/header/PageHeader.vue'
+import CategorySEO from '../../components/categories/CategorySEO.vue'
 import IconSelector from '../../components/common/IconSelector.vue'
 import { useLocalization } from '../../composables/useLocalization'
 import { useSiteTitle } from '../../composables/useSiteTitle'
+import { createEmptyCategoryTranslation } from '../../utils/categoryTranslation'
 
 // Set page title with i18n support
 useSiteTitle('categoriesCreate');
@@ -250,12 +282,21 @@ const tabs = [
     name: t('categories.basicInfo'), 
     icon: FileTextIcon
   },
+  {
+    id: 'seo',
+    name: t('settings.seo.title'),
+    icon: SearchIcon
+  },
   { 
     id: 'settings', 
     name: t('categories.settings'), 
     icon: SettingsIcon
   }
 ]
+
+const showPriceRangeFields = computed(() =>
+  form.value.type === 'product' || form.value.type === 'both',
+)
 
 onMounted(async () => {
   try {
@@ -269,11 +310,7 @@ onMounted(async () => {
 
     // Initialize translations for default language
     if (selectedLanguage.value) {
-      form.value.translations[selectedLanguage.value] = {
-        name: '',
-        slug: '',
-        description: ''
-      }
+      form.value.translations[selectedLanguage.value] = createEmptyCategoryTranslation()
     }
   } catch (error) {
     console.error('Failed to fetch languages:', error)
@@ -298,7 +335,14 @@ watch(selectedLanguage, (newLang, oldLang) => {
     form.value.translations[oldLang] = {
       name: form.value.name,
       slug: currentTranslation.value.slug,
-      description: currentTranslation.value.description
+      description: currentTranslation.value.description,
+      metaTitle: currentTranslation.value.metaTitle,
+      metaDescription: currentTranslation.value.metaDescription,
+      metaKeywords: currentTranslation.value.metaKeywords,
+      ogTitle: currentTranslation.value.ogTitle,
+      ogDescription: currentTranslation.value.ogDescription,
+      ogImage: currentTranslation.value.ogImage,
+      canonicalUrl: currentTranslation.value.canonicalUrl
     }
   }
   
@@ -309,11 +353,7 @@ watch(selectedLanguage, (newLang, oldLang) => {
   } else {
     // Initialize new translation
     form.value.name = ''
-    form.value.translations[newLang] = {
-      name: '',
-      slug: '',
-      description: ''
-    }
+    form.value.translations[newLang] = createEmptyCategoryTranslation()
   }
 })
 

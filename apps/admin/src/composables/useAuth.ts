@@ -1,6 +1,7 @@
 import { TRPCClientError } from '@trpc/client'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { navigateTo } from '#imports'
 import { useUserStore } from '@/stores/useUserStore'
 import type { ProfileResponseExtended, User } from '../types/user'
 import { useTrpc } from './useTrpc'
@@ -74,7 +75,7 @@ export const useAuth = () => {
 
       // Redirect to login
       if (typeof window !== 'undefined') {
-        window.location.href = '/auth/login'
+        navigateTo('/auth/login', { replace: true })
         return
       }
       
@@ -131,9 +132,9 @@ export const useAuth = () => {
           userStore.clearUser()
           
           // Redirect to login page if not already there
-          if (process.client && window.location.pathname !== '/auth/login') {
+          if (process.client && !window.location.pathname.endsWith('/auth/login')) {
             console.log('🔄 checkAuth: Redirecting to login page')
-            window.location.href = '/auth/login'
+            navigateTo('/auth/login', { replace: true })
             return false
           }
         } else {

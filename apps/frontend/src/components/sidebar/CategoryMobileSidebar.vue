@@ -35,11 +35,18 @@ const props = defineProps<{
     categorySlug?: string;
   };
   categoryId?: number;
+  availableAttributes?: Array<{
+    id: string;
+    name: string;
+    values: string[];
+  }>;
 }>();
 
 const emit = defineEmits<{
   (e: 'filter-change', filters: any): void;
 }>();
+
+const tr = (key: string, fallback: string) => t(key) || fallback;
 
 // Drawer state
 const isOpen = ref(false);
@@ -70,7 +77,7 @@ const minPriceInput = ref('');
 const maxPriceInput = ref('');
 
 // Attributes data
-const categoryAttributes = ref<any[]>([]);
+const categoryAttributes = computed(() => props.availableAttributes || []);
 const isLoadingAttributes = ref(false);
 const selectedAttributes = ref<Record<string, string[]>>({});
 
@@ -154,26 +161,6 @@ const fetchPriceRange = async () => {
     updatePriceInputs();
   } finally {
     isLoadingPriceRange.value = false;
-  }
-};
-
-// Fetch category attributes
-const fetchCategoryAttributes = async () => {
-  if (!props.categoryId) return;
-  
-  isLoadingAttributes.value = true;
-  try {
-    const result = await trpc.category.getAttributesByCategoryId.query({
-      categoryId: props.categoryId,
-      locale: locale.value
-    });
-    
-    categoryAttributes.value = result || [];
-  } catch (error) {
-    console.error('Error fetching category attributes:', error);
-    categoryAttributes.value = [];
-  } finally {
-    isLoadingAttributes.value = false;
   }
 };
 
@@ -266,7 +253,6 @@ const toggleSection = (section: string) => {
 // Initialize
 onMounted(() => {
   fetchPriceRange();
-  fetchCategoryAttributes();
 });
 </script>
 
@@ -282,7 +268,7 @@ onMounted(() => {
       <template #leading>
         <SlidersHorizontal class="h-4 w-4" />
       </template>
-      {{ t('products.filters') }}
+      {{ tr('products.filters', 'Bộ lọc') }}
       <template v-if="activeFiltersCount > 0" #trailing>
         <span class="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-500 text-xs text-white">
           {{ activeFiltersCount }}
@@ -297,7 +283,7 @@ onMounted(() => {
           <!-- Drawer Header -->
           <div class="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
             <h2 class="text-lg font-medium text-gray-900 dark:text-white">
-              {{ t('products.filters') }}
+              {{ tr('products.filters', 'Bộ lọc') }}
             </h2>
             <UButton
               @click="closeDrawer"
@@ -319,7 +305,7 @@ onMounted(() => {
               >
                 <div class="flex items-center gap-2">
                   <DollarSign class="h-5 w-5 text-primary-500" />
-                  <h3 class="font-medium text-gray-900 dark:text-white">{{ t('products.priceRange') }}</h3>
+                  <h3 class="font-medium text-gray-900 dark:text-white">{{ tr('products.priceRange', 'Khoảng giá') }}</h3>
                 </div>
                 <UIcon 
                   :name="expandedSections.priceRange ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" 
@@ -403,7 +389,7 @@ onMounted(() => {
               >
                 <div class="flex items-center gap-2">
                   <Tag class="h-5 w-5 text-primary-500" />
-                  <h3 class="font-medium text-gray-900 dark:text-white">{{ t('products.productType') }}</h3>
+                  <h3 class="font-medium text-gray-900 dark:text-white">{{ tr('products.productType', 'Loại sản phẩm') }}</h3>
                 </div>
                 <UIcon 
                   :name="expandedSections.productType ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" 
@@ -421,7 +407,7 @@ onMounted(() => {
                     />
                     <label for="featured-mobile" class="ml-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       <Star class="h-4 w-4 text-amber-500" />
-                      {{ t('products.featured') }}
+                      {{ tr('products.featured', 'Nổi bật') }}
                     </label>
                   </div>
                   
@@ -433,7 +419,7 @@ onMounted(() => {
                     />
                     <label for="new-mobile" class="ml-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       <Sparkles class="h-4 w-4 text-blue-500" />
-                      {{ t('products.new') }}
+                      {{ tr('products.new', 'Hàng mới về') }}
                     </label>
                   </div>
                   
@@ -445,7 +431,7 @@ onMounted(() => {
                     />
                     <label for="sale-mobile" class="ml-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       <Flame class="h-4 w-4 text-red-500" />
-                      {{ t('products.sale') }}
+                      {{ tr('products.sale', 'Khuyến mãi') }}
                     </label>
                   </div>
                 </div>
@@ -460,7 +446,7 @@ onMounted(() => {
               >
                 <div class="flex items-center gap-2">
                   <UIcon name="i-heroicons-adjustments-horizontal" class="h-5 w-5 text-primary-500" />
-                  <h3 class="font-medium text-gray-900 dark:text-white">{{ t('products.attributes') }}</h3>
+                  <h3 class="font-medium text-gray-900 dark:text-white">{{ tr('products.attributes', 'Thuộc tính') }}</h3>
                 </div>
                 <UIcon 
                   :name="expandedSections.attributes ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" 
@@ -509,7 +495,7 @@ onMounted(() => {
               <template #leading>
                 <RotateCcw class="h-4 w-4" />
               </template>
-              {{ t('products.resetFilters') }}
+              {{ tr('products.resetFilters', 'Đặt lại bộ lọc') }}
             </UButton>
           </div>
           
@@ -522,7 +508,7 @@ onMounted(() => {
               block
               size="lg"
             >
-              {{ t('products.applyFilters') }}
+              {{ tr('products.applyFilters', 'Áp dụng bộ lọc') }}
               <template v-if="activeFiltersCount > 0" #trailing>
                 <span class="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs text-primary-500">
                   {{ activeFiltersCount }}

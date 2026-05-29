@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from "vue";
+import { ref, onMounted, onUnmounted, computed, nextTick } from "vue";
 import { useMenuItems } from "~/composables/useMenuItems";
 import type { MenuItem as BaseMenuItem } from "@ew/shared";
 import Icon from "./Icon.vue";
@@ -34,21 +34,11 @@ const { locale } = useLocalization();
 // Logo
 const { currentLogoUrl, logo, isLoading: isLoadingLogo } = useLogo();
 
-// Debug logs
-watch([currentLogoUrl, logo], () => {
-  console.log('NavbarWithTheme - Logo state:', {
-    currentLogoUrl: currentLogoUrl.value,
-    logo: logo.value,
-    isLoading: isLoadingLogo.value
-  });
-}, { immediate: true });
-
 // Kiểm tra feature flag enable_add_to_cart
 const checkCartFeatureFlag = async () => {
   try {
     isLoadingFeatureFlag.value = true;
     isCartEnabled.value = await isFeatureEnabled("enable_add_to_cart", true);
-    console.log("Cart feature flag in NavbarWithTheme:", isCartEnabled.value);
   } catch (err) {
     console.error("Error checking cart feature flag:", err);
     isCartEnabled.value = false;
@@ -306,7 +296,7 @@ watch([logo, isLoadingLogo], () => {
 
         <!-- Desktop Navigation -->
         <nav class="hidden md:flex items-center space-x-6">
-          <div v-if="isLoading" class="text-sm text-neutral-500 dark:text-neutral-400">Đang tải menu...</div>
+          <InlineMenuSkeleton v-if="isLoading" :item-count="4" />
           <div v-else-if="error" class="text-sm text-red-500">{{ error }}</div>
           <template v-else>
             <div
@@ -416,9 +406,7 @@ watch([logo, isLoadingLogo], () => {
       :class="{ hidden: !isMobileMenuOpen }"
     >
       <div class="px-4 py-3 space-y-1">
-        <div v-if="isLoading" class="text-sm text-neutral-500 dark:text-neutral-400 px-3 py-2">
-          Đang tải menu...
-        </div>
+        <InlineMenuSkeleton v-if="isLoading" :item-count="5" mobile />
         <div v-else-if="error" class="text-sm text-red-500 px-3 py-2">{{ error }}</div>
         <template v-else>
           <a

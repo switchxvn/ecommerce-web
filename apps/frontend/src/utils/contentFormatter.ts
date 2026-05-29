@@ -74,11 +74,18 @@ export function formatProductContent(content: string): string {
  * @returns ID được tạo từ text
  */
 export function createIdFromText(text: string): string {
-  return text
+  const normalized = text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D');
+
+  return normalized
     .toLowerCase()
     .replace(/[^\w\s-]/g, '') // Loại bỏ ký tự đặc biệt
     .replace(/\s+/g, '-') // Thay thế khoảng trắng bằng dấu gạch ngang
     .replace(/--+/g, '-') // Loại bỏ nhiều dấu gạch ngang liên tiếp
+    .replace(/^-+|-+$/g, '')
     .trim();
 }
 
@@ -90,10 +97,18 @@ export function createIdFromText(text: string): string {
 export function addIdsToHeadings(htmlContent: string): string {
   if (!htmlContent) return '';
   
-  // Thêm ID cho các thẻ h2
-  return htmlContent.replace(/<h2[^>]*>(.*?)<\/h2>/gi, (match, text) => {
-    const id = createIdFromText(text);
-    return `<h2 id="${id}">${text}</h2>`;
+  let headingIndex = 0;
+
+  return htmlContent.replace(/<h([2-3])([^>]*)>(.*?)<\/h\1>/gis, (match, level, attributes, text) => {
+    if (/\sid\s*=/i.test(attributes)) {
+      return match;
+    }
+
+    const plainText = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const id = createIdFromText(plainText) || `heading-${headingIndex++}`;
+    const normalizedAttributes = attributes?.trim() ? ` ${attributes.trim()}` : '';
+
+    return `<h${level} id="${id}"${normalizedAttributes}>${text}</h${level}>`;
   });
 }
 
@@ -113,21 +128,27 @@ export function formatFullProductContent(content: string): string {
 export function formatFullPostContent(content: string): string {
   if (!content) return '';
 
-  // Tách nội dung thành các đoạn
-  const paragraphs = content.split('\n\n');
+  const hasHtmlHeadings = /<h[2-3][^>]*>.*?<\/h[2-3]>/i.test(content);
+  if (hasHtmlHeadings) {
+    return addIdsToHeadings(content);
+  }
 
-  // Xử lý từng đoạn
+  const paragraphs = content
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
   const formattedParagraphs = paragraphs.map((paragraph, index) => {
-    // Nếu đoạn bắt đầu bằng "##" hoặc "# ", coi như đó là heading
-    if (paragraph.startsWith('##') || paragraph.startsWith('# ')) {
-      const headingText = paragraph.replace(/^#+\s/, '');
-      const headingId = `heading-${index}`;
-      return `<h2 id="${headingId}">${headingText}</h2>`;
+    const markdownHeading = paragraph.match(/^(#{2,3})\s+(.+)$/);
+    if (markdownHeading) {
+      const level = markdownHeading[1].length;
+      const headingText = markdownHeading[2].trim();
+      const headingId = createIdFromText(headingText) || `heading-${index}`;
+      return `<h${level} id="${headingId}">${headingText}</h${level}>`;
     }
 
-    // Xử lý các đoạn văn bản thông thường
     return `<p>${paragraph}</p>`;
   });
 
-  return formattedParagraphs.join('\n');
-} 
+  return addIdsToHeadings(formattedParagraphs.join('\n'));
+}

@@ -25,32 +25,61 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ApiKeyModule } from './modules/api-key/api-key.module';
 import { CartModule } from './modules/cart/cart.module';
 import { ZnsModule } from './modules/zns/zns.module';
+import * as path from 'path';
+import { config as loadEnv } from 'dotenv';
+
+loadEnv({ path: path.resolve(process.cwd(), '.env'), override: true });
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: [
+        path.resolve(__dirname, '../../../.env'),
+        '.env',
+      ],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DB_HOST', 'localhost'),
-        port: configService.get('DB_PORT', 5432),
-        username: configService.get('DB_USERNAME', 'postgres'),
-        password: configService.get('DB_PASSWORD', 'postgres'),
-        database: configService.get('DB_DATABASE', 'ecommerce'),
-        autoLoadEntities: true,
-        entities: [__dirname + '/modules/**/*.entity{.ts,.js}'],
-        synchronize: false,
-        logging: configService.get('NODE_ENV') === 'development',
-        extra: configService.get('NODE_ENV') === 'production' ? {
-          ssl: {
-            rejectUnauthorized: false,
-          },
-        } : {},
-      }),
+      useFactory: (configService: ConfigService) => {
+        const normalizeSecret = (value: string | undefined, fallback: string) => {
+          const raw = value ?? fallback;
+          const withoutCR = raw.replace(/\r/g, '');
+          const unquoted = withoutCR.match(/^(['"])(.*)\1$/)?.[2] ?? withoutCR;
+          return unquoted;
+        };
+
+        const dbHost = process.env['DB_HOST'] || configService.get('DB_HOST', 'localhost');
+        const dbPort = Number(process.env['DB_PORT'] || configService.get('DB_PORT', 5432));
+        const dbUsername = process.env['DB_USERNAME'] || configService.get('DB_USERNAME', 'postgres');
+        const dbPassword = normalizeSecret(process.env['DB_PASSWORD'] || configService.get('DB_PASSWORD'), 'postgres');
+        const dbDatabase = process.env['DB_DATABASE'] || configService.get('DB_DATABASE', 'ecommerce');
+
+        if ((process.env['DB_DEBUG'] || configService.get('DB_DEBUG', 'false')) === 'true') {
+          const passwordHex = Buffer.from(dbPassword).toString('hex');
+          process.stderr.write(`[DB_DEBUG] host=${dbHost} port=${dbPort} user=${dbUsername} db=${dbDatabase}\n`);
+          process.stderr.write(`[DB_DEBUG] passwordLength=${dbPassword.length} passwordHex=${passwordHex}\n`);
+        }
+
+        return {
+          type: 'postgres',
+          host: dbHost,
+          port: dbPort,
+          username: dbUsername,
+          password: dbPassword,
+          database: dbDatabase,
+          autoLoadEntities: true,
+          entities: [__dirname + '/modules/**/*.entity{.ts,.js}'],
+          synchronize: false,
+          logging: configService.get('NODE_ENV') === 'development',
+          extra: configService.get('NODE_ENV') === 'production' ? {
+            ssl: {
+              rejectUnauthorized: false,
+            },
+          } : {},
+        };
+      },
     }),
     UserModule,
     AuthModule,

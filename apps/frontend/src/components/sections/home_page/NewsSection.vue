@@ -279,8 +279,11 @@ watch(() => props.config.postIds, () => {
         {{ config.title || t("home.latest_posts") }}
       </h2>
 
-      <div v-if="isLoading" class="flex justify-center items-center py-12">
-        <Loader size="lg" />
+      <div v-if="isLoading" class="py-4">
+        <CardGridSkeleton
+          :item-count="config.maxItems || 12"
+          :columns="config.layout === 'grid' ? 4 : (config.slidesPerView?.desktop || 4)"
+        />
       </div>
 
       <div v-else-if="error" class="text-center text-red-500 py-8">

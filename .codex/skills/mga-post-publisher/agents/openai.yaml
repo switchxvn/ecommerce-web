@@ -1,0 +1,4 @@
+interface:
+  display_name: "MGA Post Publisher"
+  short_description: "Draft, image, and publish MGA SEO posts"
+  default_prompt: "Use $mga-post-publisher to research, draft, illustrate, and publish a Vietnamese SEO article for MGA."

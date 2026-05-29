@@ -2,7 +2,7 @@
 import { useRouter } from 'vue-router';
 import { TRPCClientError } from '@trpc/client';
 import { useTrpc } from './useTrpc';
-import { ref } from './useVueComposables';
+import { ref } from 'vue';
 import type { User, UserProfile, AuthLoginResponse } from '../types/User';
 import { useCookie } from 'nuxt/app';
 import type { AppRouter } from '../types/trpc';

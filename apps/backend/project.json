@@ -45,7 +45,7 @@
         "buildTarget": "backend:build",
         "watch": true,
         "args": [
-          "--env-file=apps/backend/.env"
+          "--env-file=.env"
         ]
       },
       "configurations": {

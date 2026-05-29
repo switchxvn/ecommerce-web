@@ -1,6 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { ServiceTranslation } from './service-translation.entity';
 import { Category } from '../../category/entities/category.entity';
+import { Review } from '../../review/entities/review.entity';
 
 @Entity('services')
 export class Service {
@@ -30,6 +31,9 @@ export class Service {
     eager: true
   })
   translations: ServiceTranslation[];
+
+  @OneToMany(() => Review, (review) => review.service)
+  reviews!: Review[];
 
 
   @CreateDateColumn({ name: 'created_at' })

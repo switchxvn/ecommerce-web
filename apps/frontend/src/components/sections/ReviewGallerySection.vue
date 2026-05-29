@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useLocalization } from '../../composables/useLocalization';
 import { useTrpc } from '../../composables/useTrpc';
-import { ref, computed, onMounted, watch, nextTick } from '../../composables/useVueComposables';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import Loader from '../ui/Loader.vue';
 
 // Định nghĩa interface cho Gallery và ThemeSection
@@ -500,7 +500,6 @@ onMounted(() => {
 // Sửa lại cách watch để tránh gọi API liên tục
 // Chỉ theo dõi thay đổi của locale thay vì cả locale và categoryIds
 watch(locale, () => {
-  console.log('Locale changed, fetching galleries again');
   fetchGalleries();
 });
 
@@ -527,8 +526,8 @@ const isValidImage = computed(() => {
       </div>
       
       <!-- Loading state -->
-      <div v-if="isLoading" class="flex justify-center py-12">
-        <Loader size="lg" />
+      <div v-if="isLoading" class="py-4">
+        <GallerySkeleton :item-count="6" :columns="3" />
       </div>
       
       <!-- Error state -->

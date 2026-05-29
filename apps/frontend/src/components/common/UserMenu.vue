@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { useAuth } from '~/composables/useAuth';
 import Icon from '../ui/Icon.vue';
+import { AUTH_ROUTE_PATHS } from '~/utils/routes';
 
 const { user } = useAuth();
 const isOpen = ref(false);
@@ -53,7 +54,7 @@ const closeMenu = () => {
           <!-- Not Logged In -->
           <template v-if="!user">
             <NuxtLink
-              to="/auth/login"
+              :to="AUTH_ROUTE_PATHS.login"
               class="block px-4 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700"
               role="menuitem"
               @click="closeMenu"
@@ -61,7 +62,7 @@ const closeMenu = () => {
               Đăng nhập
             </NuxtLink>
             <NuxtLink
-              to="/auth/register"
+              :to="AUTH_ROUTE_PATHS.register"
               class="block px-4 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700"
               role="menuitem"
               @click="closeMenu"
@@ -73,15 +74,15 @@ const closeMenu = () => {
           <!-- Logged In -->
           <template v-else>
             <NuxtLink
-              to="/profile"
+              :to="AUTH_ROUTE_PATHS.dashboard"
               class="block px-4 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700"
               role="menuitem"
               @click="closeMenu"
             >
-              Thông tin tài khoản
+              Dashboard
             </NuxtLink>
             <NuxtLink
-              to="/orders"
+              :to="AUTH_ROUTE_PATHS.dashboard"
               class="block px-4 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700"
               role="menuitem"
               @click="closeMenu"

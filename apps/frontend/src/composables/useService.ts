@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import type { Service, ServiceFilter, ServiceResponse } from '../types/service';
 import { useTrpc } from './useTrpc';
+import { normalizeLocaleCode } from '../utils/locale';
 
 export function useService() {
   const trpc = useTrpc();
@@ -19,6 +20,7 @@ export function useService() {
         page,
         limit,
         ...filters,
+        locale: filters?.locale ? normalizeLocaleCode(filters.locale) : undefined,
       });
 
       services.value = response.items;

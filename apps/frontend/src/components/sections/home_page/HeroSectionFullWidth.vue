@@ -6,13 +6,15 @@ import 'swiper/css/pagination';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { Autoplay, EffectFade, Navigation, Pagination } from 'swiper/modules';
 import type { PropType } from 'vue';
-import { computed, defineComponent, onMounted, ref } from 'vue';
+import { computed, defineComponent, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTrpc } from '~/composables/useTrpc';
 import type { Hero, HeroSlider, Slide } from '~/types/hero';
 import { useLocalization } from '~/composables/useLocalization';
+import { useSkeletonGate } from '~/composables/useSkeletonGate';
 import HeroSliderComponent from '~/components/sliders/HeroSlider.vue';
 import type { Swiper as SwiperType } from 'swiper/types';
+import { useAsyncData } from '#imports';
 
 interface HeroConfig {
   layout?: 'split-columns' | 'full-width';
@@ -40,6 +42,8 @@ interface HeroConfig {
 interface Props {
   slides?: Slide[];
   config?: HeroConfig;
+  titleTag?: string;
+  fallbackTitleTag?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -60,69 +64,44 @@ const props = withDefaults(defineProps<Props>(), {
         direction: 'to-t'
       }
     }
-  })
+  }),
+  titleTag: 'h2',
+  fallbackTitleTag: 'div',
 });
 
 const { t } = useI18n();
 const { t: localT } = useLocalization();
 const currentSlide = ref(0);
-const isLoading = ref(true);
 const error = ref<Error | null>(null);
 
 const trpc = useTrpc();
-
-// Fetch hero data
-const heroQuery = trpc.hero.getHero.query();
-const sliderQuery = trpc.hero.getHeroSliders.query({ themeId: props.config?.themeId });
-
-const heroData = ref<Hero[]>([]);
-const sliderData = ref<HeroSlider[]>([]);
-
-onMounted(async () => {
-  try {
-    console.log('Fetching hero data...');
+const { shouldShowSkeleton } = useSkeletonGate();
+const { data: heroPayload, pending: isLoading } = await useAsyncData(
+  'hero-full-width-data',
+  async () => {
     const [heroResult, sliderResult] = await Promise.all([
-      heroQuery,
-      sliderQuery
+      trpc.hero.getHero.query(),
+      trpc.hero.getHeroSliders.query({ themeId: props.config?.themeId }),
     ]);
-    
-    console.log('Raw hero result:', heroResult);
-    console.log('Raw slider result:', sliderResult);
-    
-    heroData.value = heroResult as Hero[];
-    sliderData.value = sliderResult as HeroSlider[];
-    
-    console.log('Processed hero data:', heroData.value);
-    console.log('Processed slider data:', sliderData.value);
-    
-    const sortedSlides = computed(() => {
-      if (sliderData.value && sliderData.value.length > 0) {
-        return [...sliderData.value]
-          .sort((a, b) => a.order - b.order)
-          .map(slider => ({
-            image_url: slider.imageUrl,
-            title: slider.title,
-            description: slider.description || '',
-            link: slider.buttonLink || '#',
-            buttonText: slider.buttonText,
-            order: slider.order
-          }));
-      }
-      return [...props.slides].sort((a, b) => a.order - b.order);
-    });
-    
-    console.log('Computed sortedSlides:', sortedSlides.value);
-    
-    isLoading.value = false;
-  } catch (err) {
-    console.error('Error fetching hero data:', err);
-    error.value = err as Error;
-    isLoading.value = false;
-  }
-});
+
+    return {
+      heroData: (heroResult || []) as Hero[],
+      sliderData: (sliderResult || []) as HeroSlider[],
+    };
+  },
+  {
+    default: () => ({
+      heroData: [] as Hero[],
+      sliderData: [] as HeroSlider[],
+    }),
+  },
+);
+
+const heroData = computed(() => heroPayload.value?.heroData || []);
+const sliderData = computed(() => heroPayload.value?.sliderData || []);
 
 const hero = computed(() => {
-  if (heroData.value && heroData.value.length > 0) {
+  if (heroData.value.length > 0) {
     return heroData.value[0];
   }
   return null;
@@ -163,7 +142,7 @@ const swiperOptions = computed(() => ({
 }));
 
 const sortedSlides = computed(() => {
-  if (sliderData.value && sliderData.value.length > 0) {
+  if (sliderData.value.length > 0) {
     return [...sliderData.value]
       .sort((a, b) => a.order - b.order)
       .map(slider => ({
@@ -177,6 +156,7 @@ const sortedSlides = computed(() => {
   }
   return [...props.slides].sort((a, b) => a.order - b.order);
 });
+
 
 // Thêm computed property để xử lý config
 const processedConfig = computed(() => {
@@ -197,7 +177,6 @@ const processedConfig = computed(() => {
     }
   };
 
-  console.log('Processed Config:', config);
   return config;
 });
 </script>
@@ -205,8 +184,8 @@ const processedConfig = computed(() => {
 <template>
   <section class="hero-section-full relative w-full md:pt-0">
     <div class="aspect-[4/3] md:aspect-[1780/450] w-full">
-      <div v-if="isLoading" class="flex items-center justify-center w-full h-full">
-        <Loader size="lg" />
+      <div v-if="shouldShowSkeleton || isLoading" class="w-full h-full">
+        <HeroSkeleton class="h-full" overlay-card />
       </div>
       
       <div v-else-if="error" class="flex items-center justify-center w-full h-full">
@@ -217,13 +196,26 @@ const processedConfig = computed(() => {
         <Swiper v-if="sortedSlides.length > 0"
                 v-bind="swiperOptions"
                 class="w-full h-full hero-swiper">
-          <SwiperSlide v-for="slide in sortedSlides" :key="slide.order" class="relative">
+          <SwiperSlide
+            v-for="(slide, index) in sortedSlides"
+            :key="slide.order"
+            class="relative"
+          >
             <div class="relative w-full h-full">
               <!-- Image layer (z-index: 1) -->
-              <img 
-                :src="slide.image_url" 
+              <AppImage
+                class="absolute inset-0 w-full h-full z-[1]"
+                :src="slide.image_url"
                 :alt="slide.title"
-                class="absolute inset-0 w-full h-full object-cover object-center z-[1]"
+                width="1780"
+                height="450"
+                sizes="(max-width: 768px) 100vw, 1780px"
+                format="webp"
+                quality="75"
+                :priority="index === 0"
+                :loading="index === 0 ? 'eager' : 'lazy'"
+                :fetchpriority="index === 0 ? 'high' : 'auto'"
+                customClass="w-full h-full object-cover object-center"
               />
               
               <!-- Dark overlay layer (z-index: 2) -->
@@ -247,9 +239,12 @@ const processedConfig = computed(() => {
               <!-- Content layer (z-index: 3) -->
               <div class="absolute inset-0 flex items-center justify-center z-[3]" v-if="processedConfig?.overlay?.enabled">
                 <div class="container mx-auto px-4 text-center text-white">
-                  <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-2 md:mb-4 drop-shadow-lg">
+                  <component
+                    :is="index === 0 ? titleTag : fallbackTitleTag"
+                    class="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-2 md:mb-4 drop-shadow-lg"
+                  >
                     {{ slide.title }}
-                  </h1>
+                  </component>
                   <p class="text-base sm:text-lg md:text-xl mb-4 md:mb-8 max-w-2xl mx-auto drop-shadow line-clamp-3 md:line-clamp-none">
                     {{ slide.description }}
                   </p>

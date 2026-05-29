@@ -571,7 +571,7 @@ onMounted(async () => {
                 </div>
                 <NuxtLink 
                   :to="`/hero-slider/${slider.id}/edit`" 
-                  class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+                  class="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors shrink-0"
                   :title="t('hero_slider.edit')"
                 >
                   <LucideIcon 
@@ -582,7 +582,7 @@ onMounted(async () => {
                 </NuxtLink>
                 <button 
                   @click="deleteSlider(slider.id)" 
-                  class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                  class="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors shrink-0"
                   :title="t('hero_slider.delete')"
                 >
                   <LucideIcon 

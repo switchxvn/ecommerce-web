@@ -2,17 +2,159 @@ name: Build and Push Containers
 
 on:
   push:
-    branches:
-      - master
-      - main
+    tags:
+      - '*'
   workflow_dispatch:
+    inputs:
+      service:
+        description: Service to build and push
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - frontend
+          - backend
+          - api
+          - admin
+          - nginx
+      image_tag:
+        description: Image tag (e.g. v1.0.0)
+        required: true
+        type: string
+
+concurrency:
+  group: build-and-push-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
   packages: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_changes: ${{ steps.set-matrix.outputs.has_changes }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed services
+        id: changes
+        if: github.event_name != 'workflow_dispatch'
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            frontend:
+              - 'apps/frontend/**'
+              - 'libs/**'
+              - 'package.json'
+              - 'yarn.lock'
+              - 'nx.json'
+              - 'tsconfig.base.json'
+            backend:
+              - 'apps/backend/**'
+              - 'libs/**'
+              - 'package.json'
+              - 'yarn.lock'
+              - 'nx.json'
+              - 'tsconfig.base.json'
+            api:
+              - 'apps/api/**'
+              - 'libs/**'
+              - 'package.json'
+              - 'yarn.lock'
+              - 'nx.json'
+              - 'tsconfig.base.json'
+            admin:
+              - 'apps/admin/**'
+              - 'libs/**'
+              - 'package.json'
+              - 'yarn.lock'
+              - 'nx.json'
+              - 'tsconfig.base.json'
+            nginx:
+              - 'nginx/**'
+
+      - name: Build matrix
+        id: set-matrix
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            selected_service="${{ github.event.inputs.service }}"
+            frontend=false
+            backend=false
+            api=false
+            admin=false
+            nginx=false
+
+            if [ -z "$selected_service" ] || [ "$selected_service" = "all" ]; then
+              frontend=true
+              backend=true
+              api=true
+              admin=true
+              nginx=true
+            elif [ "$selected_service" = "frontend" ]; then
+              frontend=true
+            elif [ "$selected_service" = "backend" ]; then
+              backend=true
+            elif [ "$selected_service" = "api" ]; then
+              api=true
+            elif [ "$selected_service" = "admin" ]; then
+              admin=true
+            elif [ "$selected_service" = "nginx" ]; then
+              nginx=true
+            else
+              echo "::error::Unsupported service input: $selected_service"
+              exit 1
+            fi
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            frontend=true
+            backend=true
+            api=true
+            admin=true
+            nginx=true
+          else
+            frontend="${{ steps.changes.outputs.frontend }}"
+            backend="${{ steps.changes.outputs.backend }}"
+            api="${{ steps.changes.outputs.api }}"
+            admin="${{ steps.changes.outputs.admin }}"
+            nginx="${{ steps.changes.outputs.nginx }}"
+          fi
+
+          entries=()
+          if [ "$frontend" = "true" ]; then
+            entries+=('{"service":"frontend","dockerfile":"apps/frontend/Dockerfile"}')
+          fi
+          if [ "$backend" = "true" ]; then
+            entries+=('{"service":"backend","dockerfile":"apps/backend/Dockerfile"}')
+          fi
+          if [ "$api" = "true" ]; then
+            entries+=('{"service":"api","dockerfile":"apps/api/Dockerfile"}')
+          fi
+          if [ "$admin" = "true" ]; then
+            entries+=('{"service":"admin","dockerfile":"apps/admin/Dockerfile"}')
+          fi
+          if [ "$nginx" = "true" ]; then
+            entries+=('{"service":"nginx","dockerfile":"nginx/Dockerfile"}')
+          fi
+
+          if [ "${#entries[@]}" -eq 0 ]; then
+            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
+            echo 'has_changes=false' >> "$GITHUB_OUTPUT"
+          else
+            joined=$(IFS=,; echo "${entries[*]}")
+            echo "matrix={\"include\":[${joined}]}" >> "$GITHUB_OUTPUT"
+            echo 'has_changes=true' >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: prepare
+    if: needs.prepare.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     environment: Production
     env:
@@ -40,21 +182,10 @@ jobs:
       API_PREFIX: api
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - service: frontend
-            dockerfile: apps/frontend/Dockerfile
-          - service: backend
-            dockerfile: apps/backend/Dockerfile
-          - service: api
-            dockerfile: apps/api/Dockerfile
-          - service: admin
-            dockerfile: apps/admin/Dockerfile
-          - service: nginx
-            dockerfile: nginx/Dockerfile
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Recreate .env from secret
         env:
@@ -131,12 +262,48 @@ jobs:
           username: ${{ env.GITHUB_USERNAME }}
           password: ${{ env.GHCR_PASSWORD }}
 
-      - name: Compute version
-        id: version
+      - name: Resolve image tag
+        id: image_tag
         shell: bash
         run: |
-          VERSION=$(git describe --tags --always)
-          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+          INPUT_TAG="${{ github.event.inputs.image_tag }}"
+          REF_NAME="${GITHUB_REF_NAME}"
+
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="$REF_NAME"
+          else
+            echo "::error::image_tag is required for manual dispatch, or run on a git tag push"
+            exit 1
+          fi
+
+          echo "value=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Using image tag: $TAG"
+
+      - name: Recreate nginx SSL files from secrets
+        if: matrix.service == 'nginx'
+        env:
+          CF_ORIGIN_CERT: ${{ secrets.CF_ORIGIN_CERT }}
+          CF_ORIGIN_KEY: ${{ secrets.CF_ORIGIN_KEY }}
+        shell: bash
+        run: |
+          if [ -z "$CF_ORIGIN_CERT" ] || [ -z "$CF_ORIGIN_KEY" ]; then
+            echo "::error::CF_ORIGIN_CERT and CF_ORIGIN_KEY repository secrets are required for nginx builds"
+            exit 1
+          fi
+
+          mkdir -p nginx/ssl
+          printf "%s" "$CF_ORIGIN_CERT" > nginx/ssl/fullchain.pem
+          printf "%s" "$CF_ORIGIN_KEY" > nginx/ssl/cloudflare-key.pem
+          chmod 600 nginx/ssl/fullchain.pem nginx/ssl/cloudflare-key.pem
+
+      - name: Validate nginx SSL files
+        if: matrix.service == 'nginx'
+        shell: bash
+        run: |
+          test -s nginx/ssl/fullchain.pem
+          test -s nginx/ssl/cloudflare-key.pem
 
       - name: Build and push ${{ matrix.service }}
         uses: docker/build-push-action@v5
@@ -150,6 +317,12 @@ jobs:
             ${{ matrix.service == 'admin' && format('ENV_FILE={0}\nADMIN_HOST={1}\nADMIN_PORT={2}\nADMIN_API_BASE={3}', env.ADMIN_ENV_FILE, env.ADMIN_HOST, env.ADMIN_PORT, env.ADMIN_API_BASE) || '' }}
             ${{ matrix.service == 'backend' && format('ENV_FILE={0}\nBACKEND_FALLBACK_ENV={1}\nBACKEND_NODE_ENV={2}\nBACKEND_PORT={3}\nBACKEND_API_PREFIX={4}\nBACKEND_FRONTEND_URL={5}', env.BACKEND_ENV_FILE, env.BACKEND_FALLBACK_ENV, env.BACKEND_NODE_ENV, env.BACKEND_PORT, env.BACKEND_API_PREFIX, env.BACKEND_FRONTEND_URL) || '' }}
             ${{ matrix.service == 'api' && format('ENV_FILE={0}\nAPI_FALLBACK_ENV={1}\nAPI_NODE_ENV={2}\nAPI_PORT={3}\nAPI_PREFIX={4}', env.API_ENV_FILE, env.API_FALLBACK_ENV, env.API_NODE_ENV, env.API_PORT, env.API_PREFIX) || '' }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
           tags: |
-            ${{ env.REGISTRY }}/${{ env.GITHUB_USERNAME }}/${{ env.APP_NAME }}-${{ matrix.service }}:${{ steps.version.outputs.value }}
-            ${{ env.REGISTRY }}/${{ env.GITHUB_USERNAME }}/${{ env.APP_NAME }}-${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/${{ env.GITHUB_USERNAME }}/${{ env.APP_NAME }}-${{ matrix.service }}:${{ steps.image_tag.outputs.value }}
+
+      - name: Clean up nginx SSL files
+        if: always() && matrix.service == 'nginx'
+        shell: bash
+        run: rm -rf nginx/ssl
