@@ -164,7 +164,6 @@ deploy_nginx() {
         --name "$NGINX_CONTAINER" \
         --network "$NETWORK_NAME" \
         -p "$NGINX_HTTP_PORT:80" \
-        -p "$NGINX_HTTPS_PORT:443" \
         -v /etc/nginx/ssl:/etc/nginx/ssl:ro \
         --restart unless-stopped \
         "$REGISTRY/$GITHUB_USERNAME/${APP_NAME}-nginx:latest"
