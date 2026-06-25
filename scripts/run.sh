@@ -72,7 +72,7 @@ pull_and_run "backend" "-p $BACKEND_PORT:$BACKEND_PORT" "apps/backend/.env" "-e 
 pull_and_run "frontend" "-p $FRONTEND_PORT:4201" "apps/frontend/.env" "-e NODE_ENV=production -e HOST=0.0.0.0"
 
 # Pull and run nginx
-pull_and_run "nginx" "-p 80:80 -p 443:443" "" "-v /etc/nginx/ssl:/etc/nginx/ssl:ro"
+pull_and_run "nginx" "-p 80:80" "" "-v /etc/nginx/ssl:/etc/nginx/ssl:ro"
 
 echo "All containers are up and running!"
 echo "You can check their status with: docker ps" 
