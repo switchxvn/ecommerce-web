@@ -11,11 +11,11 @@ type RouterOutput = inferRouterOutputs<AppRouter>;
 type SeoOutput = RouterOutput['seo']['getSeoByPath'];
 
 const defaultSeo = {
-  title: 'Xe Nâng MGA FORKLIFT Động Cơ ISUZU – Bền Bỉ, Mạnh Mẽ, Tiết Kiệm Nhiên Liệu Hàng Đầu',
-  description: 'Xe nâng MGA Forklift động cơ ISUZU – giải pháp nâng hạ hiệu suất cao, bền bỉ, mạnh mẽ và tiết kiệm nhiên liệu hàng đầu. Phân phối chính hãng, giá tốt, bảo hành toàn quốc.',
-  keywords: 'Xe Nâng MGA FORKLIFT Động Cơ ISUZU – Bền Bỉ, Mạnh Mẽ, Tiết Kiệm Nhiên Liệu Hàng Đầu',
-  ogTitle: 'Xe Nâng MGA FORKLIFT Động Cơ ISUZU – Bền Bỉ, Mạnh Mẽ, Tiết Kiệm Nhiên Liệu Hàng Đầu',
-  ogDescription: 'Xe nâng MGA Forklift động cơ ISUZU – giải pháp nâng hạ hiệu suất cao, bền bỉ, mạnh mẽ và tiết kiệm nhiên liệu hàng đầu. Phân phối chính hãng, giá tốt, bảo hành toàn quốc.',
+  title: 'Cáp Treo Núi Sam | Trọn Vẹn Trải Nghiệm Tâm Linh Từ Trên Cao',
+  description: 'Cáp treo Núi Sam Châu Đốc – trải nghiệm du lịch tâm linh độc đáo trên cao. Khám phá vẻ đẹp hùng vĩ và không khí thanh tịnh từ trên cao. Đặt vé và bắt đầu hành trình ngay hôm nay!',
+  keywords: 'Cáp Treo Núi Sam | Trọn Vẹn Trải Nghiệm Tâm Linh Từ Trên Cao',
+  ogTitle: 'Cáp Treo Núi Sam | Trọn Vẹn Trải Nghiệm Tâm Linh Từ Trên Cao',
+  ogDescription: 'Trải nghiệm du lịch tâm linh độc đáo tại Núi Sam Châu Đốc với hệ thống cáp treo hiện đại. Khám phá vẻ đẹp hùng vĩ và không khí thanh tịnh từ trên cao. Đặt vé ngay hôm nay!',
   ogImage: '/images/og-default.jpg',
   robotsTxt: 'index, follow',
   canonicalUrl: ''
