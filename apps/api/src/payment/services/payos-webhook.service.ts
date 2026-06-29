@@ -5,6 +5,7 @@ import * as crypto from 'crypto';
 import { Repository } from 'typeorm';
 import { MailService } from '../../../../../apps/backend/src/modules/mail/services/mail.service';
 import { OrderAdminService } from '../../../../../apps/backend/src/modules/order/admin/services/order-admin.service';
+import { OrderFrontendService } from '../../../../../apps/backend/src/modules/order/frontend/services/order-frontend.service';
 import { PaymentStatus, OrderStatus } from '../../../../../libs/shared/src/types/order.type';
 import { PaymentMethod } from '../../../../../apps/backend/src/modules/payment/entities/payment-method.entity';
 import { PaymentFrontendService } from '../../../../../apps/backend/src/modules/payment/frontend/services/payment-frontend.service';
@@ -30,6 +31,7 @@ export class PayOSWebhookService {
   constructor(
     private readonly configService: ConfigService,
     private readonly orderAdminService: OrderAdminService,
+    private readonly orderFrontendService: OrderFrontendService,
     private readonly paymentFrontendService: PaymentFrontendService,
     private readonly mailService: MailService,
     private readonly dashboardStatsService: DashboardStatsService,
@@ -101,6 +103,17 @@ export class PayOSWebhookService {
       // Update order status to CONFIRMED when payment is successful
       if (webhookData.success && order) {
         await this.orderAdminService.updateOrderStatus(orderId, OrderStatus.CONFIRMED);
+      }
+
+      if (webhookData.success) {
+        try {
+          await this.orderFrontendService.ensureTicketQRCodes(orderId);
+        } catch (error) {
+          this.logger.error('Failed to recover missing ticket QR codes after payment success', {
+            orderId,
+            error: error.message
+          });
+        }
       }
 
       // Update dashboard stats if payment is successful

@@ -16,6 +16,7 @@ import { generateRefundCode } from '../../utils/refund-code.util';
 import * as QRCode from 'qrcode';
 // Using native fetch - Node.js 18+ support
 import { DashboardStatsService } from '../../../dashboard/services/dashboard-stats.service';
+import { getTicketItemsMissingQr } from './order-qr-recovery.util';
 
 export interface CreateOrderDto {
   orderCode: string;
@@ -211,6 +212,45 @@ export class OrderFrontendService {
       where: { id: In(orderItems.map(item => item.id)) },
       relations: ['product', 'product.translations']
     });
+  }
+
+  async ensureTicketQRCodes(orderId: number): Promise<number> {
+    const orderItems = await this.orderItemRepository.find({
+      where: { orderId }
+    });
+
+    const missingQrItems = getTicketItemsMissingQr(orderItems);
+    if (!missingQrItems.length) {
+      return 0;
+    }
+
+    const itemsById = new Map(orderItems.map((item) => [item.id, item]));
+
+    for (const missingItem of missingQrItems) {
+      const orderItem = itemsById.get(missingItem.id);
+      if (!orderItem) {
+        continue;
+      }
+
+      orderItem.qrCode = missingItem.qrText;
+
+      if (missingItem.needsImageUpload) {
+        orderItem.imageQrCode = await this.generateAndUploadQRCode(missingItem.qrText, orderId);
+      }
+    }
+
+    await this.orderItemRepository.save(
+      missingQrItems
+        .map((missingItem) => itemsById.get(missingItem.id))
+        .filter(Boolean)
+    );
+
+    this.logger.log('Recovered missing ticket QR codes', {
+      orderId,
+      recoveredItems: missingQrItems.length
+    });
+
+    return missingQrItems.length;
   }
 
   private getProductName(product: any, locale: string = 'en'): string {
