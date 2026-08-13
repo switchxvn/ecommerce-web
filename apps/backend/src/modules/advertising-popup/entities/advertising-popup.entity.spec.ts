@@ -29,5 +29,15 @@ describe('AdvertisingPopup entity', () => {
       createdAt: 'created_at',
       updatedAt: 'updated_at',
     });
+
+    const columnTypes = Object.fromEntries(
+      columns.map(({ propertyName, options }) => [propertyName, options.type]),
+    );
+    expect(columnTypes).toMatchObject({
+      startsAt: 'timestamptz',
+      endsAt: 'timestamptz',
+      createdAt: 'timestamptz',
+      updatedAt: 'timestamptz',
+    });
   });
 });
