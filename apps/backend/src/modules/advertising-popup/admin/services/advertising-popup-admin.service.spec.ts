@@ -52,6 +52,7 @@ describe('AdvertisingPopupAdminService', () => {
       update: jest.fn(),
       save: jest.fn(),
       create: jest.fn(),
+      remove: jest.fn(),
     } as unknown as jest.Mocked<EntityManager>;
     dataSource = {
       transaction: jest.fn(async (callback) => callback(manager)),
@@ -94,11 +95,31 @@ describe('AdvertisingPopupAdminService', () => {
     expect(dataSource.transaction).not.toHaveBeenCalled();
   });
 
+  it('allows only writable campaign fields when creating', async () => {
+    const created = popup();
+    repository.create.mockReturnValue(created);
+    repository.save.mockResolvedValue(created);
+    const unsafe = {
+      ...input,
+      id: 999,
+      createdAt: new Date('2000-01-01T00:00:00Z'),
+      updatedAt: new Date('2000-01-01T00:00:00Z'),
+      unknown: 'ignored',
+      isActive: false,
+    } as any;
+
+    await service.create(unsafe);
+
+    expect(repository.create).toHaveBeenCalledWith({ ...input, isActive: false });
+    expect(unsafe).toEqual(expect.objectContaining({ id: 999, unknown: 'ignored' }));
+  });
+
   it('creates an active popup through the activation transaction', async () => {
     const selected = popup({ id: 3, isActive: false });
     const activated = popup({ id: 3, isActive: true });
     manager.create.mockReturnValue(selected);
-    manager.save.mockResolvedValue(activated);
+    manager.save.mockResolvedValueOnce(selected).mockResolvedValueOnce(activated);
+    manager.findOne.mockResolvedValue(selected);
 
     await expect(service.create({ ...input, isActive: true })).resolves.toBe(activated);
     expect(dataSource.transaction).toHaveBeenCalledTimes(1);
@@ -112,6 +133,10 @@ describe('AdvertisingPopupAdminService', () => {
       { isActive: false },
     );
     expect(manager.save).toHaveBeenNthCalledWith(1, selected);
+    expect(manager.findOne).toHaveBeenCalledWith(AdvertisingPopup, {
+      where: { id: 3 },
+      lock: { mode: 'pessimistic_write' },
+    });
     expect(manager.save).toHaveBeenNthCalledWith(
       2,
       AdvertisingPopup,
@@ -154,6 +179,25 @@ describe('AdvertisingPopupAdminService', () => {
     );
   });
 
+  it('allows only writable campaign fields when updating and trusts the method id', async () => {
+    const existing = popup({ id: 1 });
+    repository.preload.mockResolvedValue(existing);
+    repository.save.mockResolvedValue(existing);
+    const unsafe = {
+      ...input,
+      id: 999,
+      isActive: true,
+      createdAt: new Date('2000-01-01T00:00:00Z'),
+      updatedAt: new Date('2000-01-01T00:00:00Z'),
+      unknown: 'ignored',
+    } as any;
+
+    await service.update(1, unsafe);
+
+    expect(repository.preload).toHaveBeenCalledWith({ id: 1, ...input });
+    expect(unsafe).toEqual(expect.objectContaining({ id: 999, unknown: 'ignored' }));
+  });
+
   it('throws when updating a missing popup', async () => {
     repository.preload.mockResolvedValue(undefined);
 
@@ -168,6 +212,10 @@ describe('AdvertisingPopupAdminService', () => {
 
     await expect(service.setActive(1, false)).resolves.toBe(saved);
     expect(manager.update).not.toHaveBeenCalled();
+    expect(manager.findOne).toHaveBeenCalledWith(AdvertisingPopup, {
+      where: { id: 1 },
+      lock: { mode: 'pessimistic_write' },
+    });
     expect(manager.save).toHaveBeenCalledWith(
       AdvertisingPopup,
       expect.objectContaining({ id: 1, isActive: false }),
@@ -205,17 +253,22 @@ describe('AdvertisingPopupAdminService', () => {
 
   it('deletes an inactive popup', async () => {
     const record = popup();
-    repository.findOne.mockResolvedValue(record);
-    repository.remove.mockResolvedValue(record);
+    manager.findOne.mockResolvedValue(record);
+    manager.remove.mockResolvedValue(record);
 
     await expect(service.delete(1)).resolves.toBeUndefined();
-    expect(repository.remove).toHaveBeenCalledWith(record);
+    expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+    expect(manager.findOne).toHaveBeenCalledWith(AdvertisingPopup, {
+      where: { id: 1 },
+      lock: { mode: 'pessimistic_write' },
+    });
+    expect(manager.remove).toHaveBeenCalledWith(AdvertisingPopup, record);
   });
 
   it('rejects deletion of an active popup', async () => {
-    repository.findOne.mockResolvedValue(popup({ isActive: true }));
+    manager.findOne.mockResolvedValue(popup({ isActive: true }));
 
     await expect(service.delete(1)).rejects.toBeInstanceOf(BadRequestException);
-    expect(repository.remove).not.toHaveBeenCalled();
+    expect(manager.remove).not.toHaveBeenCalled();
   });
 });
