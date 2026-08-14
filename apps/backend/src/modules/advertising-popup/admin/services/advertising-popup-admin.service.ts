@@ -49,7 +49,10 @@ export class AdvertisingPopupAdminService {
   }
 
   async update(id: number, input: PopupUpdateInput): Promise<AdvertisingPopup> {
-    const record = await this.repository.preload({ id, ...input });
+    const { isActive: _activationState, ...fields } = input as PopupUpdateInput & {
+      isActive?: unknown;
+    };
+    const record = await this.repository.preload({ id, ...fields });
     if (!record) throw new NotFoundException('Advertising popup not found');
     return this.repository.save(record);
   }

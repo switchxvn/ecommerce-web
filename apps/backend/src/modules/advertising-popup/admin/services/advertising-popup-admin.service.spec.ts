@@ -136,6 +136,24 @@ describe('AdvertisingPopupAdminService', () => {
     expect(repository.save).toHaveBeenCalledWith(updated);
   });
 
+  it('strips activation state from untyped ordinary update payloads', async () => {
+    const existing = popup({ isActive: false, name: 'Updated' });
+    repository.preload.mockResolvedValue(existing);
+    repository.save.mockResolvedValue(existing);
+
+    await expect(
+      service.update(1, { ...input, name: 'Updated', isActive: true } as any),
+    ).resolves.toEqual(expect.objectContaining({ isActive: false }));
+    expect(repository.preload).toHaveBeenCalledWith({
+      id: 1,
+      ...input,
+      name: 'Updated',
+    });
+    expect(repository.preload).not.toHaveBeenCalledWith(
+      expect.objectContaining({ isActive: true }),
+    );
+  });
+
   it('throws when updating a missing popup', async () => {
     repository.preload.mockResolvedValue(undefined);
 
