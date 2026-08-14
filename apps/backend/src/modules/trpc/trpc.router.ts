@@ -34,7 +34,8 @@ import {
   siteStatisticsRouter,
   userSessionRouter,
   productTierDiscountRouter,
-  cartRouter
+  cartRouter,
+  advertisingPopupRouter,
 } from './routers';
 import { adminRouter } from './routers/admin/index';
 
@@ -81,10 +82,11 @@ export class TrpcRouter {
       userSession: userSessionRouter,
       productTierDiscount: productTierDiscountRouter,
       cart: cartRouter,
+      advertisingPopup: advertisingPopupRouter,
     });
   }
 
   public router = this.getRouter();
 }
 
-export type AppRouter = ReturnType<TrpcRouter['getRouter']>; 
+export type AppRouter = ReturnType<TrpcRouter['getRouter']>;

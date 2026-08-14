@@ -84,6 +84,8 @@ import { MenuItemAdminService } from '../../settings/admin/services/menu-item-ad
 import { ApiKeyAdminService } from '../../api-key/admin/services/api-key-admin.service';
 import { ApiKeyFrontendService } from '../../api-key/frontend/services/api-key-frontend.service';
 import { CartFrontendService } from '../../cart/frontend/services/cart-frontend.service';
+import { AdvertisingPopupAdminService } from '../../advertising-popup/admin/services/advertising-popup-admin.service';
+import { AdvertisingPopupFrontendService } from '../../advertising-popup/frontend/services/advertising-popup-frontend.service';
 
 @Injectable()
 export class ServiceContext {
@@ -172,6 +174,8 @@ export class ServiceContext {
     private readonly apiKeyAdminService: ApiKeyAdminService,
     private readonly apiKeyFrontendService: ApiKeyFrontendService,
     private readonly cartFrontendService: CartFrontendService,
+    private readonly advertisingPopupAdminService: AdvertisingPopupAdminService,
+    private readonly advertisingPopupFrontendService: AdvertisingPopupFrontendService,
     @Inject(forwardRef(() => PriceRequestService))
     private readonly priceRequestService: PriceRequestService,
     @Inject(forwardRef(() => PriceRequestAdminService))
@@ -264,6 +268,8 @@ export class ServiceContext {
       apiKeyAdminService: this.apiKeyAdminService,
       apiKeyFrontendService: this.apiKeyFrontendService,
       cartFrontendService: this.cartFrontendService,
+      advertisingPopupAdminService: this.advertisingPopupAdminService,
+      advertisingPopupFrontendService: this.advertisingPopupFrontendService,
       
       // Grouped services by namespace
       admin: {
@@ -302,6 +308,7 @@ export class ServiceContext {
         userPageVisit: this.userPageVisitAdminService,
         priceRequest: this.priceRequestAdminService,
         apiKey: this.apiKeyAdminService,
+        advertisingPopup: this.advertisingPopupAdminService,
       },
       
       frontend: {
@@ -337,7 +344,8 @@ export class ServiceContext {
         userPageVisit: this.userPageVisitFrontendService,
         apiKey: this.apiKeyFrontendService,
         cart: this.cartFrontendService,
+        advertisingPopup: this.advertisingPopupFrontendService,
       },
     };
   }
-} 
+}

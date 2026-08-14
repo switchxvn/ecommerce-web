@@ -35,6 +35,7 @@ import { TicketPricingModule } from '../ticket-pricing/ticket-pricing.module';
 import { UploadModule } from '../upload/upload.module';
 import { UserModule } from '../user/user.module';
 import { UserSessionModule } from '../user-session/user-session.module';
+import { AdvertisingPopupModule } from '../advertising-popup/advertising-popup.module';
 import { CommonRouter } from './routers/common.router';
 import { TrpcController } from './trpc.controller';
 import { TrpcRouter } from './trpc.router';
@@ -95,6 +96,7 @@ import { AuthContext } from './contexts/auth.context';
     AdminMenuModule,
     UserSessionModule,
     ApiKeyModule,
+    AdvertisingPopupModule,
     forwardRef(() => PriceRequestModule),
 
     // Auth module is imported with forwardRef to avoid circular dependency
@@ -126,4 +128,4 @@ import { AuthContext } from './contexts/auth.context';
   ],
   exports: [TrpcRouter],
 })
-export class TrpcModule { } 
+export class TrpcModule { }
