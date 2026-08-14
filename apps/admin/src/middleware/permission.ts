@@ -15,6 +15,7 @@ const routePermissions: Record<string, string[]> = {
   '/settings/system': ['MANAGE_SYSTEM'],
   '/settings/api': ['MANAGE_API'],
   '/settings/advanced': ['MANAGE_ADVANCED'],
+  '/settings/advertising-popups': ['MANAGE_SETTINGS'],
   // Thêm nhiều route khác ở đây
 };
 
@@ -140,4 +141,4 @@ export default async function (to: RouteLocationNormalized) {
     // Trong trường hợp lỗi, vẫn cho phép truy cập nhưng ghi log lỗi
     return;
   }
-} 
+}
