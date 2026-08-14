@@ -10,6 +10,7 @@ import type {
 const nonEmptyString = z.string().trim().min(1);
 
 const isSafeCtaUrl = (value: string): boolean => {
+  if (value.includes('\\')) return false;
   if (/^\/(?!\/)/.test(value)) return true;
   if (!/^https:\/\/[^/?#]/i.test(value)) return false;
 
@@ -32,8 +33,8 @@ const popupWritableFieldsSchema = z.object({
   content: nonEmptyString,
   ctaLabel: nonEmptyString,
   ctaUrl: ctaUrlSchema,
-  startsAt: z.date().nullable().optional(),
-  endsAt: z.date().nullable().optional(),
+  startsAt: z.coerce.date().nullable().optional(),
+  endsAt: z.coerce.date().nullable().optional(),
 });
 
 const validateSchedule = (

@@ -16,6 +16,7 @@ describe('popupWriteSchema', () => {
   it.each([
     '/products',
     '/products?featured=true',
+    '/order-ticket?x=1',
     'https://example.com/deals',
     'https://example.com/path?x=1',
   ])(
@@ -25,6 +26,11 @@ describe('popupWriteSchema', () => {
 
   it.each(['//evil.example', 'http://example.com', 'javascript:alert(1)', 'mailto:test@example.com'])(
     'rejects unsafe CTA URL %s',
+    (ctaUrl) => expect(popupWriteSchema.safeParse({ ...writeInput, ctaUrl }).success).toBe(false),
+  );
+
+  it.each(['/\\evil.example/path', '/products\\checkout', '\\evil'])(
+    'rejects internal paths containing a backslash: %s',
     (ctaUrl) => expect(popupWriteSchema.safeParse({ ...writeInput, ctaUrl }).success).toBe(false),
   );
 
@@ -54,6 +60,27 @@ describe('popupWriteSchema', () => {
       startsAt: new Date('2026-08-14T12:00:00Z'),
       endsAt: new Date('2026-08-14T13:00:00Z'),
     }).success).toBe(true);
+  });
+
+  it('coerces ISO schedule strings to dates and preserves null', () => {
+    const result = popupWriteSchema.parse({
+      ...writeInput,
+      startsAt: '2026-08-14T12:00:00Z',
+      endsAt: '2026-08-14T13:00:00Z',
+    });
+    expect(result.startsAt).toBeInstanceOf(Date);
+    expect(result.endsAt).toBeInstanceOf(Date);
+    expect(popupWriteSchema.parse(writeInput)).toEqual(expect.objectContaining({
+      startsAt: null,
+      endsAt: null,
+    }));
+  });
+
+  it('rejects invalid schedule date strings', () => {
+    expect(popupWriteSchema.safeParse({
+      ...writeInput,
+      startsAt: 'not-a-date',
+    }).success).toBe(false);
   });
 });
 

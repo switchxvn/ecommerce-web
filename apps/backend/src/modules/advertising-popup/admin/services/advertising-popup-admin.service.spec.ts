@@ -204,6 +204,49 @@ describe('AdvertisingPopupAdminService', () => {
     await expect(service.update(404, input)).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it('rejects a partial end-date update that is not after the stored start date', async () => {
+    repository.preload.mockResolvedValue(popup({
+      startsAt: new Date('2026-08-14T12:00:00Z'),
+      endsAt: new Date('2026-08-14T11:00:00Z'),
+    }));
+
+    await expect(service.update(1, {
+      endsAt: new Date('2026-08-14T11:00:00Z'),
+    } as any)).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects a partial start-date update that is not before the stored end date', async () => {
+    repository.preload.mockResolvedValue(popup({
+      startsAt: new Date('2026-08-14T13:00:00Z'),
+      endsAt: new Date('2026-08-14T12:00:00Z'),
+    }));
+
+    await expect(service.update(1, {
+      startsAt: new Date('2026-08-14T13:00:00Z'),
+    } as any)).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it('allows a partial update to clear one schedule boundary', async () => {
+    const cleared = popup({ startsAt: null, endsAt: new Date('2026-08-14T12:00:00Z') });
+    repository.preload.mockResolvedValue(cleared);
+    repository.save.mockResolvedValue(cleared);
+
+    await expect(service.update(1, { startsAt: null } as any)).resolves.toBe(cleared);
+    expect(repository.save).toHaveBeenCalledWith(cleared);
+  });
+
+  it('rejects an invalid schedule passed directly to create', async () => {
+    await expect(service.create({
+      ...input,
+      startsAt: new Date('2026-08-14T13:00:00Z'),
+      endsAt: new Date('2026-08-14T12:00:00Z'),
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.create).not.toHaveBeenCalled();
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
   it('deactivates the selected popup transactionally', async () => {
     const selected = popup({ isActive: true });
     const saved = popup({ isActive: false });

@@ -14,7 +14,7 @@ export interface PopupWriteInput {
   isActive?: boolean;
 }
 
-export type PopupUpdateInput = Omit<PopupWriteInput, 'isActive'>;
+export type PopupUpdateInput = Partial<Omit<PopupWriteInput, 'isActive'>>;
 
 @Injectable()
 export class AdvertisingPopupAdminService {
@@ -36,6 +36,7 @@ export class AdvertisingPopupAdminService {
 
   async create(input: PopupWriteInput): Promise<AdvertisingPopup> {
     const fields = this.pickWritableFields(input);
+    this.validateSchedule(fields);
     const isActive = (input as PopupWriteInput & { isActive?: unknown }).isActive === true;
     if (!isActive) {
       return this.repository.save(this.repository.create({ ...fields, isActive: false }));
@@ -54,6 +55,7 @@ export class AdvertisingPopupAdminService {
     const fields = this.pickWritableFields(input);
     const record = await this.repository.preload({ id, ...fields });
     if (!record) throw new NotFoundException('Advertising popup not found');
+    this.validateSchedule(record);
     return this.repository.save(record);
   }
 
@@ -76,14 +78,20 @@ export class AdvertisingPopupAdminService {
 
   private pickWritableFields(input: PopupUpdateInput): PopupUpdateInput {
     return {
-      name: input.name,
-      title: input.title,
-      content: input.content,
-      ctaLabel: input.ctaLabel,
-      ctaUrl: input.ctaUrl,
-      startsAt: input.startsAt,
-      endsAt: input.endsAt,
+      ...(input.name !== undefined && { name: input.name }),
+      ...(input.title !== undefined && { title: input.title }),
+      ...(input.content !== undefined && { content: input.content }),
+      ...(input.ctaLabel !== undefined && { ctaLabel: input.ctaLabel }),
+      ...(input.ctaUrl !== undefined && { ctaUrl: input.ctaUrl }),
+      ...(input.startsAt !== undefined && { startsAt: input.startsAt }),
+      ...(input.endsAt !== undefined && { endsAt: input.endsAt }),
     };
+  }
+
+  private validateSchedule(schedule: { startsAt?: Date | null; endsAt?: Date | null }): void {
+    if (schedule.startsAt && schedule.endsAt && schedule.endsAt <= schedule.startsAt) {
+      throw new BadRequestException('Advertising popup end date must be after its start date');
+    }
   }
 
   private async findLocked(
