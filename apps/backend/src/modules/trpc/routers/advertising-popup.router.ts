@@ -8,8 +8,21 @@ import type {
 } from '../../advertising-popup/admin/services/advertising-popup-admin.service';
 
 const nonEmptyString = z.string().trim().min(1);
+
+const isSafeCtaUrl = (value: string): boolean => {
+  if (/^\/(?!\/)/.test(value)) return true;
+  if (!/^https:\/\/[^/?#]/i.test(value)) return false;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname.length > 0;
+  } catch {
+    return false;
+  }
+};
+
 const ctaUrlSchema = nonEmptyString.refine(
-  (value) => (/^\/(?!\/)/.test(value) || /^https:\/\/[^\s]+$/i.test(value)),
+  isSafeCtaUrl,
   'CTA URL must be an internal path or an absolute HTTPS URL',
 );
 

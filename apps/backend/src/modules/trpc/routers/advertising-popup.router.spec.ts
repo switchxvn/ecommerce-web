@@ -13,13 +13,23 @@ const writeInput = {
 };
 
 describe('popupWriteSchema', () => {
-  it.each(['/products', '/products?featured=true', 'https://example.com/deals'])(
+  it.each([
+    '/products',
+    '/products?featured=true',
+    'https://example.com/deals',
+    'https://example.com/path?x=1',
+  ])(
     'accepts safe CTA URL %s',
     (ctaUrl) => expect(popupWriteSchema.safeParse({ ...writeInput, ctaUrl }).success).toBe(true),
   );
 
   it.each(['//evil.example', 'http://example.com', 'javascript:alert(1)', 'mailto:test@example.com'])(
     'rejects unsafe CTA URL %s',
+    (ctaUrl) => expect(popupWriteSchema.safeParse({ ...writeInput, ctaUrl }).success).toBe(false),
+  );
+
+  it.each(['https:///evil', 'https://?next=/x', 'https://#fragment'])(
+    'rejects malformed HTTPS URL %s',
     (ctaUrl) => expect(popupWriteSchema.safeParse({ ...writeInput, ctaUrl }).success).toBe(false),
   );
 
@@ -31,6 +41,19 @@ describe('popupWriteSchema', () => {
   it('rejects a schedule whose end is not after its start', () => {
     const startsAt = new Date('2026-08-14T12:00:00Z');
     expect(popupWriteSchema.safeParse({ ...writeInput, startsAt, endsAt: startsAt }).success).toBe(false);
+  });
+
+  it('accepts omitted schedule dates', () => {
+    const { startsAt: _startsAt, endsAt: _endsAt, ...withoutDates } = writeInput;
+    expect(popupWriteSchema.safeParse(withoutDates).success).toBe(true);
+  });
+
+  it('accepts a schedule whose end is after its start', () => {
+    expect(popupWriteSchema.safeParse({
+      ...writeInput,
+      startsAt: new Date('2026-08-14T12:00:00Z'),
+      endsAt: new Date('2026-08-14T13:00:00Z'),
+    }).success).toBe(true);
   });
 });
 
