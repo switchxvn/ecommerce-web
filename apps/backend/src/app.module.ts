@@ -25,6 +25,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ApiKeyModule } from './modules/api-key/api-key.module';
 import { CartModule } from './modules/cart/cart.module';
 import { ZnsModule } from './modules/zns/zns.module';
+import { AdvertisingPopupModule } from './modules/advertising-popup/advertising-popup.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { ZnsModule } from './modules/zns/zns.module';
     ApiKeyModule,
     CartModule,
     ZnsModule,
+    AdvertisingPopupModule,
   ],
   controllers: [AppController],
   providers: [AppService],
