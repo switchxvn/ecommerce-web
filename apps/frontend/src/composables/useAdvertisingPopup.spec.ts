@@ -83,12 +83,22 @@ describe('useAdvertisingPopup', () => {
   it.each([
     { ...validCampaign, id: 0 },
     { ...validCampaign, id: Number.NaN },
+    { ...validCampaign, name: '' },
+    { ...validCampaign, name: undefined },
     { ...validCampaign, title: '   ' },
     { ...validCampaign, content: '' },
     { ...validCampaign, ctaLabel: '' },
     { ...validCampaign, ctaUrl: 'javascript:alert(1)' },
     { ...validCampaign, ctaUrl: '//evil.example/path' },
+    { ...validCampaign, ctaUrl: String.raw`/\evil.example/path` },
+    { ...validCampaign, ctaUrl: String.raw`/sale\checkout` },
     { ...validCampaign, ctaUrl: 'http://example.com/sale' },
+    { ...validCampaign, isActive: false },
+    { ...validCampaign, isActive: 'true' },
+    { ...validCampaign, startsAt: 'not-a-date' },
+    { ...validCampaign, startsAt: 123 },
+    { ...validCampaign, endsAt: '2026-99-99' },
+    { ...validCampaign, endsAt: {} },
   ])('does not show an invalid campaign response', async (campaign) => {
     query.mockResolvedValue(campaign);
     const popup = useAdvertisingPopup();
@@ -172,5 +182,21 @@ describe('useAdvertisingPopup', () => {
 
     expect(query).toHaveBeenCalledTimes(1);
     expect(second.shouldShow.value).toBe(false);
+  });
+
+  it('does not access storage or the API during SSR', async () => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem');
+    vi.stubGlobal('window', undefined);
+
+    try {
+      const popup = useAdvertisingPopup();
+      await popup.initialize();
+
+      expect(getItem).not.toHaveBeenCalled();
+      expect(query).not.toHaveBeenCalled();
+      expect(popup.shouldShow.value).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
