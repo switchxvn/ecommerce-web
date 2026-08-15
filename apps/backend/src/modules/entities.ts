@@ -152,6 +152,9 @@ import { ZnsTemplate } from './zns/entities/zns-template.entity';
 import { ZnsLog } from './zns/entities/zns-log.entity';
 import { ZnsWebhookEvent } from './zns/entities/zns-webhook-event.entity';
 
+// Advertising Popup
+import { AdvertisingPopup } from './advertising-popup/entities/advertising-popup.entity';
+
 // Type for TypeORM entities
 import { EntitySchema } from 'typeorm';
 
@@ -309,4 +312,7 @@ export const entities: (new () => any)[] = [
   ZnsTemplate,
   ZnsLog,
   ZnsWebhookEvent,
-]; 
+
+  // Advertising Popup
+  AdvertisingPopup,
+];

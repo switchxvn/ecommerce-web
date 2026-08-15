@@ -22,7 +22,8 @@ import {
   Users,
   Key,
   Monitor,
-  Zap
+  Zap,
+  Megaphone
 } from 'lucide-vue-next'
 
 const { t } = useI18n()
@@ -61,6 +62,17 @@ watch(() => userStore.isLoading, (loading) => {
 
 // Settings categories
 const settingsCategories = computed(() => [
+  {
+    title: 'Popup quảng cáo',
+    description: 'Quản lý nội dung, lịch hiển thị và trạng thái chiến dịch popup.',
+    icon: Megaphone,
+    color: 'blue',
+    route: '/settings/advertising-popups',
+    group: 'advertising-popup',
+    permission: 'VIEW_SETTINGS',
+    features: ['Nội dung popup', 'Lịch hiển thị', 'Kích hoạt chiến dịch'],
+    count: 0
+  },
   {
     title: t('settings.categories.general.title'),
     description: t('settings.categories.general.description'),
@@ -485,4 +497,4 @@ a {
 a:hover {
   text-decoration: none !important;
 }
-</style> 
+</style>

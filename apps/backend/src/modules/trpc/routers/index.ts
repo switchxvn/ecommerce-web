@@ -34,6 +34,7 @@ import { adminMenuAdminRouter } from './admin/admin-menu.router';
 import { userSessionRouter } from './user-session.router';
 import { productTierDiscountRouter } from './product-tier-discount.router';
 import { cartRouter } from './cart.router';
+import { advertisingPopupRouter } from './advertising-popup.router';
 
 // Export all routers
 export * from './app.router';
@@ -71,6 +72,7 @@ export * from './site-statistics.router';
 export * from './user-session.router';
 export * from './product-tier-discount.router';
 export * from './cart.router';
+export * from './advertising-popup.router';
 
 export const appRouter = (commonRouter) => router({
   auth: authRouter,
@@ -108,6 +110,7 @@ export const appRouter = (commonRouter) => router({
   userSession: userSessionRouter,
   productTierDiscount: productTierDiscountRouter,
   cart: cartRouter,
+  advertisingPopup: advertisingPopupRouter,
 });
 
-export type AppRouter = ReturnType<typeof appRouter>; 
+export type AppRouter = ReturnType<typeof appRouter>;

@@ -81,6 +81,8 @@ import { MenuItemAdminService } from '../../settings/admin/services/menu-item-ad
 import { ApiKeyAdminService } from '../../api-key/admin/services/api-key-admin.service';
 import { ApiKeyFrontendService } from '../../api-key/frontend/services/api-key-frontend.service';
 import { CartFrontendService } from '../../cart/frontend/services/cart-frontend.service';
+import { AdvertisingPopupAdminService } from '../../advertising-popup/admin/services/advertising-popup-admin.service';
+import { AdvertisingPopupFrontendService } from '../../advertising-popup/frontend/services/advertising-popup-frontend.service';
 
 export interface ITrpcServices {
   userService: UserService;
@@ -167,6 +169,8 @@ export interface ITrpcServices {
   apiKeyAdminService: ApiKeyAdminService;
   apiKeyFrontendService: ApiKeyFrontendService;
   cartFrontendService: CartFrontendService;
+  advertisingPopupAdminService: AdvertisingPopupAdminService;
+  advertisingPopupFrontendService: AdvertisingPopupFrontendService;
   
   // Grouped services
   admin: {
@@ -205,6 +209,7 @@ export interface ITrpcServices {
     userPageVisit: UserPageVisitAdminService;
     priceRequest: PriceRequestAdminService;
     apiKey: ApiKeyAdminService;
+    advertisingPopup: AdvertisingPopupAdminService;
   };
   
   frontend: {
@@ -240,5 +245,6 @@ export interface ITrpcServices {
     userPageVisit: UserPageVisitFrontendService;
     apiKey: ApiKeyFrontendService;
     cart: CartFrontendService;
+    advertisingPopup: AdvertisingPopupFrontendService;
   };
-} 
+}
