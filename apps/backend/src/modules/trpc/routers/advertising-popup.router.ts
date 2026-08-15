@@ -1,7 +1,9 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { protectedProcedure, publicProcedure, router } from '../procedures';
+import { adminProcedure, publicProcedure, router } from '../procedures';
+import { requirePermission } from '../middlewares/permission.middleware';
+import { Permissions } from '../../auth/constants/permissions.constant';
 import type {
   PopupUpdateInput,
   PopupWriteInput,
@@ -24,7 +26,7 @@ const isSafeCtaUrl = (value: string): boolean => {
 
 const ctaUrlSchema = nonEmptyString.refine(
   isSafeCtaUrl,
-  'CTA URL must be an internal path or an absolute HTTPS URL',
+  'CTA URL must be an internal path or an absolute HTTPS URL'
 );
 
 const popupWritableFieldsSchema = z.object({
@@ -39,7 +41,7 @@ const popupWritableFieldsSchema = z.object({
 
 const validateSchedule = (
   value: { startsAt?: Date | null; endsAt?: Date | null },
-  ctx: z.RefinementCtx,
+  ctx: z.RefinementCtx
 ) => {
   if (value.startsAt && value.endsAt && value.endsAt <= value.startsAt) {
     ctx.addIssue({
@@ -50,16 +52,28 @@ const validateSchedule = (
   }
 };
 
-export const popupWriteSchema = popupWritableFieldsSchema.superRefine(validateSchedule);
-export const popupUpdateSchema = popupWritableFieldsSchema.partial().superRefine(validateSchedule);
+export const popupWriteSchema =
+  popupWritableFieldsSchema.superRefine(validateSchedule);
+export const popupCreateSchema = popupWritableFieldsSchema
+  .extend({ isActive: z.boolean().optional().default(false) })
+  .superRefine(validateSchedule);
+export const popupUpdateSchema = popupWritableFieldsSchema
+  .partial()
+  .superRefine(validateSchedule);
 
 function mapError(error: unknown): never {
   if (error instanceof TRPCError) throw error;
   if (error instanceof NotFoundException) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: 'Advertising popup not found' });
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Advertising popup not found',
+    });
   }
   if (error instanceof BadRequestException || error instanceof z.ZodError) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid advertising popup request' });
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Invalid advertising popup request',
+    });
   }
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
@@ -76,63 +90,81 @@ export const advertisingPopupRouter = router({
     }
   }),
 
-  list: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      return await ctx.services.admin.advertisingPopup.findAll();
-    } catch (error) {
-      return mapError(error);
-    }
-  }),
+  list: adminProcedure
+    .use(requirePermission(Permissions.VIEW_SETTINGS))
+    .query(async ({ ctx }) => {
+      try {
+        return await ctx.services.admin.advertisingPopup.findAll();
+      } catch (error) {
+        return mapError(error);
+      }
+    }),
 
-  getById: protectedProcedure.input(z.number().int().positive()).query(async ({ input, ctx }) => {
-    try {
-      return await ctx.services.admin.advertisingPopup.findById(input);
-    } catch (error) {
-      return mapError(error);
-    }
-  }),
+  getById: adminProcedure
+    .use(requirePermission(Permissions.VIEW_SETTINGS))
+    .input(z.number().int().positive())
+    .query(async ({ input, ctx }) => {
+      try {
+        return await ctx.services.admin.advertisingPopup.findById(input);
+      } catch (error) {
+        return mapError(error);
+      }
+    }),
 
-  create: protectedProcedure.input(popupWriteSchema).mutation(async ({ input, ctx }) => {
-    try {
-      return await ctx.services.admin.advertisingPopup.create({
-        ...input,
-        startsAt: input.startsAt ?? null,
-        endsAt: input.endsAt ?? null,
-      } as PopupWriteInput);
-    } catch (error) {
-      return mapError(error);
-    }
-  }),
+  create: adminProcedure
+    .use(requirePermission(Permissions.EDIT_SETTINGS))
+    .input(popupCreateSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await ctx.services.admin.advertisingPopup.create({
+          ...input,
+          startsAt: input.startsAt ?? null,
+          endsAt: input.endsAt ?? null,
+        } as PopupWriteInput);
+      } catch (error) {
+        return mapError(error);
+      }
+    }),
 
-  update: protectedProcedure
-    .input(z.object({ id: z.number().int().positive(), data: popupUpdateSchema }))
+  update: adminProcedure
+    .use(requirePermission(Permissions.EDIT_SETTINGS))
+    .input(
+      z.object({ id: z.number().int().positive(), data: popupUpdateSchema })
+    )
     .mutation(async ({ input, ctx }) => {
       try {
         return await ctx.services.admin.advertisingPopup.update(
           input.id,
-          input.data as PopupUpdateInput,
+          input.data as PopupUpdateInput
         );
       } catch (error) {
         return mapError(error);
       }
     }),
 
-  setActive: protectedProcedure
+  setActive: adminProcedure
+    .use(requirePermission(Permissions.EDIT_SETTINGS))
     .input(z.object({ id: z.number().int().positive(), active: z.boolean() }))
     .mutation(async ({ input, ctx }) => {
       try {
-        return await ctx.services.admin.advertisingPopup.setActive(input.id, input.active);
+        return await ctx.services.admin.advertisingPopup.setActive(
+          input.id,
+          input.active
+        );
       } catch (error) {
         return mapError(error);
       }
     }),
 
-  delete: protectedProcedure.input(z.number().int().positive()).mutation(async ({ input, ctx }) => {
-    try {
-      await ctx.services.admin.advertisingPopup.delete(input);
-      return { success: true };
-    } catch (error) {
-      return mapError(error);
-    }
-  }),
+  delete: adminProcedure
+    .use(requirePermission(Permissions.DELETE_SETTINGS))
+    .input(z.number().int().positive())
+    .mutation(async ({ input, ctx }) => {
+      try {
+        await ctx.services.admin.advertisingPopup.delete(input);
+        return { success: true };
+      } catch (error) {
+        return mapError(error);
+      }
+    }),
 });
