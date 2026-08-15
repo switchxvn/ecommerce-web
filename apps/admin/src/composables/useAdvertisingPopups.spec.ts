@@ -96,6 +96,40 @@ describe('useAdvertisingPopups', () => {
     expect(state.isActivationPending.value).toBe(false);
   });
 
+  it('rejects activation when deletion of the same campaign is pending', async () => {
+    const pendingDelete = deferred<{ success: boolean }>();
+    trpc.advertisingPopup.delete.mutate.mockReturnValueOnce(
+      pendingDelete.promise
+    );
+    const state = useAdvertisingPopups();
+
+    const deletion = state.remove(1);
+    await expect(state.setActive(1, true)).rejects.toThrow(
+      'Một thao tác khác trên chiến dịch này đang được xử lý'
+    );
+    expect(trpc.advertisingPopup.setActive.mutate).not.toHaveBeenCalled();
+
+    pendingDelete.resolve({ success: true });
+    await deletion;
+  });
+
+  it('rejects deletion when activation of the same campaign is pending', async () => {
+    const pendingActivation = deferred<AdvertisingPopup>();
+    trpc.advertisingPopup.setActive.mutate.mockReturnValueOnce(
+      pendingActivation.promise
+    );
+    const state = useAdvertisingPopups();
+
+    const activation = state.setActive(1, true);
+    await expect(state.remove(1)).rejects.toThrow(
+      'Một thao tác khác trên chiến dịch này đang được xử lý'
+    );
+    expect(trpc.advertisingPopup.delete.mutate).not.toHaveBeenCalled();
+
+    pendingActivation.resolve(campaign(1, true));
+    await activation;
+  });
+
   it('applies successful activation locally without a follow-up list request', async () => {
     trpc.advertisingPopup.list.query.mockResolvedValueOnce([
       campaign(1, true),

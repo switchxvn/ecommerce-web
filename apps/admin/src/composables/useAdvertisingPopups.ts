@@ -16,10 +16,11 @@ export function useAdvertisingPopups() {
   const loading = computed(() => inFlight.value > 0);
   const error = ref<string | null>(null);
   const pendingActions = reactive(new Set<number>());
-  const actionPromises = new Map<number, Promise<unknown>>();
-  const activationPendingId = ref<number | null>(null);
+  const deletePromises = new Map<number, Promise<unknown>>();
+  const activationCampaignId = ref<number | null>(null);
+  let activationPromise: Promise<AdvertisingPopup> | null = null;
   const isActivationPending = computed(
-    () => activationPendingId.value !== null
+    () => activationCampaignId.value !== null
   );
 
   const run = async <T>(
@@ -38,18 +39,23 @@ export function useAdvertisingPopups() {
     }
   };
 
-  const runAction = <T>(
+  const runDeleteAction = <T>(
     id: number,
     operation: () => Promise<T>
   ): Promise<T> => {
-    const existing = actionPromises.get(id);
+    if (activationCampaignId.value === id) {
+      return Promise.reject(
+        new Error('Một thao tác khác trên chiến dịch này đang được xử lý')
+      );
+    }
+    const existing = deletePromises.get(id);
     if (existing) return existing as Promise<T>;
     pendingActions.add(id);
     const promise = run(operation).finally(() => {
       pendingActions.delete(id);
-      actionPromises.delete(id);
+      deletePromises.delete(id);
     });
-    actionPromises.set(id, promise);
+    deletePromises.set(id, promise);
     return promise;
   };
 
@@ -88,16 +94,21 @@ export function useAdvertisingPopups() {
       clearError: true,
     });
   const setActive = (id: number, active: boolean) => {
-    const existing = actionPromises.get(id);
-    if (existing) return existing as Promise<AdvertisingPopup>;
-    if (activationPendingId.value !== null) {
+    if (activationPromise) {
+      if (activationCampaignId.value === id) return activationPromise;
       return Promise.reject(
         new Error('Một thay đổi trạng thái khác đang được xử lý')
       );
     }
+    if (deletePromises.has(id)) {
+      return Promise.reject(
+        new Error('Một thao tác khác trên chiến dịch này đang được xử lý')
+      );
+    }
 
-    activationPendingId.value = id;
-    return runAction(id, async () => {
+    activationCampaignId.value = id;
+    pendingActions.add(id);
+    activationPromise = run(async () => {
       const result = (await trpc.advertisingPopup.setActive.mutate({
         id,
         active,
@@ -109,11 +120,14 @@ export function useAdvertisingPopups() {
       if (current.value?.id === id) current.value = result;
       return result;
     }).finally(() => {
-      if (activationPendingId.value === id) activationPendingId.value = null;
+      pendingActions.delete(id);
+      activationCampaignId.value = null;
+      activationPromise = null;
     });
+    return activationPromise;
   };
   const remove = (id: number) =>
-    runAction(id, async () => {
+    runDeleteAction(id, async () => {
       const result = await trpc.advertisingPopup.delete.mutate(id);
       campaigns.value = campaigns.value.filter(
         (campaign) => campaign.id !== id
