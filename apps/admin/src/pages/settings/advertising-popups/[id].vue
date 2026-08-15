@@ -19,14 +19,9 @@ const toast = useToast();
 const form = computed(() =>
   current.value ? popupToFormState(current.value) : undefined
 );
-const submit = async ({
-  data,
-  isActive,
-}: {
-  data: PopupMutationInput;
-  isActive: boolean;
-}) => {
+const submit = async (input: PopupMutationInput) => {
   try {
+    const { isActive, ...data } = input;
     await update(id, data);
     if (current.value?.isActive !== isActive) await setActive(id, isActive);
     toast.success('Đã cập nhật chiến dịch');
@@ -50,7 +45,7 @@ onMounted(async () => {
     <header>
       <NuxtLink
         to="/settings/advertising-popups"
-        class="text-sm text-primary-600 hover:underline"
+        class="text-sm text-primary hover:underline"
         >← Danh sách chiến dịch</NuxtLink
       >
       <h1 class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">

@@ -187,4 +187,27 @@ describe('useAdvertisingPopups', () => {
 
     expect(state.error.value).toBe('fetch failed');
   });
+
+  it('forwards active creation in one create mutation without setActive', async () => {
+    const input = {
+      name: 'Active campaign',
+      title: 'Title',
+      content: 'Content',
+      ctaLabel: 'Go',
+      ctaUrl: '/go',
+      startsAt: null,
+      endsAt: null,
+      isActive: true,
+    };
+    trpc.advertisingPopup.create.mutate.mockResolvedValueOnce(
+      campaign(1, true)
+    );
+    const state = useAdvertisingPopups();
+
+    await state.create(input);
+
+    expect(trpc.advertisingPopup.create.mutate).toHaveBeenCalledOnce();
+    expect(trpc.advertisingPopup.create.mutate).toHaveBeenCalledWith(input);
+    expect(trpc.advertisingPopup.setActive.mutate).not.toHaveBeenCalled();
+  });
 });

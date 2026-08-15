@@ -88,7 +88,7 @@ export function useAdvertisingPopups() {
       reportError: true,
       clearError: true,
     });
-  const update = (id: number, data: PopupMutationInput) =>
+  const update = (id: number, data: Omit<PopupMutationInput, 'isActive'>) =>
     run(() => trpc.advertisingPopup.update.mutate({ id, data }), {
       reportError: true,
       clearError: true,

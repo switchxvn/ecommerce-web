@@ -90,7 +90,7 @@ onMounted(async () => {
     class="flex min-h-64 items-center justify-center"
   >
     <span
-      class="h-8 w-8 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"
+      class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"
     />
   </div>
   <main v-else-if="hasPermissionAccess" class="space-y-6">
@@ -107,7 +107,7 @@ onMounted(async () => {
       </div>
       <NuxtLink
         to="/settings/advertising-popups/new"
-        class="inline-flex items-center justify-center gap-2 rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+        class="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
         ><Plus class="h-4 w-4" />Tạo chiến dịch</NuxtLink
       >
     </header>
@@ -185,14 +185,14 @@ onMounted(async () => {
                     :disabled="
                       isActivationPending || isActionPending(campaign.id)
                     "
-                    class="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-gray-700"
+                    class="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-primary dark:hover:bg-gray-700"
                     @click="toggleCampaign(campaign)"
                   >
                     <Power class="h-4 w-4" /></button
                   ><NuxtLink
                     :to="`/settings/advertising-popups/${campaign.id}`"
                     aria-label="Sửa chiến dịch"
-                    class="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-gray-700"
+                    class="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-primary dark:hover:bg-gray-700"
                     ><Edit3 class="h-4 w-4" /></NuxtLink
                   ><button
                     aria-label="Xóa chiến dịch"

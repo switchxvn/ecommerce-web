@@ -12,9 +12,7 @@ const props = withDefaults(
   defineProps<{ initialValue?: PopupFormState; saving?: boolean }>(),
   { saving: false }
 );
-const emit = defineEmits<{
-  submit: [payload: { data: PopupMutationInput; isActive: boolean }];
-}>();
+const emit = defineEmits<{ submit: [payload: PopupMutationInput] }>();
 const form = reactive<PopupFormState>({
   ...createDefaultPopupForm(),
   ...props.initialValue,
@@ -42,10 +40,7 @@ const validationError = computed(() => {
 });
 const submit = () => {
   if (!validationError.value && !props.saving)
-    emit('submit', {
-      data: toPopupMutationInput(form),
-      isActive: form.isActive,
-    });
+    emit('submit', toPopupMutationInput(form));
 };
 </script>
 
@@ -133,7 +128,7 @@ const submit = () => {
           ><input
             v-model="form.isActive"
             type="checkbox"
-            class="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            class="mt-1 rounded border-gray-300 text-primary focus:ring-primary"
           /><span
             ><span
               class="block text-sm font-medium text-gray-900 dark:text-white"
@@ -155,7 +150,7 @@ const submit = () => {
         <button
           type="submit"
           :disabled="saving || !!validationError"
-          class="inline-flex items-center gap-2 rounded-md bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+          class="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Save class="h-4 w-4" />{{ saving ? 'Đang lưu…' : 'Lưu chiến dịch' }}
         </button>
@@ -170,7 +165,7 @@ const submit = () => {
       <div
         class="rounded-xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-800"
       >
-        <Megaphone class="h-7 w-7 text-primary-600 dark:text-primary-400" />
+        <Megaphone class="h-7 w-7 text-primary" />
         <h3 class="mt-4 text-xl font-bold text-gray-900 dark:text-white">
           {{ form.title || 'Tiêu đề popup' }}
         </h3>
@@ -180,7 +175,7 @@ const submit = () => {
           {{ form.content || 'Nội dung popup' }}
         </p>
         <span
-          class="mt-5 inline-flex rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white"
+          class="mt-5 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
           >{{ form.ctaLabel || 'Nút hành động' }}</span
         >
       </div>

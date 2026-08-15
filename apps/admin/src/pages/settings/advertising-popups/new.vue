@@ -7,18 +7,11 @@ import type { PopupMutationInput } from '@/types/advertising-popup';
 definePageMeta({ middleware: ['auth', 'permission'] });
 provide('pageTitle', ref('Tạo popup quảng cáo'));
 const { hasPermissionAccess } = usePagePermissions(['MANAGE_SETTINGS']);
-const { loading, error, create, setActive } = useAdvertisingPopups();
+const { loading, error, create } = useAdvertisingPopups();
 const toast = useToast();
-const submit = async ({
-  data,
-  isActive,
-}: {
-  data: PopupMutationInput;
-  isActive: boolean;
-}) => {
+const submit = async (input: PopupMutationInput) => {
   try {
-    const created = await create(data);
-    if (isActive) await setActive(created.id, true);
+    await create(input);
     toast.success('Đã tạo chiến dịch');
     await navigateTo('/settings/advertising-popups');
   } catch {
@@ -31,7 +24,7 @@ const submit = async ({
     <header>
       <NuxtLink
         to="/settings/advertising-popups"
-        class="text-sm text-primary-600 hover:underline"
+        class="text-sm text-primary hover:underline"
         >← Danh sách chiến dịch</NuxtLink
       >
       <h1 class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">

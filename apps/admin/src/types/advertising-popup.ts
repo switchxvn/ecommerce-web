@@ -31,6 +31,7 @@ export interface PopupMutationInput {
   ctaUrl: string;
   startsAt: Date | null;
   endsAt: Date | null;
+  isActive: boolean;
 }
 
 export const createDefaultPopupForm = (): PopupFormState => ({
@@ -60,6 +61,7 @@ export const toPopupMutationInput = (
   ctaUrl: form.ctaUrl.trim(),
   startsAt: toOptionalDate(form.startsAt),
   endsAt: toOptionalDate(form.endsAt),
+  isActive: form.isActive,
 });
 
 const toDateTimeLocal = (value: Date | string | null): string => {

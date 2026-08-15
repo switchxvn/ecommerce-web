@@ -41,7 +41,18 @@ describe('advertising popup form helpers', () => {
       ctaUrl: '/order-ticket',
       startsAt: null,
       endsAt: null,
+      isActive: false,
     });
+  });
+
+  it('includes the requested active state in the atomic create input', () => {
+    const input = toPopupMutationInput({
+      ...createDefaultPopupForm(),
+      name: 'Active campaign',
+      isActive: true,
+    });
+
+    expect(input.isActive).toBe(true);
   });
 
   it('converts populated local datetimes to Date values', () => {
