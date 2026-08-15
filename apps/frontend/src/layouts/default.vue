@@ -17,11 +17,19 @@ import FloatingZaloSupport from '~/components/ui/FloatingZaloSupport.vue';
 import FloatingMessengerSupport from '~/components/ui/FloatingMessengerSupport.vue';
 import SimpleNavbar from '~/components/ui/SimpleNavbar.vue';
 import MaintenancePage from '~/components/MaintenancePage.vue';
+import AdvertisingPopup from '~/components/modals/AdvertisingPopup.vue';
+import { useAdvertisingPopup } from '~/composables/useAdvertisingPopup';
 
 const router = useRouter();
 const trpc = useTrpc();
 const { getActiveTheme } = useTheme();
 const { getIpInfo } = useIpInfo();
+const {
+  campaign,
+  shouldShow,
+  initialize: initializeAdvertisingPopup,
+  close: closeAdvertisingPopup,
+} = useAdvertisingPopup();
 
 const user = ref<any>(null);
 const isLoading = ref(true);
@@ -38,7 +46,7 @@ const gtmConfig = useState('gtm-id', () => null);
 useHead(() => {
   const scripts = [];
   const noscripts = [];
-  
+
   // Add GTM script if ID is available
   if (gtmConfig.value) {
     scripts.push({
@@ -46,17 +54,17 @@ useHead(() => {
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','${gtmConfig.value}');`
+})(window,document,'script','dataLayer','${gtmConfig.value}');`,
     });
-    
+
     noscripts.push({
-      innerHTML: `<iframe src="https://www.googletagmanager.com/ns.html?id=${gtmConfig.value}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`
+      innerHTML: `<iframe src="https://www.googletagmanager.com/ns.html?id=${gtmConfig.value}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`,
     });
   }
-  
+
   return {
     script: scripts,
-    noscript: noscripts
+    noscript: noscripts,
   };
 });
 
@@ -76,11 +84,15 @@ const resolveFooterComponent = (componentName?: string) => {
 
 // Function to get component name based on section type and componentName
 const resolveComponent = (section: any) => {
-  if (section.componentName && components[section.componentName as keyof typeof components]) {
-    const component = components[section.componentName as keyof typeof components];
+  if (
+    section.componentName &&
+    components[section.componentName as keyof typeof components]
+  ) {
+    const component =
+      components[section.componentName as keyof typeof components];
     return component;
   }
-  
+
   const component = getDefaultComponent(section.type);
   return component;
 };
@@ -88,11 +100,11 @@ const resolveComponent = (section: any) => {
 // Function to get default component based on section type
 const getDefaultComponent = (type: string) => {
   const typeToComponent: Record<string, any> = {
-    'navbar': components.CombinedNavbar,
-    'simple_navbar': components.SimpleNavbar,
-    'combined_navbar': components.CombinedNavbar
+    navbar: components.CombinedNavbar,
+    simple_navbar: components.SimpleNavbar,
+    combined_navbar: components.CombinedNavbar,
   };
-  
+
   return typeToComponent[type] || components.CombinedNavbar;
 };
 
@@ -105,19 +117,19 @@ const initSession = async () => {
       console.error('Failed to get IP information');
       return; // Không tiếp tục nếu không lấy được thông tin IP
     }
-    
+
     // Kiểm tra sessionId trong localStorage
     let localSessionId = localStorage.getItem('sessionId');
     const isNewSession = !localSessionId;
-    
+
     // Tạo sessionId mới nếu chưa có
     if (isNewSession) {
       localSessionId = nanoid(21); // Tạo ID duy nhất 21 ký tự
       localStorage.setItem('sessionId', localSessionId);
     }
-    
+
     sessionId.value = localSessionId!;
-    
+
     // Start hoặc update session trên backend
     if (isNewSession) {
       // Khởi tạo session mới với IP và country đã lấy được
@@ -130,8 +142,8 @@ const initSession = async () => {
           screenWidth: window.screen.width,
           screenHeight: window.screen.height,
           language: navigator.language,
-          platform: navigator.platform
-        }
+          platform: navigator.platform,
+        },
       });
     } else {
       // Cập nhật session
@@ -139,12 +151,12 @@ const initSession = async () => {
         sessionId: sessionId.value,
         lastActivity: new Date(),
       });
-      
+
       // Cập nhật country nếu có
       if (ipData.country) {
         await trpc.userSession.updateSession.mutate({
           sessionId: sessionId.value,
-          country: ipData.country
+          country: ipData.country,
         });
       }
     }
@@ -156,8 +168,9 @@ const initSession = async () => {
 // Kiểm tra dark mode với defensive programming
 const checkDarkMode = () => {
   if (process.client) {
-    isDarkMode.value = document?.documentElement?.classList?.contains('dark') ?? false;
-    
+    isDarkMode.value =
+      document?.documentElement?.classList?.contains('dark') ?? false;
+
     // Thêm class vào body để đảm bảo dark mode được áp dụng đúng cách
     if (isDarkMode.value) {
       document?.body?.classList?.add('dark-mode');
@@ -168,35 +181,37 @@ const checkDarkMode = () => {
 };
 
 onMounted(async () => {
+  void initializeAdvertisingPopup();
+
   try {
     // Khởi tạo hoặc cập nhật session
     if (process.client) {
       await initSession();
-      
+
       // Set up interval để cập nhật thời gian hoạt động
       const sessionUpdateInterval = setInterval(async () => {
         if (sessionId.value) {
           try {
             await trpc.userSession.updateSession.mutate({
               sessionId: sessionId.value,
-              lastActivity: new Date()
+              lastActivity: new Date(),
             });
           } catch (error) {
             console.error('Failed to update session activity:', error);
           }
         }
       }, 5 * 60 * 1000); // 5 phút
-      
+
       // Clear interval khi component unmounted
       onBeforeUnmount(() => {
         clearInterval(sessionUpdateInterval);
       });
     }
-    
+
     // Kiểm tra xem người dùng đã đăng nhập chưa
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
-    
+
     if (storedUser && token) {
       try {
         user.value = JSON.parse(storedUser);
@@ -207,7 +222,7 @@ onMounted(async () => {
         handleLogout();
       }
     }
-    
+
     // Lấy theme và navbar section với error handling
     try {
       const activeTheme = await getActiveTheme({ pageType: PageType.COMMON });
@@ -217,7 +232,7 @@ onMounted(async () => {
     } catch (error) {
       console.error('Failed to load theme:', error);
     }
-    
+
     // Fetch footer data
     try {
       const activeFooter = await trpc.footer.getActiveFooter.query();
@@ -227,10 +242,9 @@ onMounted(async () => {
     } catch (error) {
       console.error('Failed to load footer:', error);
     }
-    
+
     // Kiểm tra dark mode
     checkDarkMode();
-    
   } catch (error) {
     console.error('Error in layout setup:', error);
   } finally {
@@ -254,14 +268,14 @@ async function handleLogout() {
   try {
     // Gọi tRPC endpoint để đăng xuất
     await trpc.auth.logout.mutate();
-    
+
     // Xóa thông tin người dùng và token khỏi localStorage
     localStorage.removeItem('user');
     localStorage.removeItem('token');
-    
+
     // Reset user state
     user.value = null;
-    
+
     // Chuyển hướng đến trang đăng nhập
     router.push('/login');
   } catch (error) {
@@ -280,8 +294,8 @@ async function handleLogout() {
     <template v-else>
       <!-- Header -->
       <template v-if="theme?.sections">
-        <component 
-          v-for="section in theme.sections" 
+        <component
+          v-for="section in theme.sections"
           :key="section.id"
           v-show="section.isActive"
           :is="resolveComponent(section)"
@@ -291,12 +305,12 @@ async function handleLogout() {
           @logout="handleLogout"
         />
       </template>
-      
+
       <!-- Main content -->
       <main class="flex-grow">
         <slot />
       </main>
-      
+
       <!-- Footer -->
       <component
         v-if="footer"
@@ -308,6 +322,11 @@ async function handleLogout() {
       <FloatingZaloSupport />
       <FloatingMessengerSupport />
     </template>
+    <AdvertisingPopup
+      v-if="shouldShow && campaign"
+      :campaign="campaign"
+      @close="closeAdvertisingPopup"
+    />
   </div>
 </template>
 
@@ -376,12 +395,13 @@ body.dark-mode .footer__copyright {
 }
 
 /* Remove any spacer divs */
-:deep(.navbar-section > div[style*="height"]) {
+:deep(.navbar-section > div[style*='height']) {
   display: none !important;
 }
 
 /* Add shadow when navbar is stuck */
 .navbar-without-logo {
-  box-shadow: 0 2px 15px -3px rgba(0,0,0,0.07), 0 10px 20px -2px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.07),
+    0 10px 20px -2px rgba(0, 0, 0, 0.04);
 }
-</style> 
+</style>
