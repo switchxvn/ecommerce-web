@@ -97,8 +97,12 @@ describe('useAdvertisingPopup', () => {
     { ...validCampaign, isActive: 'true' },
     { ...validCampaign, startsAt: 'not-a-date' },
     { ...validCampaign, startsAt: 123 },
+    { ...validCampaign, startsAt: undefined },
     { ...validCampaign, endsAt: '2026-99-99' },
     { ...validCampaign, endsAt: {} },
+    { ...validCampaign, endsAt: undefined },
+    (({ startsAt: _startsAt, ...campaign }) => campaign)(validCampaign),
+    (({ endsAt: _endsAt, ...campaign }) => campaign)(validCampaign),
   ])('does not show an invalid campaign response', async (campaign) => {
     query.mockResolvedValue(campaign);
     const popup = useAdvertisingPopup();

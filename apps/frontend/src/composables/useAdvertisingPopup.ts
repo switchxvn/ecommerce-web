@@ -23,10 +23,8 @@ const isSafeCtaUrl = (value: unknown): value is string => {
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?:T.*)?$/;
 
-const isOptionalDate = (
-  value: unknown
-): value is Date | string | null | undefined => {
-  if (value === null || value === undefined) return true;
+const isNullableDate = (value: unknown): value is Date | string | null => {
+  if (value === null) return true;
   if (value instanceof Date) return !Number.isNaN(value.getTime());
   return (
     typeof value === 'string' &&
@@ -49,8 +47,8 @@ const isCampaign = (value: unknown): value is AdvertisingPopupCampaign => {
     isNonEmptyString(campaign.ctaLabel) &&
     isSafeCtaUrl(campaign.ctaUrl) &&
     campaign.isActive === true &&
-    isOptionalDate(campaign.startsAt) &&
-    isOptionalDate(campaign.endsAt)
+    isNullableDate(campaign.startsAt) &&
+    isNullableDate(campaign.endsAt)
   );
 };
 
