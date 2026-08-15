@@ -17,19 +17,12 @@ import FloatingZaloSupport from '~/components/ui/FloatingZaloSupport.vue';
 import FloatingMessengerSupport from '~/components/ui/FloatingMessengerSupport.vue';
 import SimpleNavbar from '~/components/ui/SimpleNavbar.vue';
 import MaintenancePage from '~/components/MaintenancePage.vue';
-import AdvertisingPopup from '~/components/modals/AdvertisingPopup.vue';
-import { useAdvertisingPopup } from '~/composables/useAdvertisingPopup';
+import AdvertisingPopupHost from '../components/modals/AdvertisingPopupHost.vue';
 
 const router = useRouter();
 const trpc = useTrpc();
 const { getActiveTheme } = useTheme();
 const { getIpInfo } = useIpInfo();
-const {
-  campaign,
-  shouldShow,
-  initialize: initializeAdvertisingPopup,
-  close: closeAdvertisingPopup,
-} = useAdvertisingPopup();
 
 const user = ref<any>(null);
 const isLoading = ref(true);
@@ -181,8 +174,6 @@ const checkDarkMode = () => {
 };
 
 onMounted(async () => {
-  void initializeAdvertisingPopup();
-
   try {
     // Khởi tạo hoặc cập nhật session
     if (process.client) {
@@ -322,11 +313,7 @@ async function handleLogout() {
       <FloatingZaloSupport />
       <FloatingMessengerSupport />
     </template>
-    <AdvertisingPopup
-      v-if="shouldShow && campaign"
-      :campaign="campaign"
-      @close="closeAdvertisingPopup"
-    />
+    <AdvertisingPopupHost />
   </div>
 </template>
 

@@ -1,7 +1,18 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import {
+  computed,
+  getCurrentInstance,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+} from 'vue';
 
 import type { AdvertisingPopupCampaign } from '../../types/advertising-popup';
+import {
+  modalTitleId,
+  registerModal,
+  unregisterModal,
+} from '../../utils/modalStack';
 
 const props = defineProps<{
   campaign: AdvertisingPopupCampaign;
@@ -11,12 +22,10 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-let popupId = 0;
-const titleId = `advertising-popup-title-${++popupId}`;
+const titleId = modalTitleId(getCurrentInstance()?.uid);
 const dialogRef = ref<HTMLElement | null>(null);
 const closeButtonRef = ref<HTMLButtonElement | null>(null);
-const previousFocus = ref<HTMLElement | null>(null);
-let previousBodyOverflow = '';
+let modalToken: symbol | null = null;
 let cleanedUp = false;
 
 const classifyCta = (value: string) => {
@@ -39,19 +48,11 @@ const classifyCta = (value: string) => {
 
 const cta = computed(() => classifyCta(props.campaign.ctaUrl));
 
-const focusableElements = () =>
-  Array.from(
-    dialogRef.value?.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    ) ?? []
-  ).filter((element) => !element.hasAttribute('disabled'));
-
 const cleanup = () => {
   if (cleanedUp) return;
   cleanedUp = true;
-  document.removeEventListener('keydown', handleKeydown);
-  document.body.style.overflow = previousBodyOverflow;
-  previousFocus.value?.focus();
+  unregisterModal(modalToken);
+  modalToken = null;
 };
 
 const requestClose = () => {
@@ -59,48 +60,12 @@ const requestClose = () => {
   emit('close');
 };
 
-function handleKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') {
-    event.preventDefault();
-    requestClose();
-    return;
-  }
-
-  if (event.key !== 'Tab') return;
-
-  const elements = focusableElements();
-  if (elements.length === 0) {
-    event.preventDefault();
-    return;
-  }
-
-  const first = elements[0];
-  const last = elements[elements.length - 1];
-  if (!dialogRef.value?.contains(document.activeElement)) {
-    event.preventDefault();
-    (event.shiftKey ? last : first).focus();
-    return;
-  }
-
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-}
-
-onMounted(async () => {
-  previousFocus.value =
-    document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
-  previousBodyOverflow = document.body.style.overflow;
-  document.body.style.overflow = 'hidden';
-  document.addEventListener('keydown', handleKeydown);
-  await nextTick();
-  closeButtonRef.value?.focus();
+onMounted(() => {
+  modalToken = registerModal({
+    element: () => dialogRef.value,
+    focusInitial: () => closeButtonRef.value?.focus(),
+    onEscape: requestClose,
+  });
 });
 
 onBeforeUnmount(cleanup);

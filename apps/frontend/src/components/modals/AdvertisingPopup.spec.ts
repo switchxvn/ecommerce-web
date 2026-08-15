@@ -72,6 +72,23 @@ describe('AdvertisingPopup', () => {
     ).not.toBeNull();
   });
 
+  it('assigns distinct title relationships to simultaneous dialog instances', () => {
+    mountPopup();
+    mountPopup({ id: 43, title: 'Thông báo thứ hai' });
+    const dialogs = Array.from(
+      document.body.querySelectorAll('[role="dialog"]')
+    );
+    const titleIds = dialogs.map((dialog) =>
+      dialog.getAttribute('aria-labelledby')
+    );
+
+    expect(new Set(titleIds).size).toBe(2);
+    titleIds.forEach((id, index) => {
+      expect(id).not.toBeNull();
+      expect(dialogs[index].querySelector('h2')?.id).toBe(id);
+    });
+  });
+
   it('teleports the modal under document.body instead of the mount wrapper', () => {
     const wrapper = mountPopup();
 
@@ -288,5 +305,90 @@ describe('AdvertisingPopup', () => {
 
     expect(event.defaultPrevented).toBe(true);
     expect(document.activeElement).toBe(cta);
+  });
+
+  it('lets only the topmost dialog handle Escape and keeps the underlying modal active', async () => {
+    const bottom = mountPopup();
+    const top = mountPopup({ id: 43, title: 'Thông báo thứ hai' });
+    await nextTick();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await nextTick();
+
+    expect(top.emitted('close')).toHaveLength(1);
+    expect(bottom.emitted('close')).toBeUndefined();
+    expect(document.body.style.overflow).toBe('hidden');
+  });
+
+  it('keeps focus in the top dialog when an underlying dialog unmounts', async () => {
+    const bottom = mountPopup();
+    const top = mountPopup({ id: 43, title: 'Thông báo thứ hai' });
+    await nextTick();
+    const topDialog =
+      document.body.querySelectorAll<HTMLElement>('[role="dialog"]')[1];
+    topDialog.querySelector<HTMLElement>('a[href]')!.focus();
+
+    bottom.unmount();
+
+    expect(topDialog.contains(document.activeElement)).toBe(true);
+    expect(document.body.style.overflow).toBe('hidden');
+    top.unmount();
+  });
+
+  it('hands focus to the new top dialog when the current top unmounts', async () => {
+    const bottom = mountPopup();
+    const top = mountPopup({ id: 43, title: 'Thông báo thứ hai' });
+    await nextTick();
+    const bottomDialog =
+      document.body.querySelectorAll<HTMLElement>('[role="dialog"]')[0];
+    const bottomClose =
+      bottomDialog.querySelector<HTMLButtonElement>('button')!;
+
+    top.unmount();
+
+    expect(document.activeElement).toBe(bottomClose);
+    expect(document.body.style.overflow).toBe('hidden');
+    bottom.unmount();
+  });
+
+  it.each([
+    ['top-first', 1, 0],
+    ['bottom-first', 0, 1],
+  ])(
+    'restores exact body overflow only after the final unmount (%s)',
+    async (_name, firstIndex, lastIndex) => {
+      document.body.style.overflow = 'scroll';
+      const instances = [
+        mountPopup(),
+        mountPopup({ id: 43, title: 'Thông báo thứ hai' }),
+      ];
+      await nextTick();
+
+      instances[firstIndex].unmount();
+      expect(document.body.style.overflow).toBe('hidden');
+      instances[lastIndex].unmount();
+      expect(document.body.style.overflow).toBe('scroll');
+    }
+  );
+
+  it('traps Tab only within the topmost dialog', async () => {
+    mountPopup();
+    mountPopup({ id: 43, title: 'Thông báo thứ hai' });
+    await nextTick();
+    const dialogs =
+      document.body.querySelectorAll<HTMLElement>('[role="dialog"]');
+    const bottomClose = dialogs[0].querySelector<HTMLButtonElement>('button')!;
+    const topClose = dialogs[1].querySelector<HTMLButtonElement>('button')!;
+    bottomClose.focus();
+
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Tab',
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+
+    expect(document.activeElement).toBe(topClose);
   });
 });

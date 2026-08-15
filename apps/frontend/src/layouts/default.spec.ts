@@ -1,26 +1,71 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mount } from '@vue/test-utils';
+import { defineComponent, ref } from 'vue';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { describe, expect, it } from 'vitest';
+import AdvertisingPopupHost from '../components/modals/AdvertisingPopupHost.vue';
 
-const source = readFileSync(
-  resolve(process.cwd(), 'apps/frontend/src/layouts/default.vue'),
-  'utf8'
-);
+const popupMocks = vi.hoisted(() => ({
+  campaign: null as ReturnType<typeof ref> | null,
+  shouldShow: null as ReturnType<typeof ref> | null,
+  initialize: vi.fn(),
+  close: vi.fn(),
+}));
 
-describe('public default layout advertising popup integration', () => {
-  it('creates one popup composable instance and initializes it once on mount', () => {
-    expect(source.match(/useAdvertisingPopup\(\)/g)).toHaveLength(1);
-    expect(source.match(/initializeAdvertisingPopup\(\)/g)).toHaveLength(1);
-    expect(source).toMatch(
-      /const\s*{[\s\S]*?campaign,[\s\S]*?shouldShow,[\s\S]*?initialize:\s*initializeAdvertisingPopup,[\s\S]*?close:\s*closeAdvertisingPopup,[\s\S]*?}\s*=\s*useAdvertisingPopup\(\)/
-    );
+vi.mock('../composables/useAdvertisingPopup', async () => {
+  const { ref: vueRef } = await import('vue');
+  popupMocks.campaign = vueRef({
+    id: 1,
+    name: 'Campaign',
+    title: 'Thông báo',
+    content: 'Nội dung',
+    ctaLabel: 'Xem',
+    ctaUrl: '/sale',
+    isActive: true,
+    startsAt: null,
+    endsAt: null,
+  });
+  popupMocks.shouldShow = vueRef(true);
+  return {
+    useAdvertisingPopup: () => ({
+      campaign: popupMocks.campaign,
+      shouldShow: popupMocks.shouldShow,
+      initialize: popupMocks.initialize,
+      close: popupMocks.close,
+    }),
+  };
+});
+
+vi.mock('../components/modals/AdvertisingPopup.vue', () => ({
+  default: defineComponent({
+    name: 'AdvertisingPopup',
+    props: ['campaign'],
+    emits: ['close'],
+    template:
+      '<button data-testid="layout-popup" @click="$emit(\'close\')">popup</button>',
+  }),
+}));
+
+describe('public layout advertising popup host', () => {
+  beforeEach(() => {
+    popupMocks.initialize.mockReset().mockResolvedValue(undefined);
+    popupMocks.close.mockReset();
+    popupMocks.shouldShow!.value = true;
   });
 
-  it('renders the popup once outside the loading content branches', () => {
-    expect(source.match(/<AdvertisingPopup/g)).toHaveLength(1);
-    expect(source).toMatch(
-      /<\/template>\s*<AdvertisingPopup\s+v-if="shouldShow && campaign"/
-    );
+  it('initializes exactly once and renders whenever campaign state is visible', () => {
+    const wrapper = mount(AdvertisingPopupHost);
+
+    expect(popupMocks.initialize).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-testid="layout-popup"]').exists()).toBe(true);
+  });
+
+  it('routes close to the composable and reacts to visibility independently', async () => {
+    const wrapper = mount(AdvertisingPopupHost);
+    await wrapper.get('[data-testid="layout-popup"]').trigger('click');
+    expect(popupMocks.close).toHaveBeenCalledTimes(1);
+
+    popupMocks.shouldShow!.value = false;
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="layout-popup"]').exists()).toBe(false);
   });
 });
