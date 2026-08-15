@@ -1,12 +1,21 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { nextTick } from 'vue';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import type { AdvertisingPopupCampaign } from '../../types/advertising-popup';
 import AdvertisingPopup from './AdvertisingPopup.vue';
 
 type PopupWrapper = ReturnType<typeof mount>;
 const wrappers: PopupWrapper[] = [];
+const componentSource = readFileSync(
+  resolve(
+    process.cwd(),
+    'apps/frontend/src/components/modals/AdvertisingPopup.vue'
+  ),
+  'utf8'
+);
 
 const campaign: AdvertisingPopupCampaign = {
   id: 42,
@@ -63,6 +72,34 @@ describe('AdvertisingPopup', () => {
     ).not.toBeNull();
   });
 
+  it('teleports the modal under document.body instead of the mount wrapper', () => {
+    const wrapper = mountPopup();
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    expect(document.body.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(
+      document.body.querySelector('[data-testid="popup-overlay"]')
+    ).not.toBeNull();
+  });
+
+  it('uses a centered fixed overlay and responsive scrollable card', () => {
+    mountPopup();
+    const overlay = document.body.querySelector(
+      '[data-testid="popup-overlay"]'
+    )!;
+    const dialog = document.body.querySelector('[role="dialog"]')!;
+
+    expect(overlay.className).toContain('fixed');
+    expect(overlay.className).toContain('inset-0');
+    expect(overlay.className).toContain('flex');
+    expect(overlay.className).toContain('items-center');
+    expect(overlay.className).toContain('justify-center');
+    expect(dialog.className).toContain('w-full');
+    expect(dialog.className).toContain('max-w-lg');
+    expect(dialog.className).toContain('max-h-[calc(100dvh-2rem)]');
+    expect(dialog.className).toContain('overflow-y-auto');
+  });
+
   it('renders emoji and multiline content as plain text', () => {
     mountPopup();
     const content = document.body.querySelector(
@@ -86,6 +123,20 @@ describe('AdvertisingPopup', () => {
     expect(dialog.className).toContain('border-border');
     expect(dialog.getAttribute('style')).toBeNull();
     expect(document.body.innerHTML).not.toMatch(/(?:gold|amber|yellow|brown)/i);
+    expect(
+      document.body.querySelector('[data-testid="popup-overlay"]')!.className
+    ).toContain('bg-foreground/50');
+  });
+
+  it('uses restrained opacity/scale motion with reduced-motion disabled transitions', () => {
+    expect(componentSource).toMatch(/transition:\s*opacity 180ms ease/);
+    expect(componentSource).toMatch(/transform:\s*scale\(0\.98\)/);
+    expect(componentSource).toContain(
+      '@media (prefers-reduced-motion: reduce)'
+    );
+    expect(componentSource).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*?transition:\s*none/
+    );
   });
 
   it.each([
@@ -193,6 +244,49 @@ describe('AdvertisingPopup', () => {
         bubbles: true,
       })
     );
+    expect(document.activeElement).toBe(cta);
+  });
+
+  it('moves Tab to the first focusable element when focus is outside the dialog', async () => {
+    mountPopup();
+    await nextTick();
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    outside.focus();
+    const close = document.body.querySelector<HTMLButtonElement>(
+      '[aria-label="Đóng thông báo quảng cáo"]'
+    )!;
+    const event = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      bubbles: true,
+      cancelable: true,
+    });
+
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(close);
+  });
+
+  it('moves Shift+Tab to the last focusable element when focus is outside the dialog', async () => {
+    mountPopup();
+    await nextTick();
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    outside.focus();
+    const cta = document.body.querySelector<HTMLAnchorElement>(
+      '[data-testid="popup-cta"]'
+    )!;
+    const event = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
     expect(document.activeElement).toBe(cta);
   });
 });
