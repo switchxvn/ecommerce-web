@@ -5,6 +5,17 @@ import { useTrpc } from './useTrpc';
 
 const SESSION_MARKER_KEY = 'advertising-popup-shown';
 
+interface AdvertisingPopupSessionClaim {
+  owner: symbol;
+  promise: Promise<AdvertisingPopupCampaign | null>;
+}
+
+let advertisingPopupSessionClaim: AdvertisingPopupSessionClaim | null = null;
+
+export const __resetAdvertisingPopupSessionForTests = () => {
+  advertisingPopupSessionClaim = null;
+};
+
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0;
 
@@ -21,15 +32,23 @@ const isSafeCtaUrl = (value: unknown): value is string => {
   }
 };
 
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?:T.*)?$/;
+const ISO_DATE_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))?$/;
 
 const isNullableDate = (value: unknown): value is Date | string | null => {
   if (value === null) return true;
   if (value instanceof Date) return !Number.isNaN(value.getTime());
+  if (typeof value !== 'string') return false;
+
+  const match = ISO_DATE_PATTERN.exec(value);
+  if (!match || Number.isNaN(Date.parse(value))) return false;
+
+  const [, year, month, day] = match;
+  const calendarDate = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
   return (
-    typeof value === 'string' &&
-    ISO_DATE_PATTERN.test(value) &&
-    !Number.isNaN(Date.parse(value))
+    calendarDate.getUTCFullYear() === Number(year) &&
+    calendarDate.getUTCMonth() + 1 === Number(month) &&
+    calendarDate.getUTCDate() === Number(day)
   );
 };
 
@@ -53,6 +72,7 @@ const isCampaign = (value: unknown): value is AdvertisingPopupCampaign => {
 };
 
 export const useAdvertisingPopup = () => {
+  const instanceId = Symbol('advertising-popup-instance');
   const campaign = ref<AdvertisingPopupCampaign | null>(null);
   const shouldShow = ref(false);
   const isLoading = ref(false);
@@ -73,14 +93,38 @@ export const useAdvertisingPopup = () => {
     error.value = null;
 
     try {
-      const result: unknown =
-        await useTrpc().advertisingPopup.getActive.query();
-      if (!isCampaign(result)) return;
+      if (advertisingPopupSessionClaim) {
+        await advertisingPopupSessionClaim.promise;
+        return;
+      }
 
-      campaign.value = result;
-      window.sessionStorage.setItem(SESSION_MARKER_KEY, 'true');
+      const claim: AdvertisingPopupSessionClaim = {
+        owner: instanceId,
+        promise: (async () => {
+          const result: unknown =
+            await useTrpc().advertisingPopup.getActive.query();
+          if (!isCampaign(result)) return null;
+
+          campaign.value = result;
+          window.sessionStorage.setItem(SESSION_MARKER_KEY, 'true');
+          return result;
+        })(),
+      };
+      advertisingPopupSessionClaim = claim;
+
+      const result = await claim.promise;
+      if (!result) {
+        if (advertisingPopupSessionClaim === claim) {
+          advertisingPopupSessionClaim = null;
+        }
+        return;
+      }
+
       shouldShow.value = true;
     } catch (initializationError) {
+      if (advertisingPopupSessionClaim?.owner === instanceId) {
+        advertisingPopupSessionClaim = null;
+      }
       error.value = initializationError;
       shouldShow.value = false;
     } finally {

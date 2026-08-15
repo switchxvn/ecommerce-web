@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useAdvertisingPopup } from './useAdvertisingPopup';
+import {
+  __resetAdvertisingPopupSessionForTests,
+  useAdvertisingPopup,
+} from './useAdvertisingPopup';
 import { useTrpc } from './useTrpc';
 
 vi.mock('./useTrpc', () => ({
@@ -25,6 +28,7 @@ const mockedUseTrpc = vi.mocked(useTrpc);
 describe('useAdvertisingPopup', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    __resetAdvertisingPopupSessionForTests();
     sessionStorage.clear();
     query.mockReset();
     mockedUseTrpc.mockReturnValue({
@@ -96,6 +100,9 @@ describe('useAdvertisingPopup', () => {
     { ...validCampaign, isActive: false },
     { ...validCampaign, isActive: 'true' },
     { ...validCampaign, startsAt: 'not-a-date' },
+    { ...validCampaign, startsAt: '2026-13-01' },
+    { ...validCampaign, startsAt: '2026-04-31' },
+    { ...validCampaign, startsAt: '2025-02-29' },
     { ...validCampaign, startsAt: 123 },
     { ...validCampaign, startsAt: undefined },
     { ...validCampaign, endsAt: '2026-99-99' },
@@ -118,6 +125,18 @@ describe('useAdvertisingPopup', () => {
     query.mockResolvedValue({
       ...validCampaign,
       ctaUrl: 'https://example.com/sale',
+    });
+    const popup = useAdvertisingPopup();
+
+    await popup.initialize();
+
+    expect(popup.shouldShow.value).toBe(true);
+  });
+
+  it('accepts a valid leap-day schedule', async () => {
+    query.mockResolvedValue({
+      ...validCampaign,
+      startsAt: '2024-02-29T00:00:00.000Z',
     });
     const popup = useAdvertisingPopup();
 
@@ -174,6 +193,66 @@ describe('useAdvertisingPopup', () => {
 
     expect(query).toHaveBeenCalledTimes(1);
     expect(popup.shouldShow.value).toBe(true);
+  });
+
+  it('coordinates concurrent initialization across composable instances', async () => {
+    let resolveQuery!: (value: typeof validCampaign) => void;
+    query.mockReturnValue(new Promise((resolve) => (resolveQuery = resolve)));
+    const owner = useAdvertisingPopup();
+    const follower = useAdvertisingPopup();
+
+    const ownerInitialization = owner.initialize();
+    const followerInitialization = follower.initialize();
+    resolveQuery(validCampaign);
+    await Promise.all([ownerInitialization, followerInitialization]);
+
+    expect(query).toHaveBeenCalledTimes(1);
+    expect([owner.shouldShow.value, follower.shouldShow.value]).toEqual([
+      true,
+      false,
+    ]);
+    expect(sessionStorage.getItem('advertising-popup-shown')).toBe('true');
+  });
+
+  it('allows a later instance to retry after a null response', async () => {
+    query.mockResolvedValueOnce(null).mockResolvedValueOnce(validCampaign);
+    await useAdvertisingPopup().initialize();
+    const retry = useAdvertisingPopup();
+
+    await retry.initialize();
+
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(retry.shouldShow.value).toBe(true);
+  });
+
+  it('allows a later instance to retry after an API failure', async () => {
+    query
+      .mockRejectedValueOnce(new Error('network failure'))
+      .mockResolvedValueOnce(validCampaign);
+    await useAdvertisingPopup().initialize();
+    const retry = useAdvertisingPopup();
+
+    await retry.initialize();
+
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(retry.shouldShow.value).toBe(true);
+  });
+
+  it('allows a later instance to retry after a storage write failure', async () => {
+    query.mockResolvedValue(validCampaign);
+    const setItem = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementationOnce(() => {
+        throw new Error('storage full');
+      });
+    await useAdvertisingPopup().initialize();
+    setItem.mockRestore();
+    const retry = useAdvertisingPopup();
+
+    await retry.initialize();
+
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(retry.shouldShow.value).toBe(true);
   });
 
   it('does not repeat across composable instances in the same session', async () => {
