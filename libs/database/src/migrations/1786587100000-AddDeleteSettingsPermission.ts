@@ -39,7 +39,7 @@ export class AddDeleteSettingsPermission1786587100000
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-      DELETE FROM role_permissions
+      DELETE FROM roles_permissions
       WHERE permission_id IN (
         SELECT id
         FROM permissions

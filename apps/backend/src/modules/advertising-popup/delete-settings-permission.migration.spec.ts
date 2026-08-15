@@ -35,7 +35,7 @@ describe('AddDeleteSettingsPermission1786587100000', () => {
       ([statement]) => statement,
     );
     expect(statements).toHaveLength(2);
-    expect(statements[0]).toContain('DELETE FROM role_permissions');
+    expect(statements[0]).toContain('DELETE FROM roles_permissions');
     expect(statements[0]).toContain('DELETE_SETTINGS');
     expect(statements[1]).toContain('DELETE FROM permissions');
     expect(statements[1]).toContain('DELETE_SETTINGS');
