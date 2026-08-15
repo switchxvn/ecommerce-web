@@ -6,7 +6,7 @@ import { useToast } from '@/composables/useToast';
 import type { PopupMutationInput } from '@/types/advertising-popup';
 definePageMeta({ middleware: ['auth', 'permission'] });
 provide('pageTitle', ref('Tạo popup quảng cáo'));
-const { hasPermissionAccess } = usePagePermissions(['MANAGE_SETTINGS']);
+const { hasPermissionAccess } = usePagePermissions(['EDIT_SETTINGS']);
 const { loading, error, create } = useAdvertisingPopups();
 const toast = useToast();
 const submit = async (input: PopupMutationInput) => {

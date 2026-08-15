@@ -12,7 +12,7 @@ definePageMeta({ middleware: ['auth', 'permission'] });
 provide('pageTitle', ref('Sửa popup quảng cáo'));
 const route = useRoute();
 const id = Number(route.params.id);
-const { hasPermissionAccess } = usePagePermissions(['MANAGE_SETTINGS']);
+const { hasPermissionAccess } = usePagePermissions(['EDIT_SETTINGS']);
 const { current, loading, error, getById, update, setActive } =
   useAdvertisingPopups();
 const toast = useToast();

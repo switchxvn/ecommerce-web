@@ -16,7 +16,7 @@ const routePermissions: Record<string, string[]> = {
   '/settings/system': ['MANAGE_SYSTEM'],
   '/settings/api': ['MANAGE_API'],
   '/settings/advanced': ['MANAGE_ADVANCED'],
-  '/settings/advertising-popups': ['MANAGE_SETTINGS'],
+  '/settings/advertising-popups': ['VIEW_SETTINGS'],
   // Thêm nhiều route khác ở đây
 };
 

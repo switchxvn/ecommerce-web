@@ -69,7 +69,7 @@ const settingsCategories = computed(() => [
     color: 'blue',
     route: '/settings/advertising-popups',
     group: 'advertising-popup',
-    permission: 'MANAGE_SETTINGS',
+    permission: 'VIEW_SETTINGS',
     features: ['Nội dung popup', 'Lịch hiển thị', 'Kích hoạt chiến dịch'],
     count: 0
   },

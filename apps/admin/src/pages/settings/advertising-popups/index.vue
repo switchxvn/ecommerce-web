@@ -1,16 +1,28 @@
 <script setup lang="ts">
-import { onMounted, provide, ref } from 'vue';
+import { computed, onMounted, provide, ref } from 'vue';
 import { Edit3, Megaphone, Plus, Power, Trash2 } from 'lucide-vue-next';
 import { useAdvertisingPopups } from '@/composables/useAdvertisingPopups';
 import { useConfirm } from '@/composables/useConfirm';
 import { usePagePermissions } from '@/composables/usePagePermissions';
+import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
 import type { AdvertisingPopup } from '@/types/advertising-popup';
 
 definePageMeta({ middleware: ['auth', 'permission'] });
 provide('pageTitle', ref('Popup quảng cáo'));
-const { isLoadingPermissions, hasPermissionAccess, ensureUserData } =
-  usePagePermissions(['MANAGE_SETTINGS']);
+const {
+  isLoadingPermissions,
+  hasPermissionAccess,
+  ensureUserData,
+  checkPermissions,
+} = usePagePermissions(['VIEW_SETTINGS']);
+const { isSuperAdmin, hasPermission } = usePermissions();
+const canEdit = computed(
+  () => isSuperAdmin.value || hasPermission('EDIT_SETTINGS')
+);
+const canDelete = computed(
+  () => isSuperAdmin.value || hasPermission('DELETE_SETTINGS')
+);
 const {
   campaigns,
   loading,
@@ -74,7 +86,7 @@ const deleteCampaign = (campaign: AdvertisingPopup) => {
 };
 onMounted(async () => {
   await ensureUserData();
-  if (hasPermissionAccess.value) {
+  if (checkPermissions()) {
     try {
       await refresh();
     } catch {
@@ -106,6 +118,7 @@ onMounted(async () => {
         </p>
       </div>
       <NuxtLink
+        v-if="canEdit"
         to="/settings/advertising-popups/new"
         class="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
         ><Plus class="h-4 w-4" />Tạo chiến dịch</NuxtLink
@@ -177,6 +190,7 @@ onMounted(async () => {
               <td class="px-5 py-4">
                 <div class="flex justify-end gap-1">
                   <button
+                    v-if="canEdit"
                     :aria-label="
                       campaign.isActive
                         ? 'Tắt chiến dịch'
@@ -190,11 +204,13 @@ onMounted(async () => {
                   >
                     <Power class="h-4 w-4" /></button
                   ><NuxtLink
+                    v-if="canEdit"
                     :to="`/settings/advertising-popups/${campaign.id}`"
                     aria-label="Sửa chiến dịch"
                     class="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-primary dark:hover:bg-gray-700"
                     ><Edit3 class="h-4 w-4" /></NuxtLink
                   ><button
+                    v-if="canDelete"
                     aria-label="Xóa chiến dịch"
                     :disabled="
                       campaign.isActive || isActionPending(campaign.id)
