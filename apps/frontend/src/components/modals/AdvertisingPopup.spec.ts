@@ -2,18 +2,16 @@ import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { nextTick } from 'vue';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import type { AdvertisingPopupCampaign } from '../../types/advertising-popup';
 import AdvertisingPopup from './AdvertisingPopup.vue';
 
 type PopupWrapper = ReturnType<typeof mount>;
 const wrappers: PopupWrapper[] = [];
+const componentFile = './AdvertisingPopup.vue';
 const componentSource = readFileSync(
-  resolve(
-    process.cwd(),
-    'apps/frontend/src/components/modals/AdvertisingPopup.vue'
-  ),
+  fileURLToPath(new URL(componentFile, import.meta.url)),
   'utf8'
 );
 
