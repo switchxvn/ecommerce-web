@@ -11,8 +11,15 @@ definePageMeta({ middleware: ['auth', 'permission'] });
 provide('pageTitle', ref('Popup quảng cáo'));
 const { isLoadingPermissions, hasPermissionAccess, ensureUserData } =
   usePagePermissions(['MANAGE_SETTINGS']);
-const { campaigns, loading, error, refresh, setActive, remove } =
-  useAdvertisingPopups();
+const {
+  campaigns,
+  loading,
+  error,
+  refresh,
+  setActive,
+  remove,
+  isActionPending,
+} = useAdvertisingPopups();
 const confirm = useConfirm();
 const toast = useToast();
 const formatDate = (value: Date | string | null) =>
@@ -36,8 +43,12 @@ const toggleCampaign = (campaign: AdvertisingPopup) =>
         toast.success(
           campaign.isActive ? 'Đã tắt chiến dịch' : 'Đã kích hoạt chiến dịch'
         );
-      } catch {
-        toast.error(error.value || 'Không thể cập nhật trạng thái');
+      } catch (caught) {
+        toast.error(
+          caught instanceof Error
+            ? caught.message
+            : 'Không thể cập nhật trạng thái'
+        );
       }
     },
   });
@@ -52,8 +63,10 @@ const deleteCampaign = (campaign: AdvertisingPopup) => {
       try {
         await remove(campaign.id);
         toast.success('Đã xóa chiến dịch');
-      } catch {
-        toast.error(error.value || 'Không thể xóa chiến dịch');
+      } catch (caught) {
+        toast.error(
+          caught instanceof Error ? caught.message : 'Không thể xóa chiến dịch'
+        );
       }
     },
   });
@@ -168,6 +181,7 @@ onMounted(async () => {
                         ? 'Tắt chiến dịch'
                         : 'Kích hoạt chiến dịch'
                     "
+                    :disabled="isActionPending(campaign.id)"
                     class="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-gray-700"
                     @click="toggleCampaign(campaign)"
                   >
@@ -179,7 +193,9 @@ onMounted(async () => {
                     ><Edit3 class="h-4 w-4" /></NuxtLink
                   ><button
                     aria-label="Xóa chiến dịch"
-                    :disabled="campaign.isActive"
+                    :disabled="
+                      campaign.isActive || isActionPending(campaign.id)
+                    "
                     class="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-red-950/30"
                     @click="deleteCampaign(campaign)"
                   >

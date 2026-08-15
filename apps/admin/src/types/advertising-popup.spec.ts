@@ -78,4 +78,41 @@ describe('advertising popup form helpers', () => {
     });
     expect(result.startsAt).toMatch(/^2026-08-14T\d{2}:30$/);
   });
+
+  it('formats a constructed local date without shifting its wall-clock time', () => {
+    const localDate = new Date(2026, 7, 14, 9, 30);
+    const result = popupToFormState({
+      id: 1,
+      name: 'Campaign',
+      title: 'Title',
+      content: 'Content',
+      ctaLabel: 'Go',
+      ctaUrl: '/go',
+      isActive: false,
+      startsAt: localDate,
+      endsAt: null,
+      createdAt: localDate,
+      updatedAt: localDate,
+    });
+
+    expect(result.startsAt).toBe('2026-08-14T09:30');
+  });
+
+  it('uses a blank datetime-local value for invalid server dates', () => {
+    const popup = {
+      id: 1,
+      name: 'Campaign',
+      title: 'Title',
+      content: 'Content',
+      ctaLabel: 'Go',
+      ctaUrl: '/go',
+      isActive: false,
+      startsAt: 'invalid-date',
+      endsAt: null,
+      createdAt: 'invalid-date',
+      updatedAt: 'invalid-date',
+    };
+
+    expect(popupToFormState(popup).startsAt).toBe('');
+  });
 });
