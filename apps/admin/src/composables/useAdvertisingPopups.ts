@@ -17,6 +17,10 @@ export function useAdvertisingPopups() {
   const error = ref<string | null>(null);
   const pendingActions = reactive(new Set<number>());
   const actionPromises = new Map<number, Promise<unknown>>();
+  const activationPendingId = ref<number | null>(null);
+  const isActivationPending = computed(
+    () => activationPendingId.value !== null
+  );
 
   const run = async <T>(
     operation: () => Promise<T>,
@@ -83,8 +87,17 @@ export function useAdvertisingPopups() {
       reportError: true,
       clearError: true,
     });
-  const setActive = (id: number, active: boolean) =>
-    runAction(id, async () => {
+  const setActive = (id: number, active: boolean) => {
+    const existing = actionPromises.get(id);
+    if (existing) return existing as Promise<AdvertisingPopup>;
+    if (activationPendingId.value !== null) {
+      return Promise.reject(
+        new Error('Một thay đổi trạng thái khác đang được xử lý')
+      );
+    }
+
+    activationPendingId.value = id;
+    return runAction(id, async () => {
       const result = (await trpc.advertisingPopup.setActive.mutate({
         id,
         active,
@@ -95,7 +108,10 @@ export function useAdvertisingPopups() {
       });
       if (current.value?.id === id) current.value = result;
       return result;
+    }).finally(() => {
+      if (activationPendingId.value === id) activationPendingId.value = null;
     });
+  };
   const remove = (id: number) =>
     runAction(id, async () => {
       const result = await trpc.advertisingPopup.delete.mutate(id);
@@ -120,5 +136,6 @@ export function useAdvertisingPopups() {
     setActive,
     remove,
     isActionPending,
+    isActivationPending,
   };
 }

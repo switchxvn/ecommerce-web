@@ -19,6 +19,7 @@ const {
   setActive,
   remove,
   isActionPending,
+  isActivationPending,
 } = useAdvertisingPopups();
 const confirm = useConfirm();
 const toast = useToast();
@@ -181,7 +182,7 @@ onMounted(async () => {
                         ? 'Tắt chiến dịch'
                         : 'Kích hoạt chiến dịch'
                     "
-                    :disabled="isActionPending(campaign.id)"
+                    :disabled="isActivationPending"
                     class="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-gray-700"
                     @click="toggleCampaign(campaign)"
                   >

@@ -79,6 +79,23 @@ describe('useAdvertisingPopups', () => {
     expect(state.isActionPending(1)).toBe(false);
   });
 
+  it('rejects activation of a different campaign while one activation is pending', async () => {
+    const pending = deferred<AdvertisingPopup>();
+    trpc.advertisingPopup.setActive.mutate.mockReturnValueOnce(pending.promise);
+    const state = useAdvertisingPopups();
+
+    const first = state.setActive(1, true);
+    expect(state.isActivationPending.value).toBe(true);
+    await expect(state.setActive(2, true)).rejects.toThrow(
+      'Một thay đổi trạng thái khác đang được xử lý'
+    );
+    expect(trpc.advertisingPopup.setActive.mutate).toHaveBeenCalledTimes(1);
+
+    pending.resolve(campaign(1, true));
+    await first;
+    expect(state.isActivationPending.value).toBe(false);
+  });
+
   it('applies successful activation locally without a follow-up list request', async () => {
     trpc.advertisingPopup.list.query.mockResolvedValueOnce([
       campaign(1, true),
