@@ -8,7 +8,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
 import type { AdvertisingPopup } from '@/types/advertising-popup';
 
-definePageMeta({ middleware: ['auth', 'permission'] });
+definePageMeta({ middleware: ['auth'] });
 provide('pageTitle', ref('Popup quảng cáo'));
 const {
   isLoadingPermissions,

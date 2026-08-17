@@ -8,7 +8,7 @@ import {
   popupToFormState,
   type PopupMutationInput,
 } from '@/types/advertising-popup';
-definePageMeta({ middleware: ['auth', 'permission'] });
+definePageMeta({ middleware: ['auth'] });
 provide('pageTitle', ref('Sửa popup quảng cáo'));
 const route = useRoute();
 const id = Number(route.params.id);
