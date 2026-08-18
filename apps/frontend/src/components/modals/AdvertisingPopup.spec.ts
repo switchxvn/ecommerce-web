@@ -129,18 +129,37 @@ describe('AdvertisingPopup', () => {
     expect(document.body.querySelector('script')).toBeNull();
   });
 
+  it('renders an unchecked persistent-dismissal checkbox with an accessible label', () => {
+    mountPopup();
+    const checkbox = document.body.querySelector<HTMLInputElement>(
+      '[data-testid="popup-do-not-show-again"]'
+    )!;
+
+    expect(checkbox).not.toBeNull();
+    expect(checkbox.type).toBe('checkbox');
+    expect(checkbox.checked).toBe(false);
+    expect(checkbox.labels?.[0]?.textContent?.trim()).toBe(
+      'Không hiển thị lại lần sau'
+    );
+  });
+
   it('uses semantic theme classes without inline promotional colors', () => {
     mountPopup();
     const dialog = document.body.querySelector('[role="dialog"]')!;
 
-    expect(dialog.className).toContain('bg-card');
-    expect(dialog.className).toContain('text-card-foreground');
+    expect(dialog.className).toContain('bg-muted');
+    expect(dialog.className).toContain('text-foreground');
     expect(dialog.className).toContain('border-border');
     expect(dialog.getAttribute('style')).toBeNull();
     expect(document.body.innerHTML).not.toMatch(/(?:gold|amber|yellow|brown)/i);
     expect(
       document.body.querySelector('[data-testid="popup-overlay"]')!.className
     ).toContain('bg-foreground/50');
+    const content = document.body.querySelector(
+      '[data-testid="popup-content"]'
+    )!;
+    expect(content.className).toContain('font-semibold');
+    expect(content.className).toContain('text-foreground');
   });
 
   it('uses restrained opacity/scale motion with reduced-motion disabled transitions', () => {
@@ -157,20 +176,29 @@ describe('AdvertisingPopup', () => {
   it.each([
     ['close button', '[aria-label="Đóng thông báo quảng cáo"]', 'click'],
     ['overlay', '[data-testid="popup-overlay"]', 'click'],
-  ])('emits close from the %s', async (_name, selector, event) => {
-    const wrapper = mountPopup();
-    document.body
-      .querySelector<HTMLElement>(selector)!
-      .dispatchEvent(new MouseEvent(event, { bubbles: true }));
-    await nextTick();
-    expect(wrapper.emitted('close')).toHaveLength(1);
-  });
+  ])(
+    'emits the current checkbox decision from the %s',
+    async (_name, selector, event) => {
+      const wrapper = mountPopup();
+      const checkbox = document.body.querySelector<HTMLInputElement>(
+        '[data-testid="popup-do-not-show-again"]'
+      )!;
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      await nextTick();
+      document.body
+        .querySelector<HTMLElement>(selector)!
+        .dispatchEvent(new MouseEvent(event, { bubbles: true }));
+      await nextTick();
+      expect(wrapper.emitted('close')).toEqual([[true]]);
+    }
+  );
 
   it('emits close on Escape but not on a click inside the dialog', async () => {
     const wrapper = mountPopup();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await nextTick();
-    expect(wrapper.emitted('close')).toHaveLength(1);
+    expect(wrapper.emitted('close')).toEqual([[false]]);
 
     document.body
       .querySelector('[role="dialog"]')!
@@ -178,6 +206,33 @@ describe('AdvertisingPopup', () => {
     await nextTick();
     expect(wrapper.emitted('close')).toHaveLength(1);
   });
+
+  it.each([
+    ['internal', '/khuyen-mai'],
+    ['external', 'https://example.com/sale'],
+  ])(
+    'emits the current checkbox decision from the %s CTA',
+    async (_, ctaUrl) => {
+      const wrapper = mountPopup({ ctaUrl });
+      const checkbox = document.body.querySelector<HTMLInputElement>(
+        '[data-testid="popup-do-not-show-again"]'
+      )!;
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      await nextTick();
+
+      const cta = document.body.querySelector<HTMLElement>(
+        '[data-testid="popup-cta"]'
+      )!;
+      cta.addEventListener('click', (event) => event.preventDefault());
+      cta.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, cancelable: true })
+      );
+      await nextTick();
+
+      expect(wrapper.emitted('close')).toEqual([[true]]);
+    }
+  );
 
   it('renders internal CTA with NuxtLink semantics', () => {
     mountPopup();
@@ -240,6 +295,19 @@ describe('AdvertisingPopup', () => {
       new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })
     );
     expect(document.activeElement).toBe(close);
+  });
+
+  it('orders focusable controls as close, checkbox, then CTA', async () => {
+    mountPopup();
+    await nextTick();
+    const dialog = document.body.querySelector('[role="dialog"]')!;
+    const focusable = Array.from(
+      dialog.querySelectorAll<HTMLElement>('button, input, a[href]')
+    );
+
+    expect(
+      focusable.map((element) => element.dataset.testid ?? element.tagName)
+    ).toEqual(['BUTTON', 'popup-do-not-show-again', 'popup-cta']);
   });
 
   it('wraps Shift+Tab backward from the first focusable element', async () => {
