@@ -310,6 +310,38 @@ describe('AdvertisingPopup', () => {
     ).toEqual(['BUTTON', 'popup-do-not-show-again', 'popup-cta']);
   });
 
+  it('wraps focus between the close button and checkbox when there is no CTA', async () => {
+    mountPopup({ ctaUrl: 'javascript:alert(1)' });
+    await nextTick();
+    const close = document.body.querySelector<HTMLButtonElement>(
+      '[aria-label="Đóng thông báo quảng cáo"]'
+    )!;
+    const checkbox = document.body.querySelector<HTMLInputElement>(
+      '[data-testid="popup-do-not-show-again"]'
+    )!;
+
+    checkbox.focus();
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Tab',
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    expect(document.activeElement).toBe(close);
+
+    close.focus();
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Tab',
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    expect(document.activeElement).toBe(checkbox);
+  });
+
   it('wraps Shift+Tab backward from the first focusable element', async () => {
     mountPopup();
     await nextTick();
