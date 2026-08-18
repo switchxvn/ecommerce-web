@@ -4,6 +4,7 @@ import type { AdvertisingPopupCampaign } from '../types/advertising-popup';
 import { useTrpc } from './useTrpc';
 
 const SESSION_MARKER_KEY = 'advertising-popup-shown';
+const DISMISSED_CAMPAIGNS_KEY = 'advertising-popup-dismissed-campaigns';
 
 interface AdvertisingPopupSessionClaim {
   owner: symbol;
@@ -58,7 +59,7 @@ const isCampaign = (value: unknown): value is AdvertisingPopupCampaign => {
   const campaign = value as Record<string, unknown>;
   return (
     typeof campaign.id === 'number' &&
-    Number.isFinite(campaign.id) &&
+    Number.isInteger(campaign.id) &&
     campaign.id > 0 &&
     isNonEmptyString(campaign.name) &&
     isNonEmptyString(campaign.title) &&
@@ -69,6 +70,19 @@ const isCampaign = (value: unknown): value is AdvertisingPopupCampaign => {
     isNullableDate(campaign.startsAt) &&
     isNullableDate(campaign.endsAt)
   );
+};
+
+const parseDismissedCampaignIds = (value: string | null): number[] => {
+  if (value === null) return [];
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.filter((id): id is number => Number.isInteger(id) && id > 0);
+  } catch {
+    return [];
+  }
 };
 
 export const useAdvertisingPopup = () => {
@@ -120,6 +134,16 @@ export const useAdvertisingPopup = () => {
         return;
       }
 
+      let dismissedCampaignIds: number[] = [];
+      try {
+        dismissedCampaignIds = parseDismissedCampaignIds(
+          window.localStorage.getItem(DISMISSED_CAMPAIGNS_KEY)
+        );
+      } catch {
+        // localStorage can be unavailable; session-only behavior still applies.
+      }
+      if (dismissedCampaignIds.includes(result.id)) return;
+
       shouldShow.value = true;
     } catch (initializationError) {
       if (advertisingPopupSessionClaim?.owner === instanceId) {
@@ -141,8 +165,26 @@ export const useAdvertisingPopup = () => {
     return initialization;
   };
 
-  const close = () => {
+  const close = (doNotShowAgain = false) => {
     shouldShow.value = false;
+    if (!doNotShowAgain || !campaign.value || typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const dismissedCampaignIds = parseDismissedCampaignIds(
+        window.localStorage.getItem(DISMISSED_CAMPAIGNS_KEY)
+      );
+      const campaignIds = Array.from(
+        new Set([...dismissedCampaignIds, campaign.value.id])
+      );
+      window.localStorage.setItem(
+        DISMISSED_CAMPAIGNS_KEY,
+        JSON.stringify(campaignIds)
+      );
+    } catch (storageError) {
+      error.value = storageError;
+    }
   };
 
   return { campaign, shouldShow, isLoading, error, initialize, close };

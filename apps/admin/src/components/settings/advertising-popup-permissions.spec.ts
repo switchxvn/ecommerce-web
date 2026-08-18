@@ -41,6 +41,18 @@ describe('advertising popup permission contract', () => {
     }
   });
 
+  it('uses only auth middleware on popup admin pages', () => {
+    for (const path of [
+      '../../pages/settings/advertising-popups/index.vue',
+      '../../pages/settings/advertising-popups/new.vue',
+      '../../pages/settings/advertising-popups/[id].vue',
+    ]) {
+      const source = read(path);
+      expect(source).toContain("definePageMeta({ middleware: ['auth'] });");
+      expect(source).not.toContain("['auth', 'permission']");
+    }
+  });
+
   it('gates list mutations with EDIT_SETTINGS and DELETE_SETTINGS', () => {
     const list = read('../../pages/settings/advertising-popups/index.vue');
     expect(list).toContain("hasPermission('EDIT_SETTINGS')");

@@ -30,6 +30,7 @@ describe('useAdvertisingPopup', () => {
     vi.restoreAllMocks();
     __resetAdvertisingPopupSessionForTests();
     sessionStorage.clear();
+    localStorage.clear();
     query.mockReset();
     mockedUseTrpc.mockReturnValue({
       advertisingPopup: { getActive: { query } },
@@ -74,6 +75,120 @@ describe('useAdvertisingPopup', () => {
     expect(sessionStorage.getItem('advertising-popup-shown')).toBe('true');
   });
 
+  it('persists the current campaign when closing with do not show again', async () => {
+    query.mockResolvedValue(validCampaign);
+    const popup = useAdvertisingPopup();
+    await popup.initialize();
+
+    popup.close(true);
+
+    expect(popup.shouldShow.value).toBe(false);
+    expect(
+      JSON.parse(localStorage.getItem('advertising-popup-dismissed-campaigns')!)
+    ).toEqual([validCampaign.id]);
+  });
+
+  it('deduplicates persisted campaign IDs when closing', async () => {
+    localStorage.setItem(
+      'advertising-popup-dismissed-campaigns',
+      JSON.stringify([validCampaign.id, 2])
+    );
+    query.mockResolvedValue(validCampaign);
+    const popup = useAdvertisingPopup();
+    await popup.initialize();
+
+    popup.close(true);
+
+    expect(
+      JSON.parse(localStorage.getItem('advertising-popup-dismissed-campaigns')!)
+    ).toEqual([validCampaign.id, 2]);
+  });
+
+  it('does not persist the campaign on a normal close', async () => {
+    query.mockResolvedValue(validCampaign);
+    const popup = useAdvertisingPopup();
+    await popup.initialize();
+
+    popup.close(false);
+
+    expect(
+      localStorage.getItem('advertising-popup-dismissed-campaigns')
+    ).toBeNull();
+  });
+
+  it('keeps a persistently dismissed campaign hidden after fetching it', async () => {
+    localStorage.setItem(
+      'advertising-popup-dismissed-campaigns',
+      JSON.stringify([validCampaign.id])
+    );
+    query.mockResolvedValue(validCampaign);
+    const popup = useAdvertisingPopup();
+
+    await popup.initialize();
+
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(popup.campaign.value).toEqual(validCampaign);
+    expect(popup.shouldShow.value).toBe(false);
+    expect(sessionStorage.getItem('advertising-popup-shown')).toBe('true');
+  });
+
+  it('shows a new campaign ID when a different campaign was dismissed', async () => {
+    localStorage.setItem(
+      'advertising-popup-dismissed-campaigns',
+      JSON.stringify([validCampaign.id])
+    );
+    const newCampaign = { ...validCampaign, id: 2 };
+    query.mockResolvedValue(newCampaign);
+    const popup = useAdvertisingPopup();
+
+    await popup.initialize();
+
+    expect(popup.campaign.value).toEqual(newCampaign);
+    expect(popup.shouldShow.value).toBe(true);
+  });
+
+  it('treats malformed dismissed campaign storage as empty', async () => {
+    localStorage.setItem('advertising-popup-dismissed-campaigns', '{broken');
+    query.mockResolvedValue(validCampaign);
+    const popup = useAdvertisingPopup();
+
+    await popup.initialize();
+
+    expect(popup.shouldShow.value).toBe(true);
+  });
+
+  it('falls back to normal popup behavior when dismissed storage cannot be read', async () => {
+    query.mockResolvedValue(validCampaign);
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function (key) {
+      if (
+        this === localStorage &&
+        key === 'advertising-popup-dismissed-campaigns'
+      ) {
+        throw new Error('local storage denied');
+      }
+      return null;
+    });
+    const popup = useAdvertisingPopup();
+
+    await expect(popup.initialize()).resolves.toBeUndefined();
+
+    expect(popup.shouldShow.value).toBe(true);
+  });
+
+  it('still closes and records a local storage write failure', async () => {
+    query.mockResolvedValue(validCampaign);
+    const popup = useAdvertisingPopup();
+    await popup.initialize();
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function () {
+      if (this === localStorage) throw new Error('local storage full');
+    });
+
+    expect(() => popup.close(true)).not.toThrow();
+
+    expect(popup.shouldShow.value).toBe(false);
+    expect(popup.error.value).toEqual(new Error('local storage full'));
+  });
+
   it('does not show when no campaign is active', async () => {
     query.mockResolvedValue(null);
     const popup = useAdvertisingPopup();
@@ -86,6 +201,7 @@ describe('useAdvertisingPopup', () => {
 
   it.each([
     { ...validCampaign, id: 0 },
+    { ...validCampaign, id: 1.5 },
     { ...validCampaign, id: Number.NaN },
     { ...validCampaign, name: '' },
     { ...validCampaign, name: undefined },

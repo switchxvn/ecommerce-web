@@ -4,7 +4,7 @@ import { useAdvertisingPopups } from '@/composables/useAdvertisingPopups';
 import { usePagePermissions } from '@/composables/usePagePermissions';
 import { useToast } from '@/composables/useToast';
 import type { PopupMutationInput } from '@/types/advertising-popup';
-definePageMeta({ middleware: ['auth', 'permission'] });
+definePageMeta({ middleware: ['auth'] });
 provide('pageTitle', ref('Tạo popup quảng cáo'));
 const { hasPermissionAccess } = usePagePermissions(['EDIT_SETTINGS']);
 const { loading, error, create } = useAdvertisingPopups();

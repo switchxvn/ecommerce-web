@@ -41,7 +41,7 @@ vi.mock('../components/modals/AdvertisingPopup.vue', () => ({
     props: ['campaign'],
     emits: ['close'],
     template:
-      '<button data-testid="layout-popup" @click="$emit(\'close\')">popup</button>',
+      '<button data-testid="layout-popup" @click="$emit(\'close\', true)">popup</button>',
   }),
 }));
 
@@ -62,7 +62,8 @@ describe('public layout advertising popup host', () => {
   it('routes close to the composable and reacts to visibility independently', async () => {
     const wrapper = mount(AdvertisingPopupHost);
     await wrapper.get('[data-testid="layout-popup"]').trigger('click');
-    expect(popupMocks.close).toHaveBeenCalledTimes(1);
+    expect(popupMocks.close).toHaveBeenCalledOnce();
+    expect(popupMocks.close).toHaveBeenCalledWith(true);
 
     popupMocks.shouldShow!.value = false;
     await wrapper.vm.$nextTick();
